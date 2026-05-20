@@ -11,18 +11,20 @@ DELETE FROM dbo.sanpham_seed;
 DELETE FROM dbo.diachitk_seed;
 DELETE FROM dbo.thuonghieu_seed;
 DELETE FROM dbo.danhmuc_seed;
+DELETE FROM taikhoan_seed;
 
-UPDATE dbo.taikhoan_seed
-SET
-    tk_id = NULL,
-    trang_thai_dang_ky = N'chua_dang_ky',
-    trang_thai = N'san_sang',
-    dang_ky_luc = NULL,
-    doi_mk_luc = NULL,
-    cap_nhat_luc = SYSDATETIME(),
-    ghi_chu = N'Reset dữ liệu test; tài khoản sẵn sàng đăng ký lại'
-WHERE tao_luc IS NOT NULL;
-GO
 
-SELECT COUNT(*) AS so_tai_khoan_con_lai FROM dbo.taikhoan_seed;
+-- Reset IDENTITY về 0 (giá trị tiếp theo sẽ là 1)
+DBCC CHECKIDENT ('dbo.ketqua_testcase',       RESEED, 0);
+DBCC CHECKIDENT ('dbo.donhang_sanpham_seed',  RESEED, 0);
+DBCC CHECKIDENT ('dbo.tk_chan_seed',          RESEED, 0);
+DBCC CHECKIDENT ('dbo.tk_theodoi_seed',       RESEED, 0);
+DBCC CHECKIDENT ('dbo.tk_thich_sanpham_seed', RESEED, 0);
+DBCC CHECKIDENT ('dbo.binhluan_sp_seed',      RESEED, 0);
+DBCC CHECKIDENT ('dbo.sanpham_seed',          RESEED, 0);
+DBCC CHECKIDENT ('dbo.diachitk_seed',         RESEED, 0);
+DBCC CHECKIDENT ('dbo.thuonghieu_seed',       RESEED, 0);
+DBCC CHECKIDENT ('dbo.danhmuc_seed',          RESEED, 0);
+DBCC CHECKIDENT ('dbo.taikhoan_seed',          RESEED, 0);
+
 GO

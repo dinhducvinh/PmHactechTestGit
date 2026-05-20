@@ -188,7 +188,7 @@ public static partial class BoKichBanApi
     }
 
     private static void ThemResetPassword(List<KichBanApi> ds)
-    {
+    {  //chưa hiểu chỗ này,nghĩa là làm sao để hệ thống hiểu đc ("phone_number", tk.Sdt) tk này đã xác thực otp thành công
         Them(ds, "AUTH-RESET-01", "Auth", "Reset password sau khi OTP đã verify",
             "Chuẩn bị OTP verified rồi gọi reset password.",
             async ctx =>

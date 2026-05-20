@@ -185,9 +185,19 @@ public static partial class BoKichBanApi
 
         Them(ds, "PRODUCT-COMMENT-SET-19", "Product", "User bị seller chặn không được bình luận",
             "Cần tk_chan_seed biểu diễn seller chặn user.",
-            _ => Req(HttpMethod.Post, "/api/set_comments_product", Obj()),
-            KhongCoQuyen,
-            lyDoBoQua: "Cần seed block giữa seller và user trong tk_chan_seed; chưa đủ dữ liệu để tự động hóa case này.");
+            async ctx =>
+            {
+                var seed = ctx.KhoSeed.LaySeedSellerChanUserChoBinhLuan()
+                    ?? throw new BoQuaKiemThuException("Thiếu seed seller chặn user cho PRODUCT-COMMENT-SET-19.");
+                return new YeuCauApi(HttpMethod.Post, "/api/set_comments_product",
+                    Obj(
+                        ("product_id", SoId(seed.SanPham.SpId, "sp_id")),
+                        ("content", "User bị seller chặn thử bình luận"),
+                        ("index", 0),
+                        ("count", 10)),
+                    await ctx.YeuCauTokenCuaTaiKhoanAsync(seed.UserBiChan));
+            },
+            KhongCoQuyen);
 
         Them(ds, "PRODUCT-COMMENT-SET-20", "Product", "Tạo comment và trả về phân trang count = 5",
             "Gửi index = 0, count = 5.",

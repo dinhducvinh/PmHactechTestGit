@@ -52,7 +52,7 @@ public sealed class NguCanhKiemThu
         return await YeuCauTokenCuaTaiKhoanAsync(taiKhoan);
     }
 
-    public async Task<string> YeuCauTokenCuaTaiKhoanAsync(TaiKhoanSeed taiKhoan)
+    public async Task<string> YeuCauTokenCuaTaiKhoanAsync(TaiKhoanSeed taiKhoan) // truyền vào 1 đối tượng
     {
         var token = await DangNhapLayTokenAsync(taiKhoan);
         return token
@@ -169,7 +169,7 @@ public sealed class NguCanhKiemThu
 
     public TaiKhoanSeed YeuCauSellerCuaSanPham(SanPhamSeed sanPham)
     {
-        return KhoSeed.LayTaiKhoanTheoSeedId(sanPham.SellerTkSeedId)
+        return KhoSeed.LayTaiKhoanTheoSeedId(sanPham.SellerTkSeedId) // lúc này trả về 1 đối tượng(tk)
             ?? throw new BoQuaKiemThuException($"Thiếu seller seed cho sản phẩm {sanPham.SpId}.");
     }
 

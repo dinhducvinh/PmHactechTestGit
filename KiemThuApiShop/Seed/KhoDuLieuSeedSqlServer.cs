@@ -151,7 +151,7 @@ public sealed class KhoDuLieuSeedSqlServer
     public TaiKhoanSeed? LayTaiKhoanTheoSeedId(int tkSeedId)
     {
         return DuLieu.TaiKhoanSeed.FirstOrDefault(x => x.TkSeedId == tkSeedId);
-    }
+    } // lấy về 1 đối tượng của tài khoản theo id tk đó
 
     public TaiKhoanSeed? LayTaiKhoanKhac(int tkSeedId)
     {
@@ -262,6 +262,42 @@ public sealed class KhoDuLieuSeedSqlServer
     public TaiKhoanThichSanPhamSeed? LayLikeBatKy()
     {
         return DuLieu.TaiKhoanThichSanPhamSeed.FirstOrDefault(x => x.TrangThai == "dang_like");
+    }
+
+    public (SanPhamSeed SanPham, TaiKhoanSeed Seller, TaiKhoanSeed UserBiChan, TaiKhoanChanSeed Chan)? LaySeedSellerChanUserChoBinhLuan()
+    {
+        var sanPhamUuTien = DuLieu.SanPhamSeed
+            .Where(x => x.TrangThai == "san_sang")
+            .OrderByDescending(x => string.Equals(x.LoaiSeed, "cho_like_comment", StringComparison.OrdinalIgnoreCase))
+            .ThenBy(x => x.SpSeedId);
+
+        foreach (var sanPham in sanPhamUuTien)
+        {
+            var seller = LayTaiKhoanTheoSeedId(sanPham.SellerTkSeedId);
+            if (seller is null || seller.TrangThaiDangKy != "da_dang_ky" || string.IsNullOrWhiteSpace(seller.TkId))
+            {
+                continue;
+            }
+
+            var chan = DuLieu.TaiKhoanChanSeed.FirstOrDefault(x =>
+                x.TrangThai == "dang_chan" &&
+                x.ChanTkSeedId == seller.TkSeedId &&
+                x.BiChanTkSeedId != seller.TkSeedId);
+            if (chan is null)
+            {
+                continue;
+            }
+
+            var userBiChan = LayTaiKhoanTheoSeedId(chan.BiChanTkSeedId);
+            if (userBiChan is null || userBiChan.TrangThaiDangKy != "da_dang_ky" || string.IsNullOrWhiteSpace(userBiChan.TkId))
+            {
+                continue;
+            }
+
+            return (sanPham, seller, userBiChan, chan);
+        }
+
+        return null;
     }
 
     private static async Task KiemTraBangSeedAsync(SqlConnection connection)

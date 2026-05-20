@@ -217,7 +217,7 @@ public static partial class BoKichBanApi
             async ctx =>
             {
                 var sp = ctx.YeuCauSanPhamTheoLoai("cho_delete");
-                var seller = ctx.YeuCauSellerCuaSanPham(sp);
+                var seller = ctx.YeuCauSellerCuaSanPham(sp); // 1 tk
                 var req = new YeuCauApi(HttpMethod.Delete, $"/api/delete/{sp.SpId}", token: await ctx.YeuCauTokenCuaTaiKhoanAsync(seller));
                 req.Tam["sanPham"] = sp;
                 return req;
