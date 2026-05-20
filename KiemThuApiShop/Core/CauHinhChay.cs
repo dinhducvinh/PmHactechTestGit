@@ -20,9 +20,6 @@ public sealed record CauHinhChay
         ["ApiShopTestDb"] = "Server=.;Database=ApiShopTestDb;Trusted_Connection=True;TrustServerCertificate=True"
     };
 
-    [JsonPropertyName("thuMucKetQua")]
-    public string ThuMucKetQua { get; init; } = "ket-qua";
-
     [JsonPropertyName("soTaiKhoanSeed")]
     public int SoTaiKhoanSeed { get; init; } = 100;
 

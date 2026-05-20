@@ -26,6 +26,7 @@ public static partial class BoKichBanApi
                 var tk = ctx.YeuCauTaiKhoanChuaDangKy();
                 var req = new YeuCauApi(HttpMethod.Post, "/auth/signup", NguCanhKiemThu.TaoBodyDangKy(tk));
                 req.Tam["taiKhoan"] = tk;
+                req.Tam["matKhauDaDungDeDangKy"] = tk.MatKhauHienTai;
                 return Task.FromResult(req);
             },
             Ok,
@@ -33,7 +34,8 @@ public static partial class BoKichBanApi
             async (response, request, ctx) =>
             {
                 var tk = (TaiKhoanSeed)request.Tam["taiKhoan"]!;
-                NguCanhKiemThu.CapNhatTaiKhoanSauDangKy(tk, response.Data);
+                var matKhauDaDungDeDangKy = (string)request.Tam["matKhauDaDungDeDangKy"]!;
+                NguCanhKiemThu.CapNhatTaiKhoanSauDangKy(tk, response.Data, matKhauDaDungDeDangKy);
                 await ctx.KhoSeed.LuuAsync();
             });
 

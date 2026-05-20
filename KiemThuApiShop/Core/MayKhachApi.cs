@@ -89,9 +89,14 @@ public static class TienIchJson
 {
     public static string? DocChuoi(JsonNode? node, params string[] tenTruong)
     {
+        if (node is not JsonObject obj)
+        {
+            return null;
+        }
+
         foreach (var ten in tenTruong)
         {
-            var giaTri = node?[ten];
+            var giaTri = obj[ten];
             if (giaTri is null)
             {
                 continue;

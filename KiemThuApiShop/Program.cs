@@ -39,5 +39,5 @@ if (kichBanCanChay.Count == 0)
 var trinhChay = new TrinhChayKiemThu(nguCanh);
 var ketQua = await trinhChay.ChayAsync(kichBanCanChay);
 
-var tepBaoCao = await BaoCaoKetQua.GhiBaoCaoAsync(ketQua, cauHinh.ThuMucKetQua);
-ManHinhConsole.InTongKet(ketQua, tepBaoCao);
+var soDongKetQuaDaLuu = await khoSeed.GhiKetQuaTestCaseAsync(ketQua);
+ManHinhConsole.InTongKet(ketQua, soDongKetQuaDaLuu);

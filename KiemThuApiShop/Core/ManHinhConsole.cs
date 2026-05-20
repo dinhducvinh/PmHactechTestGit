@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 namespace KiemThuApiShop.Core;
 
 public static class ManHinhConsole
@@ -60,7 +58,7 @@ public static class ManHinhConsole
         }
     }
 
-    public static void InTongKet(IReadOnlyList<KetQuaChay> ketQua, string tepBaoCao)
+    public static void InTongKet(IReadOnlyList<KetQuaChay> ketQua, int soDongKetQuaDaLuu)
     {
         var dat = ketQua.Count(x => x.TrangThai == TrangThaiKetQua.Dat);
         var thatBai = ketQua.Count(x => x.TrangThai == TrangThaiKetQua.ThatBai);
@@ -75,7 +73,7 @@ public static class ManHinhConsole
         Console.WriteLine($"- Bỏ qua do thiếu điều kiện test: {boQua}");
         Console.WriteLine($"- Lỗi chuẩn bị test: {loiChuanBi}");
         Console.WriteLine($"- Lỗi môi trường/base URL: {loiMoiTruong}");
-        Console.WriteLine($"Báo cáo đã ghi: {tepBaoCao}");
+        Console.WriteLine($"Kết quả đã lưu vào SQL Server: dbo.ketqua_testcase ({soDongKetQuaDaLuu} dòng).");
     }
 
     private static IReadOnlyList<KichBanApi> ChonTheoNhom(IReadOnlyList<KichBanApi> tatCa)
@@ -101,47 +99,5 @@ public static class ManHinhConsole
     {
         InDanhSachKichBan(tatCa);
         return [];
-    }
-}
-
-public static class BaoCaoKetQua
-{
-    public static async Task<string> GhiBaoCaoAsync(IReadOnlyList<KetQuaChay> ketQua, string thuMuc)
-    {
-        Directory.CreateDirectory(thuMuc);
-        var tenFile = $"bao-cao-{DateTimeOffset.Now:yyyyMMdd-HHmmss}.json";
-        var duongDan = Path.Combine(thuMuc, tenFile);
-        var json = JsonSerializer.Serialize(ketQua, TuyChonJson.MacDinh);
-        await File.WriteAllTextAsync(duongDan, json);
-
-        var mdPath = Path.ChangeExtension(duongDan, ".md");
-        await File.WriteAllTextAsync(mdPath, TaoMarkdown(ketQua));
-
-        return Path.GetFullPath(mdPath);
-    }
-
-    private static string TaoMarkdown(IReadOnlyList<KetQuaChay> ketQua)
-    {
-        var lines = new List<string>
-        {
-            "# Báo cáo kiểm thử API shop",
-            "",
-            $"Thời gian: {DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss zzz}",
-            "",
-            "| Mã | Nhóm | Trạng thái | Mã mong đợi | Mã thực tế | Endpoint | Thông điệp |",
-            "| --- | --- | --- | --- | --- | --- | --- |"
-        };
-
-        foreach (var item in ketQua)
-        {
-            lines.Add($"| {Escape(item.Ma)} | {Escape(item.Nhom)} | {item.TrangThai} | {Escape(item.MaMongDoi)} | {Escape(item.MaThucTe)} | {Escape(item.Endpoint)} | {Escape(item.ThongDiep)} |");
-        }
-
-        return string.Join(Environment.NewLine, lines);
-    }
-
-    private static string Escape(string? text)
-    {
-        return (text ?? "").Replace("|", "\\|").Replace(Environment.NewLine, " ");
     }
 }

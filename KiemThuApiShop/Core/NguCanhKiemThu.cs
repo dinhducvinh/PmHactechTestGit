@@ -67,6 +67,7 @@ public sealed class NguCanhKiemThu
             return null;
         }
 
+        var matKhauDungDeDangKy = taiKhoan.MatKhauHienTai;
         var body = TaoBodyDangKy(taiKhoan);
         var response = await Api.GuiAsync(new YeuCauApi(HttpMethod.Post, "/auth/signup", body));
         if (response.MaSoSanh != "1000")
@@ -74,7 +75,7 @@ public sealed class NguCanhKiemThu
             return null;
         }
 
-        CapNhatTaiKhoanSauDangKy(taiKhoan, response.Data);
+        CapNhatTaiKhoanSauDangKy(taiKhoan, response.Data, matKhauDungDeDangKy);
         await KhoSeed.LuuAsync();
         return taiKhoan;
     }
@@ -138,9 +139,10 @@ public sealed class NguCanhKiemThu
         };
     }
 
-    public static void CapNhatTaiKhoanSauDangKy(TaiKhoanSeed taiKhoan, JsonNode? data)
+    public static void CapNhatTaiKhoanSauDangKy(TaiKhoanSeed taiKhoan, JsonNode? data, string matKhauDaDungDeDangKy)
     {
         taiKhoan.TkId = TienIchJson.DocChuoi(data, "id", "user_id", "userId") ?? taiKhoan.TkId;
+        taiKhoan.MatKhauHienTai = matKhauDaDungDeDangKy;
         taiKhoan.TrangThaiDangKy = "da_dang_ky";
         taiKhoan.TrangThai = "san_sang";
         taiKhoan.DangKyLuc = DateTimeOffset.Now;

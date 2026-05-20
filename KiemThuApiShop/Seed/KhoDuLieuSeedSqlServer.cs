@@ -1,3 +1,4 @@
+using KiemThuApiShop.Core;
 using Microsoft.Data.SqlClient;
 
 namespace KiemThuApiShop.Seed;
@@ -58,6 +59,53 @@ public sealed class KhoDuLieuSeedSqlServer
             await LuuTheoDoiAsync(connection, (SqlTransaction)transaction);
             await LuuChanAsync(connection, (SqlTransaction)transaction);
             await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    public async Task<int> GhiKetQuaTestCaseAsync(IReadOnlyList<KetQuaChay> ketQua)
+    {
+        if (ketQua.Count == 0)
+        {
+            return 0;
+        }
+
+        const string sql = """
+            INSERT INTO dbo.ketqua_testcase
+            (ma_testcase, nhom, ten_hien_thi, trang_thai, ma_mong_doi, ma_thuc_te, http_status, endpoint, thong_diep, response_rut_gon)
+            VALUES
+            (@ma_testcase, @nhom, @ten_hien_thi, @trang_thai, @ma_mong_doi, @ma_thuc_te, @http_status, @endpoint, @thong_diep, @response_rut_gon);
+            """;
+
+        await using var connection = new SqlConnection(_chuoiKetNoi);
+        await connection.OpenAsync();
+        await KiemTraBangSeedAsync(connection);
+        await using var transaction = await connection.BeginTransactionAsync();
+
+        try
+        {
+            foreach (var item in ketQua)
+            {
+                await using var command = TaoLenh(sql, connection, (SqlTransaction)transaction);
+                Them(command, "@ma_testcase", CatChuoi(item.Ma, 80));
+                Them(command, "@nhom", CatChuoi(item.Nhom, 50));
+                Them(command, "@ten_hien_thi", CatChuoi(item.TenHienThi, 255));
+                Them(command, "@trang_thai", item.TrangThai.ToString());
+                Them(command, "@ma_mong_doi", CatChuoi(item.MaMongDoi, 100));
+                Them(command, "@ma_thuc_te", CatChuoi(item.MaThucTe, 100));
+                Them(command, "@http_status", item.HttpStatus);
+                Them(command, "@endpoint", CatChuoi(item.Endpoint, 255));
+                Them(command, "@thong_diep", item.ThongDiep);
+                Them(command, "@response_rut_gon", item.ResponseRutGon);
+                await command.ExecuteNonQueryAsync();
+            }
+
+            await transaction.CommitAsync();
+            return ketQua.Count;
         }
         catch
         {
@@ -228,7 +276,8 @@ public sealed class KhoDuLieuSeedSqlServer
             "binhluan_sp_seed",
             "tk_thich_sanpham_seed",
             "tk_theodoi_seed",
-            "tk_chan_seed"
+            "tk_chan_seed",
+            "ketqua_testcase"
         };
 
         foreach (var bang in tenBang)
@@ -830,5 +879,15 @@ public sealed class KhoDuLieuSeedSqlServer
 
         var dateTime = Convert.ToDateTime(reader[tenCot]);
         return new DateTimeOffset(DateTime.SpecifyKind(dateTime, DateTimeKind.Local));
+    }
+
+    private static string? CatChuoi(string? giaTri, int doDaiToiDa)
+    {
+        if (string.IsNullOrEmpty(giaTri) || giaTri.Length <= doDaiToiDa)
+        {
+            return giaTri;
+        }
+
+        return giaTri[..doDaiToiDa];
     }
 }

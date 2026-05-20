@@ -187,7 +187,21 @@ public static partial class BoKichBanApi
         ThemUpdateValidation(ds, "PRODUCT-UPDATE-21", "category_id không tồn tại", Obj(("category_id", 999999)), Tap("1004", "9994"));
         ThemUpdateValidation(ds, "PRODUCT-UPDATE-22", "brand_id không tồn tại", Obj(("brand_id", 999999)), Tap("1004", "9994"));
         ThemUpdateValidation(ds, "PRODUCT-UPDATE-23", "ship_from_id không tồn tại", Obj(("ship_from_id", 999999)), Tap("1004", "9994"));
-        ThemUpdateValidation(ds, "PRODUCT-UPDATE-24", "ship_from_id thuộc tài khoản khác", Obj(("ship_from_id", 999999)), KhongCoQuyen);
+        Them(ds, "PRODUCT-UPDATE-24", "Product", "ship_from_id thuộc tài khoản khác",
+            "Token seller nhưng gửi ship_from_id thuộc tài khoản khác.",
+            async ctx =>
+            {
+                var sp = ctx.YeuCauSanPhamTheoLoai("cho_update");
+                var seller = ctx.YeuCauSellerCuaSanPham(sp);
+                var diaChiKhac = ctx.KhoSeed.LayDiaChiKhacTaiKhoan(seller.TkSeedId)
+                    ?? throw new BoQuaKiemThuException("Cần địa chỉ của tài khoản khác để kiểm thử ship_from_id không thuộc seller.");
+                return new YeuCauApi(
+                    HttpMethod.Patch,
+                    $"/api/update/{sp.SpId}",
+                    Obj(("ship_from_id", SoIdBatBuoc(diaChiKhac.DiaChiId, "diachi_id khác seller"))),
+                    await ctx.YeuCauTokenCuaTaiKhoanAsync(seller));
+            },
+            KhongCoQuyen);
         ThemUpdateValidation(ds, "PRODUCT-UPDATE-25", "Gửi đồng thời image_urls và videos", Obj(("image_urls", new[] { "https://example.com/a.jpg" }), ("videos", new[] { Obj(("url", "https://example.com/a.mp4")) })), SaiGiaTri);
         ThemUpdateValidation(ds, "PRODUCT-UPDATE-26", "Gửi quá 4 ảnh", Obj(("image_urls", new[] { "1.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg" })), Tap("1004", "1008"));
         ThemUpdateValidation(ds, "PRODUCT-UPDATE-27", "Gửi ảnh trùng", Obj(("image_urls", new[] { "same.jpg", "same.jpg" })), SaiGiaTri);
