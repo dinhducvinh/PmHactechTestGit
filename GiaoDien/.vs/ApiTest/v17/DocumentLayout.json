@@ -1,0 +1,64 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "D:\\T\u00E0i li\u1EC7u \u0111\u1ED3 \u00E1n\\PmHactechTestGit\\GiaoDien\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{2BADFB1B-57F4-4228-A6F2-8E0ECBAD5F8E}|ApiTest.csproj|d:\\t\u00E0i li\u1EC7u \u0111\u1ED3 \u00E1n\\pmhactechtestgit\\giaodien\\control\\chaytest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{2BADFB1B-57F4-4228-A6F2-8E0ECBAD5F8E}|ApiTest.csproj|solutionrelative:control\\chaytest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2BADFB1B-57F4-4228-A6F2-8E0ECBAD5F8E}|ApiTest.csproj|D:\\T\u00E0i li\u1EC7u \u0111\u1ED3 \u00E1n\\PmHactechTestGit\\GiaoDien\\control\\chaytest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "RelativeMoniker": "D:0:0:{2BADFB1B-57F4-4228-A6F2-8E0ECBAD5F8E}|ApiTest.csproj|solutionrelative:control\\chaytest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 3,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{b1e99781-ab81-11d0-b683-00aa00a3ee26}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{3ae79031-e1bc-11d0-8f78-00a0c9110057}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{eefa5220-e298-11d0-8f78-00a0c9110057}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "ChayTest.cs",
+              "DocumentMoniker": "D:\\T\u00E0i li\u1EC7u \u0111\u1ED3 \u00E1n\\PmHactechTestGit\\GiaoDien\\Control\\ChayTest.cs",
+              "RelativeDocumentMoniker": "Control\\ChayTest.cs",
+              "ToolTip": "D:\\T\u00E0i li\u1EC7u \u0111\u1ED3 \u00E1n\\PmHactechTestGit\\GiaoDien\\Control\\ChayTest.cs",
+              "RelativeToolTip": "Control\\ChayTest.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAC4BAAAVAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-26T07:35:47.677Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "ChayTest.cs [Design]",
+              "DocumentMoniker": "D:\\T\u00E0i li\u1EC7u \u0111\u1ED3 \u00E1n\\PmHactechTestGit\\GiaoDien\\Control\\ChayTest.cs",
+              "RelativeDocumentMoniker": "Control\\ChayTest.cs",
+              "ToolTip": "D:\\T\u00E0i li\u1EC7u \u0111\u1ED3 \u00E1n\\PmHactechTestGit\\GiaoDien\\Control\\ChayTest.cs [Design]",
+              "RelativeToolTip": "Control\\ChayTest.cs [Design]",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-20T15:37:07.538Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

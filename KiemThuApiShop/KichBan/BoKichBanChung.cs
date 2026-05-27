@@ -11,15 +11,28 @@ public static partial class BoKichBanApi
     private static readonly IReadOnlySet<string> SaiGiaTri = Tap("1004");
     private static readonly IReadOnlySet<string> SaiToken = Tap("9998", "HTTP_401", "HTTP_403");
     private static readonly IReadOnlySet<string> KhongCoDuLieu = Tap("1000", "9994");
-    private static readonly IReadOnlySet<string> KhongCoSanPham = Tap("9992", "404", "HTTP_404");
     private static readonly IReadOnlySet<string> KhongCoQuyen = Tap("1009", "9998", "HTTP_401", "HTTP_403");
+    private static readonly IReadOnlySet<string> OkHoacSaiGiaTri = Tap("1000", "1004");
+    private static readonly IReadOnlySet<string> OkHoacKhongCoDuLieu = Tap("1000", "9994");
+    private static readonly IReadOnlySet<string> ThieuThamSoHoacSaiGiaTri = Tap("1002", "1004");
+    private static readonly IReadOnlySet<string> SaiKieuHoacSaiGiaTri = Tap("1003", "1004");
+    private static readonly IReadOnlySet<string> SaiKieuHoacThieuThamSo = Tap("1003", "1002");
+    private static readonly IReadOnlySet<string> LoiThamSo = Tap("1002", "1003", "1004");
+    private static readonly IReadOnlySet<string> SaiGiaTriHoacKhongCoDuLieu = Tap("1004", "9994");
+    private static readonly IReadOnlySet<string> SaiTokenHoacKhongCoNguoiDung = Tap("9998", "HTTP_401", "HTTP_403", "1013");
+    private static readonly IReadOnlySet<string> OkHoacKhongCoNguoiDung = Tap("1000", "1013");
+    private static readonly IReadOnlySet<string> KhongCoQuyenHoacSaiGiaTri = Tap("1009", "9998", "HTTP_401", "HTTP_403", "1004");
+    private static readonly IReadOnlySet<string> KhongCoNguoiDung = Tap("1013");
+    private static readonly IReadOnlySet<string> DaThucHienTruocDo = Tap("1010");
 
     public static IReadOnlyList<KichBanApi> TaoTatCaKichBan()
     {
         var ds = new List<KichBanApi>();
         ThemKichBanAuth(ds);
         ThemKichBanUser(ds);
-        ThemKichBanProduct(ds);
+        ThemKichBanSearch(ds);
+        ThemKichBanFollowBlock(ds);
+        ThemKichBanDevTokenPush(ds);
         return ds;
     }
 
@@ -90,10 +103,20 @@ public static partial class BoKichBanApi
         return SoId(giaTri, tenDuLieu);
     }
 
+    private static bool LaMaThanhCong(PhanHoiApi response)
+    {
+        return string.Equals(response.MaSoSanh, "1000", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static Func<PhanHoiApi, YeuCauApi, NguCanhKiemThu, Task<KetQuaKiemTraThem>> DataCoTruong(params string[] truong)
     {
         return (response, _, _) =>
         {
+            if (!LaMaThanhCong(response))
+            {
+                return Task.FromResult(KetQuaKiemTraThem.ThanhCong);
+            }
+
             if (response.Data is null)
             {
                 return Task.FromResult(new KetQuaKiemTraThem(false, "Response thiếu data."));
@@ -115,6 +138,11 @@ public static partial class BoKichBanApi
     {
         return (response, _, _) =>
         {
+            if (!LaMaThanhCong(response))
+            {
+                return Task.FromResult(KetQuaKiemTraThem.ThanhCong);
+            }
+
             if (response.Data is not JsonArray mang)
             {
                 return Task.FromResult(new KetQuaKiemTraThem(false, "data không phải mảng."));
@@ -133,6 +161,11 @@ public static partial class BoKichBanApi
     {
         return (response, _, _) =>
         {
+            if (!LaMaThanhCong(response))
+            {
+                return Task.FromResult(KetQuaKiemTraThem.ThanhCong);
+            }
+
             var giaTri = TienIchJson.DocBool(response.Data, tenTruong);
             if (giaTri != mongDoi)
             {
@@ -147,6 +180,11 @@ public static partial class BoKichBanApi
     {
         return (response, _, _) =>
         {
+            if (!LaMaThanhCong(response))
+            {
+                return Task.FromResult(KetQuaKiemTraThem.ThanhCong);
+            }
+
             if (response.Data is not JsonArray mang)
             {
                 return Task.FromResult(new KetQuaKiemTraThem(false, "data không phải mảng."));
@@ -162,6 +200,11 @@ public static partial class BoKichBanApi
     {
         return (response, _, _) =>
         {
+            if (!LaMaThanhCong(response))
+            {
+                return Task.FromResult(KetQuaKiemTraThem.ThanhCong);
+            }
+
             if (response.Data is not JsonArray mang)
             {
                 return Task.FromResult(new KetQuaKiemTraThem(false, "data không phải mảng."));

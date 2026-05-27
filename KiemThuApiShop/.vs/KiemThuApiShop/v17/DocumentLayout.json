@@ -7,10 +7,6 @@
       "RelativeMoniker": "D:0:0:{855EC1B5-D8D0-3C1F-CA5D-641B72720574}|KiemThuApiShop.csproj|solutionrelative:kichban\\bokichbanuser.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{855EC1B5-D8D0-3C1F-CA5D-641B72720574}|KiemThuApiShop.csproj|d:\\t\u00E0i li\u1EC7u \u0111\u1ED3 \u00E1n\\pmhactechtestgit\\kiemthuapishop\\kichban\\bokichbanproduct_mutation.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{855EC1B5-D8D0-3C1F-CA5D-641B72720574}|KiemThuApiShop.csproj|solutionrelative:kichban\\bokichbanproduct_mutation.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{855EC1B5-D8D0-3C1F-CA5D-641B72720574}|KiemThuApiShop.csproj|d:\\t\u00E0i li\u1EC7u \u0111\u1ED3 \u00E1n\\pmhactechtestgit\\kiemthuapishop\\kichban\\bokichbanauth.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{855EC1B5-D8D0-3C1F-CA5D-641B72720574}|KiemThuApiShop.csproj|solutionrelative:kichban\\bokichbanauth.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -29,6 +25,10 @@
     {
       "AbsoluteMoniker": "D:0:0:{855EC1B5-D8D0-3C1F-CA5D-641B72720574}|KiemThuApiShop.csproj|d:\\t\u00E0i li\u1EC7u \u0111\u1ED3 \u00E1n\\pmhactechtestgit\\kiemthuapishop\\seed\\mohinhseed.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{855EC1B5-D8D0-3C1F-CA5D-641B72720574}|KiemThuApiShop.csproj|solutionrelative:seed\\mohinhseed.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\T\u00E0i li\u1EC7u \u0111\u1ED3 \u00E1n\\PmHactechTestGit\\KiemThuApiShop\\KichBan\\BoKichBanProduct_Mutation.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:KichBan\\BoKichBanProduct_Mutation.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -60,14 +60,14 @@
               "RelativeDocumentMoniker": "KichBan\\BoKichBanUser.cs",
               "ToolTip": "D:\\T\u00E0i li\u1EC7u \u0111\u1ED3 \u00E1n\\PmHactechTestGit\\KiemThuApiShop\\KichBan\\BoKichBanUser.cs",
               "RelativeToolTip": "KichBan\\BoKichBanUser.cs",
-              "ViewState": "AgIAACgAAAAAAAAAAAAQwDUAAAAIAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAADUAAAAIAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-05-20T07:26:14.252Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 1,
               "Title": "BoKichBanAuth.cs",
               "DocumentMoniker": "D:\\T\u00E0i li\u1EC7u \u0111\u1ED3 \u00E1n\\PmHactechTestGit\\KiemThuApiShop\\KichBan\\BoKichBanAuth.cs",
               "RelativeDocumentMoniker": "KichBan\\BoKichBanAuth.cs",
@@ -79,7 +79,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 2,
               "Title": "appsettings.json",
               "DocumentMoniker": "D:\\T\u00E0i li\u1EC7u \u0111\u1ED3 \u00E1n\\PmHactechTestGit\\KiemThuApiShop\\appsettings.json",
               "RelativeDocumentMoniker": "appsettings.json",
@@ -91,7 +91,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 6,
               "Title": "BoKichBanProduct_Mutation.cs",
               "DocumentMoniker": "D:\\T\u00E0i li\u1EC7u \u0111\u1ED3 \u00E1n\\PmHactechTestGit\\KiemThuApiShop\\KichBan\\BoKichBanProduct_Mutation.cs",
               "RelativeDocumentMoniker": "KichBan\\BoKichBanProduct_Mutation.cs",
@@ -103,7 +103,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 3,
               "Title": "KhoDuLieuSeedSqlServer.cs",
               "DocumentMoniker": "D:\\T\u00E0i li\u1EC7u \u0111\u1ED3 \u00E1n\\PmHactechTestGit\\KiemThuApiShop\\Seed\\KhoDuLieuSeedSqlServer.cs",
               "RelativeDocumentMoniker": "Seed\\KhoDuLieuSeedSqlServer.cs",
@@ -115,7 +115,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 4,
               "Title": "NguCanhKiemThu.cs",
               "DocumentMoniker": "D:\\T\u00E0i li\u1EC7u \u0111\u1ED3 \u00E1n\\PmHactechTestGit\\KiemThuApiShop\\Core\\NguCanhKiemThu.cs",
               "RelativeDocumentMoniker": "Core\\NguCanhKiemThu.cs",
@@ -127,7 +127,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 5,
               "Title": "MoHinhSeed.cs",
               "DocumentMoniker": "D:\\T\u00E0i li\u1EC7u \u0111\u1ED3 \u00E1n\\PmHactechTestGit\\KiemThuApiShop\\Seed\\MoHinhSeed.cs",
               "RelativeDocumentMoniker": "Seed\\MoHinhSeed.cs",

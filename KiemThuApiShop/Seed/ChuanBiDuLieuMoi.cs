@@ -1,10 +1,12 @@
-using System.Text.Json.Nodes;
 using KiemThuApiShop.Core;
 
 namespace KiemThuApiShop.Seed;
 
 public sealed class ChuanBiDuLieuMoi
 {
+    private const int SoQuanHeChinhToiThieu = 2;
+    private const int SoQuanHeChinhMucTieu = 3;
+
     private readonly NguCanhKiemThu _nguCanh;
 
     public ChuanBiDuLieuMoi(NguCanhKiemThu nguCanh)
@@ -18,15 +20,11 @@ public sealed class ChuanBiDuLieuMoi
 
         if (duLieuConThieu.Count == 0)
         {
-            Console.WriteLine("Dữ liệu mồi trong SQL Server đã đủ, bỏ qua bước chuẩn bị.");
+            InBaoCaoDuLieuMoi("Dữ liệu mồi trong SQL Server đã đủ, bỏ qua bước chuẩn bị.", duLieuConThieu);
             return;
         }
 
-        Console.WriteLine("Dữ liệu mồi còn thiếu, chỉ gọi API để bổ sung các phần thiếu:");
-        foreach (var item in duLieuConThieu)
-        {
-            Console.WriteLine($"- {item}");
-        }
+        InBaoCaoDuLieuMoi("Dữ liệu mồi còn thiếu, chỉ gọi API để bổ sung các phần thiếu:", duLieuConThieu);
 
         try
         {
@@ -35,39 +33,14 @@ public sealed class ChuanBiDuLieuMoi
                 await DangKyTaiKhoanSeedAsync();
             }
 
-            if (ThieuDanhMuc())
-            {
-                await DongBoDanhMucAsync();
-            }
-
-            if (ThieuThuongHieu())
-            {
-                await DongBoThuongHieuAsync();
-            }
-
-            if (ThieuDiaChi())
-            {
-                await TaoDiaChiSeedAsync();
-            }
-
-            if (ThieuSanPham())
-            {
-                await TaoSanPhamSeedAsync();
-            }
-
-            if (ThieuBinhLuan())
-            {
-                await TaoBinhLuanSeedAsync();
-            }
-
-            if (ThieuLike())
-            {
-                await TaoLikeSeedAsync();
-            }
-
             if (ThieuTheoDoi())
             {
                 await TaoTheoDoiSeedAsync();
+            }
+
+            if (ThieuTimKiem())
+            {
+                await TaoTimKiemSeedAsync();
             }
 
             if (ThieuChan())
@@ -76,23 +49,59 @@ public sealed class ChuanBiDuLieuMoi
             }
 
             var sauChuanBiConThieu = KiemTraDuLieuConThieu();
-            if (sauChuanBiConThieu.Count > 0)
-            {
-                Console.WriteLine("Sau bước chuẩn bị vẫn còn thiếu dữ liệu mồi:");
-                foreach (var item in sauChuanBiConThieu)
-                {
-                    Console.WriteLine($"- {item}");
-                }
-            }
+            InBaoCaoDuLieuMoi(
+                sauChuanBiConThieu.Count == 0
+                    ? "Sau bước chuẩn bị: dữ liệu mồi đã đủ."
+                    : "Sau bước chuẩn bị vẫn còn thiếu dữ liệu mồi:",
+                sauChuanBiConThieu);
         }
         catch (HttpRequestException ex)
         {
             Console.WriteLine($"Không kết nối được API để chuẩn bị seed: {ex.Message}");
+            InBaoCaoDuLieuMoi("Dữ liệu mồi sau lỗi kết nối vẫn còn thiếu:", KiemTraDuLieuConThieu());
         }
         catch (TaskCanceledException)
         {
             Console.WriteLine("Quá thời gian chờ khi chuẩn bị seed. Các case cần dữ liệu mồi có thể bị bỏ qua.");
+            InBaoCaoDuLieuMoi("Dữ liệu mồi sau timeout vẫn còn thiếu:", KiemTraDuLieuConThieu());
         }
+    }
+
+    private void InBaoCaoDuLieuMoi(string tieuDe, IReadOnlyList<string> duLieuConThieu)
+    {
+        Console.WriteLine(tieuDe);
+        InThongKeDuLieuMoi();
+
+        if (duLieuConThieu.Count == 0)
+        {
+            Console.WriteLine("- Trạng thái: đã đủ dữ liệu mồi cần thiết.");
+            Console.WriteLine();
+            return;
+        }
+
+        Console.WriteLine("- Các phần còn thiếu:");
+        foreach (var item in duLieuConThieu)
+        {
+            Console.WriteLine($"  + {item}");
+        }
+
+        Console.WriteLine();
+    }
+
+    private void InThongKeDuLieuMoi()
+    {
+        var taiKhoanDaDangKy = _nguCanh.KhoSeed.DuLieu.TaiKhoanSeed.Count(x =>
+            x.TrangThai == "san_sang" &&
+            x.TrangThaiDangKy == "da_dang_ky");
+        var timKiemDangLuu = _nguCanh.KhoSeed.DuLieu.TaiKhoanTimKiemSeed.Count(x => x.TrangThai == "dang_luu");
+        var theoDoiFollowerChinh = DemQuanHeTheoDoiCuaFollowerChinh();
+        var chanBlockerChinh = DemQuanHeChanCuaBlockerChinh();
+
+        Console.WriteLine("- Hiện có:");
+        Console.WriteLine($"  + Tài khoản đã đăng ký: {taiKhoanDaDangKy}/{_nguCanh.CauHinh.SoTaiKhoanDangKyTruoc}");
+        Console.WriteLine($"  + Saved search dang_luu: {timKiemDangLuu}/2");
+        Console.WriteLine($"  + Follow của follower_chinh: {theoDoiFollowerChinh}/{SoQuanHeChinhToiThieu}");
+        Console.WriteLine($"  + Block của blocker_chinh: {chanBlockerChinh}/{SoQuanHeChinhToiThieu}");
     }
 
     private List<string> KiemTraDuLieuConThieu()
@@ -104,49 +113,19 @@ public sealed class ChuanBiDuLieuMoi
             thieu.Add($"Thiếu tài khoản đã đăng ký trong taikhoan_seed: cần tối thiểu {_nguCanh.CauHinh.SoTaiKhoanDangKyTruoc}.");
         }
 
-        if (ThieuDanhMuc())
-        {
-            thieu.Add("Thiếu danh mục san_sang trong danhmuc_seed.");
-        }
-
-        if (ThieuThuongHieu())
-        {
-            thieu.Add("Thiếu thương hiệu san_sang trong thuonghieu_seed.");
-        }
-
-        if (ThieuDiaChi())
-        {
-            thieu.Add("Thiếu địa chỉ san_sang cho tài khoản đã đăng ký trong diachitk_seed.");
-        }
-
-        if (ThieuSanPham())
-        {
-            thieu.Add("Thiếu sản phẩm seed san_sang đủ các loại: co_anh, nhieu_variant, cho_update, cho_delete, cho_like_comment.");
-        }
-
-        if (ThieuBinhLuan())
-        {
-            thieu.Add("Thiếu sản phẩm có tối thiểu 6 bình luận san_sang trong binhluan_sp_seed.");
-        }
-
-        if (ThieuLike())
-        {
-            thieu.Add("Thiếu quan hệ like dang_like trong tk_thich_sanpham_seed.");
-        }
-
         if (ThieuTheoDoi())
         {
-            thieu.Add("Thiếu 10 quan hệ theo dõi dang_theo_doi trong tk_theodoi_seed.");
+            thieu.Add("Thiếu 2-3 quan hệ theo dõi dang_theo_doi của follower_chinh trong tk_theodoi_seed.");
         }
 
-        if (ThieuSoLuongChan())
+        if (ThieuTimKiem())
         {
-            thieu.Add("Thiếu 10 quan hệ chặn dang_chan trong tk_chan_seed.");
+            thieu.Add("Thiếu lịch sử tìm kiếm dang_luu trong tk_timkiem_seed.");
         }
 
-        if (ThieuChanChoBinhLuanBiChan())
+        if (ThieuChan())
         {
-            thieu.Add("Thiếu quan hệ seller chặn user cho case PRODUCT-COMMENT-SET-19 trong tk_chan_seed.");
+            thieu.Add("Thiếu 2-3 quan hệ chặn dang_chan của blocker_chinh trong tk_chan_seed.");
         }
 
         return thieu;
@@ -159,68 +138,39 @@ public sealed class ChuanBiDuLieuMoi
             x.TrangThaiDangKy == "da_dang_ky") < _nguCanh.CauHinh.SoTaiKhoanDangKyTruoc;
     }
 
-    private bool ThieuDanhMuc()
-    {
-        return !_nguCanh.KhoSeed.DuLieu.DanhMucSeed.Any(x => x.TrangThai == "san_sang");
-    }
-
-    private bool ThieuThuongHieu()
-    {
-        return !_nguCanh.KhoSeed.DuLieu.ThuongHieuSeed.Any(x => x.TrangThai == "san_sang");
-    }
-
-    private bool ThieuDiaChi()
-    {
-        var soTaiKhoanDaDangKy = _nguCanh.KhoSeed.DuLieu.TaiKhoanSeed.Count(x =>
-            x.TrangThai == "san_sang" &&
-            x.TrangThaiDangKy == "da_dang_ky");
-        var soDiaChiCanCo = Math.Min(3, soTaiKhoanDaDangKy);
-
-        return soDiaChiCanCo > 0 &&
-            _nguCanh.KhoSeed.DuLieu.DiaChiTaiKhoanSeed
-                .Where(x => x.TrangThai == "san_sang")
-                .Select(x => x.TkSeedId)
-                .Distinct()
-                .Count() < soDiaChiCanCo;
-    }
-
-    private bool ThieuSanPham()
-    {
-        var loaiCanCo = new[] { "co_anh", "nhieu_variant", "cho_update", "cho_delete", "cho_like_comment" };
-        return loaiCanCo.Any(loai => _nguCanh.KhoSeed.LaySanPhamTheoLoai(loai) is null);
-    }
-
-    private bool ThieuBinhLuan()
-    {
-        return !_nguCanh.KhoSeed.DuLieu.BinhLuanSanPhamSeed
-            .Where(x => x.TrangThai == "san_sang")
-            .GroupBy(x => x.SpId)
-            .Any(x => x.Count() >= 6);
-    }
-
-    private bool ThieuLike()
-    {
-        return _nguCanh.KhoSeed.LayLikeBatKy() is null;
-    }
-
     private bool ThieuTheoDoi()
     {
-        return _nguCanh.KhoSeed.DuLieu.TaiKhoanTheoDoiSeed.Count(x => x.TrangThai == "dang_theo_doi") < 10;
+        return DemQuanHeTheoDoiCuaFollowerChinh() < SoQuanHeChinhToiThieu;
+    }
+
+    private bool ThieuTimKiem()
+    {
+        return _nguCanh.KhoSeed.DuLieu.TaiKhoanTimKiemSeed.Count(x => x.TrangThai == "dang_luu") < 2;
     }
 
     private bool ThieuChan()
     {
-        return ThieuSoLuongChan() || ThieuChanChoBinhLuanBiChan();
+        return DemQuanHeChanCuaBlockerChinh() < SoQuanHeChinhToiThieu;
     }
 
-    private bool ThieuSoLuongChan()
+    private int DemQuanHeTheoDoiCuaFollowerChinh()
     {
-        return _nguCanh.KhoSeed.DuLieu.TaiKhoanChanSeed.Count(x => x.TrangThai == "dang_chan") < 10;
+        return _nguCanh.KhoSeed.DuLieu.TaiKhoanTheoDoiSeed
+            .Where(x => x.TrangThai == "dang_theo_doi")
+            .GroupBy(x => x.TkSeedId)
+            .Select(x => x.Count())
+            .DefaultIfEmpty(0)
+            .Max();
     }
 
-    private bool ThieuChanChoBinhLuanBiChan()
+    private int DemQuanHeChanCuaBlockerChinh()
     {
-        return _nguCanh.KhoSeed.LaySeedSellerChanUserChoBinhLuan() is null;
+        return _nguCanh.KhoSeed.DuLieu.TaiKhoanChanSeed
+            .Where(x => x.TrangThai == "dang_chan")
+            .GroupBy(x => x.ChanTkSeedId)
+            .Select(x => x.Count())
+            .DefaultIfEmpty(0)
+            .Max();
     }
 
     private async Task DangKyTaiKhoanSeedAsync()
@@ -239,313 +189,48 @@ public sealed class ChuanBiDuLieuMoi
         }
     }
 
-    private async Task DongBoDanhMucAsync()
+    private async Task TaoTimKiemSeedAsync()
     {
-        var response = await _nguCanh.Api.GuiAsync(new YeuCauApi(HttpMethod.Post, "/api/get_categories", new Dictionary<string, object?>()));
-        if (response.MaSoSanh != "1000" || response.Data is not JsonArray mang)
+        var taiKhoanDaDangKy = LayTaiKhoanDaDangKySanSang();
+        if (taiKhoanDaDangKy.Count == 0)
         {
             return;
         }
 
-        _nguCanh.KhoSeed.DuLieu.DanhMucSeed.Clear();
-        foreach (var item in mang)
+        var mucTieu = 2;
+        var daCo = _nguCanh.KhoSeed.DuLieu.TaiKhoanTimKiemSeed.Count(x => x.TrangThai == "dang_luu");
+        for (var i = 0; i < taiKhoanDaDangKy.Count && daCo < mucTieu; i++)
         {
-            var id = TienIchJson.DocChuoi(item, "id");
-            if (string.IsNullOrWhiteSpace(id))
-            {
-                continue;
-            }
-
-            _nguCanh.KhoSeed.DuLieu.DanhMucSeed.Add(new DanhMucSeed
-            {
-                DmId = id,
-                TenDanhMuc = TienIchJson.DocChuoi(item, "name") ?? $"Danh mục {id}",
-                DmChaId = TienIchJson.DocChuoi(item, "parent_id"),
-                CoDanhMucCon = TienIchJson.DocBool(item, "has_child") ?? false,
-                CoThuongHieu = TienIchJson.DocBool(item, "has_brand") ?? false,
-                CoKichCo = TienIchJson.DocBool(item, "has_size") ?? false,
-                YeuCauCanNang = TienIchJson.DocBool(item, "require_weight") ?? false,
-                Sort = (int?)TienIchJson.DocSoNguyen(item, "sort"),
-                TrangThai = "san_sang",
-                DongBoLuc = DateTimeOffset.Now
-            });
-        }
-
-        await _nguCanh.KhoSeed.LuuAsync();
-    }
-
-    private async Task DongBoThuongHieuAsync()
-    {
-        var body = new Dictionary<string, object?> { ["category_id"] = 0, ["index"] = 0, ["count"] = 1000 };
-        var response = await _nguCanh.Api.GuiAsync(new YeuCauApi(HttpMethod.Post, "/api/get_list_brands", body));
-        if (response.MaSoSanh != "1000" || response.Data is not JsonArray mang)
-        {
-            return;
-        }
-
-        _nguCanh.KhoSeed.DuLieu.ThuongHieuSeed.Clear();
-        foreach (var item in mang)
-        {
-            var id = TienIchJson.DocChuoi(item, "id");
-            if (string.IsNullOrWhiteSpace(id))
-            {
-                continue;
-            }
-
-            _nguCanh.KhoSeed.DuLieu.ThuongHieuSeed.Add(new ThuongHieuSeed
-            {
-                ThuongHieuId = id,
-                TenThuongHieu = TienIchJson.DocChuoi(item, "brand_name", "name") ?? $"Thương hiệu {id}",
-                DmId = TienIchJson.DocChuoi(item, "category_id", "dm_id"),
-                TrangThai = "san_sang",
-                DongBoLuc = DateTimeOffset.Now
-            });
-        }
-
-        await _nguCanh.KhoSeed.LuuAsync();
-    }
-
-    private async Task TaoDiaChiSeedAsync()
-    {
-        var taiKhoanDaDangKy = _nguCanh.KhoSeed.DuLieu.TaiKhoanSeed
-            .Where(x => x.TrangThaiDangKy == "da_dang_ky")
-            .Take(3)
-            .ToList();
-
-        foreach (var taiKhoan in taiKhoanDaDangKy)
-        {
-            if (_nguCanh.KhoSeed.LayDiaChiTheoTaiKhoan(taiKhoan.TkSeedId) is not null)
-            {
-                continue;
-            }
-
+            var taiKhoan = taiKhoanDaDangKy[i];
             var token = await _nguCanh.DangNhapLayTokenAsync(taiKhoan);
             if (token is null)
             {
                 continue;
             }
 
-            var body = new Dictionary<string, object?>
-            {
-                ["receiver_name"] = $"Người nhận seed {taiKhoan.TkSeedId}",
-                ["phone"] = taiKhoan.Sdt,
-                ["full_address"] = $"Số {taiKhoan.TkSeedId}, phường test, Hà Nội",
-                ["is_default"] = true,
-                ["ward_id"] = 1,
-                ["lat"] = 21.0278,
-                ["lng"] = 105.8342,
-                ["address_name"] = "Địa chỉ test",
-                ["address_detail"] = "Dữ liệu mồi tự động"
-            };
-
-            var response = await _nguCanh.Api.GuiAsync(new YeuCauApi(HttpMethod.Post, "/addresses/create", body, token));
+            var keyword = $"search_seed_{taiKhoan.TkSeedId}_{DateTimeOffset.Now:yyyyMMddHHmmss}";
+            var body = new Dictionary<string, object?> { ["keyword"] = keyword };
+            var response = await _nguCanh.Api.GuiAsync(new YeuCauApi(HttpMethod.Post, "/api/save_search", body, token));
             if (response.MaSoSanh != "1000")
             {
                 continue;
             }
 
-            var diaChiId = TienIchJson.DocChuoi(response.Data, "id", "address_id", "diachi_id");
-            if (string.IsNullOrWhiteSpace(diaChiId))
+            _nguCanh.KhoSeed.DuLieu.TaiKhoanTimKiemSeed.Add(new TaiKhoanTimKiemSeed
             {
-                continue;
-            }
-
-            _nguCanh.KhoSeed.DuLieu.DiaChiTaiKhoanSeed.Add(new DiaChiTaiKhoanSeed
-            {
+                TkTimKiemSeedId = _nguCanh.KhoSeed.DuLieu.TaiKhoanTimKiemSeed.Count == 0
+                    ? 1
+                    : _nguCanh.KhoSeed.DuLieu.TaiKhoanTimKiemSeed.Max(x => x.TkTimKiemSeedId) + 1,
                 TkSeedId = taiKhoan.TkSeedId,
                 TkId = taiKhoan.TkId,
-                DiaChiId = diaChiId,
-                TenNguoiNhan = $"Người nhận seed {taiKhoan.TkSeedId}",
-                Sdt = taiKhoan.Sdt,
-                DiaChiDayDu = $"Số {taiKhoan.TkSeedId}, phường test, Hà Nội",
+                SavedSearchId = TienIchJson.DocChuoi(response.Data, "id", "saved_search_id"),
+                Keyword = TienIchJson.DocChuoi(response.Data, "keyword") ?? keyword,
+                TrangThai = "dang_luu",
+                TaoBoiTest = true,
                 TaoLuc = DateTimeOffset.Now
             });
+            daCo++;
         }
-
-        await _nguCanh.KhoSeed.LuuAsync();
-    }
-
-    private async Task TaoSanPhamSeedAsync()
-    {
-        var danhMuc = _nguCanh.KhoSeed.LayDanhMucBatKy();
-        if (danhMuc is null)
-        {
-            return;
-        }
-
-        var thuongHieu = _nguCanh.KhoSeed.LayThuongHieuBatKy();
-        var cacLoai = new[] { "co_anh", "nhieu_variant", "cho_update", "cho_delete", "cho_like_comment" };
-
-        foreach (var loai in cacLoai)
-        {
-            if (_nguCanh.KhoSeed.LaySanPhamTheoLoai(loai) is not null)
-            {
-                continue;
-            }
-
-            var seller = _nguCanh.KhoSeed.DuLieu.TaiKhoanSeed
-                .FirstOrDefault(x => x.TrangThaiDangKy == "da_dang_ky" && _nguCanh.KhoSeed.LayDiaChiTheoTaiKhoan(x.TkSeedId) is not null);
-            if (seller is null)
-            {
-                return;
-            }
-
-            var diaChi = _nguCanh.KhoSeed.LayDiaChiTheoTaiKhoan(seller.TkSeedId);
-            var token = await _nguCanh.DangNhapLayTokenAsync(seller);
-            if (diaChi is null || token is null)
-            {
-                return;
-            }
-
-            var body = NguCanhKiemThu.TaoBodySanPhamHopLe(
-                $"Sản phẩm seed {loai} {DateTimeOffset.Now:yyyyMMddHHmmss}",
-                danhMuc,
-                thuongHieu,
-                diaChi,
-                dungVideo: loai == "co_video",
-                nhieuVariant: loai == "nhieu_variant");
-
-            var response = await _nguCanh.Api.GuiAsync(new YeuCauApi(HttpMethod.Post, "/api/add_product", body, token));
-            if (response.MaSoSanh != "1000")
-            {
-                continue;
-            }
-
-            var spId = TienIchJson.DocChuoi(response.Data, "id", "product_id", "sp_id");
-            if (string.IsNullOrWhiteSpace(spId))
-            {
-                continue;
-            }
-
-            _nguCanh.KhoSeed.DuLieu.SanPhamSeed.Add(new SanPhamSeed
-            {
-                SpSeedId = _nguCanh.KhoSeed.DuLieu.SanPhamSeed.Count + 1,
-                SpId = spId,
-                SellerTkSeedId = seller.TkSeedId,
-                SellerTkId = seller.TkId,
-                DmId = danhMuc.DmId,
-                ThuongHieuId = thuongHieu?.ThuongHieuId,
-                DiaChiId = diaChi.DiaChiId,
-                TenSp = TienIchJson.DocChuoi(response.Data, "name", "title") ?? $"Sản phẩm seed {loai}",
-                Gia = 150000,
-                LoaiSeed = loai,
-                TrangThai = "san_sang",
-                XacMinhLuc = DateTimeOffset.Now
-            });
-        }
-
-        await _nguCanh.KhoSeed.LuuAsync();
-    }
-
-    private async Task TaoBinhLuanSeedAsync()
-    {
-        if (_nguCanh.KhoSeed.LayBinhLuanBatKy() is not null)
-        {
-            return;
-        }
-
-        var sanPham = _nguCanh.KhoSeed.LaySanPhamTheoLoai("cho_like_comment") ?? _nguCanh.KhoSeed.LaySanPhamBatKy();
-        if (sanPham is null)
-        {
-            return;
-        }
-
-        var taiKhoan = _nguCanh.KhoSeed.LayTaiKhoanKhac(sanPham.SellerTkSeedId) ?? _nguCanh.KhoSeed.LayTaiKhoanDaDangKy();
-        if (taiKhoan is null)
-        {
-            return;
-        }
-
-        var token = await _nguCanh.DangNhapLayTokenAsync(taiKhoan);
-        if (token is null)
-        {
-            return;
-        }
-
-        for (var i = 1; i <= 6; i++)
-        {
-            if (!long.TryParse(sanPham.SpId, out var spId))
-            {
-                return;
-            }
-
-            var noiDung = $"Bình luận seed {i} cho sản phẩm {sanPham.SpId}";
-            var body = new Dictionary<string, object?>
-            {
-                ["product_id"] = spId,
-                ["content"] = noiDung,
-                ["index"] = 0,
-                ["count"] = 10
-            };
-
-            var response = await _nguCanh.Api.GuiAsync(new YeuCauApi(HttpMethod.Post, "/api/set_comments_product", body, token));
-            if (response.MaSoSanh != "1000")
-            {
-                break;
-            }
-
-            _nguCanh.KhoSeed.DuLieu.BinhLuanSanPhamSeed.Add(new BinhLuanSanPhamSeed
-            {
-                BlSeedId = _nguCanh.KhoSeed.DuLieu.BinhLuanSanPhamSeed.Count + 1,
-                SpSeedId = sanPham.SpSeedId,
-                SpId = sanPham.SpId,
-                TkSeedId = taiKhoan.TkSeedId,
-                TkId = taiKhoan.TkId,
-                BlId = TienIchJson.DocChuoi(response.Data, "id", "comment_id"),
-                NoiDung = noiDung,
-                TaoLuc = DateTimeOffset.Now
-            });
-        }
-
-        await _nguCanh.KhoSeed.LuuAsync();
-    }
-
-    private async Task TaoLikeSeedAsync()
-    {
-        if (_nguCanh.KhoSeed.LayLikeBatKy() is not null)
-        {
-            return;
-        }
-
-        var sanPham = _nguCanh.KhoSeed.LaySanPhamTheoLoai("cho_like_comment") ?? _nguCanh.KhoSeed.LaySanPhamBatKy();
-        if (sanPham is null)
-        {
-            return;
-        }
-
-        var taiKhoan = _nguCanh.KhoSeed.LayTaiKhoanKhac(sanPham.SellerTkSeedId) ?? _nguCanh.KhoSeed.LayTaiKhoanDaDangKy();
-        if (taiKhoan is null)
-        {
-            return;
-        }
-
-        var token = await _nguCanh.DangNhapLayTokenAsync(taiKhoan);
-        if (token is null)
-        {
-            return;
-        }
-
-        if (!long.TryParse(sanPham.SpId, out var spId))
-        {
-            return;
-        }
-
-        var body = new Dictionary<string, object?> { ["product_id"] = spId };
-        var response = await _nguCanh.Api.GuiAsync(new YeuCauApi(HttpMethod.Post, "/api/like_product", body, token));
-        if (response.MaSoSanh != "1000")
-        {
-            return;
-        }
-
-        _nguCanh.KhoSeed.DuLieu.TaiKhoanThichSanPhamSeed.Add(new TaiKhoanThichSanPhamSeed
-        {
-            TkSeedId = taiKhoan.TkSeedId,
-            TkId = taiKhoan.TkId,
-            SpSeedId = sanPham.SpSeedId,
-            SpId = sanPham.SpId,
-            TrangThai = "dang_like",
-            TaoLuc = DateTimeOffset.Now
-        });
 
         await _nguCanh.KhoSeed.LuuAsync();
     }
@@ -558,26 +243,39 @@ public sealed class ChuanBiDuLieuMoi
             return;
         }
 
-        var mucTieu = 10;
-        var daCo = _nguCanh.KhoSeed.DuLieu.TaiKhoanTheoDoiSeed
+        var seedDangTheoDoi = _nguCanh.KhoSeed.DuLieu.TaiKhoanTheoDoiSeed
             .Where(x => x.TrangThai == "dang_theo_doi")
-            .Select(x => (x.TkSeedId, x.FolloweeTkSeedId))
+            .ToList();
+        var followerChinhSeedId = seedDangTheoDoi
+            .GroupBy(x => x.TkSeedId)
+            .OrderByDescending(x => x.Count())
+            .Select(x => (int?)x.Key)
+            .FirstOrDefault();
+        var nguoiTheoDoi = followerChinhSeedId.HasValue
+            ? taiKhoanDaDangKy.FirstOrDefault(x => x.TkSeedId == followerChinhSeedId.Value)
+            : taiKhoanDaDangKy[0];
+        if (nguoiTheoDoi is null || string.IsNullOrWhiteSpace(nguoiTheoDoi.TkId))
+        {
+            return;
+        }
+
+        var followeeDaCo = seedDangTheoDoi
+            .Where(x => x.TkSeedId == nguoiTheoDoi.TkSeedId)
+            .Select(x => x.FolloweeTkSeedId)
             .ToHashSet();
 
-        for (var i = 0; i < taiKhoanDaDangKy.Count && daCo.Count < mucTieu; i++)
+        var token = await _nguCanh.DangNhapLayTokenAsync(nguoiTheoDoi);
+        if (token is null)
         {
-            var nguoiTheoDoi = taiKhoanDaDangKy[i];
-            var nguoiDuocTheoDoi = taiKhoanDaDangKy[(i + 1) % taiKhoanDaDangKy.Count];
+            return;
+        }
 
+        for (var i = 0; i < taiKhoanDaDangKy.Count && followeeDaCo.Count < SoQuanHeChinhMucTieu; i++)
+        {
+            var nguoiDuocTheoDoi = taiKhoanDaDangKy[i];
             if (nguoiTheoDoi.TkSeedId == nguoiDuocTheoDoi.TkSeedId ||
                 string.IsNullOrWhiteSpace(nguoiDuocTheoDoi.TkId) ||
-                daCo.Contains((nguoiTheoDoi.TkSeedId, nguoiDuocTheoDoi.TkSeedId)))
-            {
-                continue;
-            }
-
-            var token = await _nguCanh.DangNhapLayTokenAsync(nguoiTheoDoi);
-            if (token is null)
+                followeeDaCo.Contains(nguoiDuocTheoDoi.TkSeedId))
             {
                 continue;
             }
@@ -600,9 +298,10 @@ public sealed class ChuanBiDuLieuMoi
                 TkId = nguoiTheoDoi.TkId,
                 FolloweeTkSeedId = nguoiDuocTheoDoi.TkSeedId,
                 FolloweeTkId = nguoiDuocTheoDoi.TkId,
+                TheoDoiLuc = DateTimeOffset.Now,
                 TrangThai = "dang_theo_doi"
             });
-            daCo.Add((nguoiTheoDoi.TkSeedId, nguoiDuocTheoDoi.TkSeedId));
+            followeeDaCo.Add(nguoiDuocTheoDoi.TkSeedId);
         }
 
         await _nguCanh.KhoSeed.LuuAsync();
@@ -616,25 +315,52 @@ public sealed class ChuanBiDuLieuMoi
             return;
         }
 
-        var mucTieu = 10;
-        var capTheoDoi = _nguCanh.KhoSeed.DuLieu.TaiKhoanTheoDoiSeed
+        var seedDangTheoDoi = _nguCanh.KhoSeed.DuLieu.TaiKhoanTheoDoiSeed
             .Where(x => x.TrangThai == "dang_theo_doi")
+            .ToList();
+        var capTheoDoi = seedDangTheoDoi
             .Select(x => (x.TkSeedId, x.FolloweeTkSeedId))
             .ToHashSet();
-        var daCo = _nguCanh.KhoSeed.DuLieu.TaiKhoanChanSeed
+        var seedDangChan = _nguCanh.KhoSeed.DuLieu.TaiKhoanChanSeed
             .Where(x => x.TrangThai == "dang_chan")
+            .ToList();
+        var daCo = seedDangChan
             .Select(x => (x.ChanTkSeedId, x.BiChanTkSeedId))
             .ToHashSet();
-
-        await TaoChanSellerChoBinhLuanAsync(taiKhoanDaDangKy, capTheoDoi, daCo);
-
-        for (var i = 0; i < taiKhoanDaDangKy.Count && daCo.Count < mucTieu; i++)
+        var followerChinhSeedId = seedDangTheoDoi
+            .GroupBy(x => x.TkSeedId)
+            .OrderByDescending(x => x.Count())
+            .Select(x => (int?)x.Key)
+            .FirstOrDefault();
+        var blockerChinhSeedId = seedDangChan
+            .GroupBy(x => x.ChanTkSeedId)
+            .OrderByDescending(x => x.Count())
+            .Select(x => (int?)x.Key)
+            .FirstOrDefault();
+        var nguoiChan = blockerChinhSeedId.HasValue
+            ? taiKhoanDaDangKy.FirstOrDefault(x => x.TkSeedId == blockerChinhSeedId.Value)
+            : taiKhoanDaDangKy.FirstOrDefault(x => !followerChinhSeedId.HasValue || x.TkSeedId != followerChinhSeedId.Value);
+        if (nguoiChan is null)
         {
-            var nguoiChan = taiKhoanDaDangKy[i];
-            var nguoiBiChan = taiKhoanDaDangKy[(i + 2) % taiKhoanDaDangKy.Count];
+            return;
+        }
 
+        var biChanDaCo = seedDangChan
+            .Where(x => x.ChanTkSeedId == nguoiChan.TkSeedId)
+            .Select(x => x.BiChanTkSeedId)
+            .ToHashSet();
+        var followeeCuaFollowerChinh = seedDangTheoDoi
+            .Where(x => !followerChinhSeedId.HasValue || x.TkSeedId == followerChinhSeedId.Value)
+            .Select(x => x.FolloweeTkSeedId)
+            .ToHashSet();
+
+        for (var i = 0; i < taiKhoanDaDangKy.Count && biChanDaCo.Count < SoQuanHeChinhMucTieu; i++)
+        {
+            var nguoiBiChan = taiKhoanDaDangKy[i];
             if (nguoiChan.TkSeedId == nguoiBiChan.TkSeedId ||
                 string.IsNullOrWhiteSpace(nguoiBiChan.TkId) ||
+                biChanDaCo.Contains(nguoiBiChan.TkSeedId) ||
+                followeeCuaFollowerChinh.Contains(nguoiBiChan.TkSeedId) ||
                 daCo.Contains((nguoiChan.TkSeedId, nguoiBiChan.TkSeedId)) ||
                 capTheoDoi.Contains((nguoiChan.TkSeedId, nguoiBiChan.TkSeedId)) ||
                 capTheoDoi.Contains((nguoiBiChan.TkSeedId, nguoiChan.TkSeedId)))
@@ -642,51 +368,13 @@ public sealed class ChuanBiDuLieuMoi
                 continue;
             }
 
-            await TaoQuanHeChanAsync(nguoiChan, nguoiBiChan, daCo);
+            if (await TaoQuanHeChanAsync(nguoiChan, nguoiBiChan, daCo))
+            {
+                biChanDaCo.Add(nguoiBiChan.TkSeedId);
+            }
         }
 
         await _nguCanh.KhoSeed.LuuAsync();
-    }
-
-    private async Task TaoChanSellerChoBinhLuanAsync(
-        IReadOnlyList<TaiKhoanSeed> taiKhoanDaDangKy,
-        HashSet<(int TkSeedId, int FolloweeTkSeedId)> capTheoDoi,
-        HashSet<(int ChanTkSeedId, int BiChanTkSeedId)> daCo)
-    {
-        if (_nguCanh.KhoSeed.LaySeedSellerChanUserChoBinhLuan() is not null)
-        {
-            return;
-        }
-
-        var sanPham = _nguCanh.KhoSeed.LaySanPhamTheoLoai("cho_like_comment") ?? _nguCanh.KhoSeed.LaySanPhamBatKy();
-        if (sanPham is null)
-        {
-            return;
-        }
-
-        var seller = _nguCanh.KhoSeed.LayTaiKhoanTheoSeedId(sanPham.SellerTkSeedId);
-        if (seller is null || string.IsNullOrWhiteSpace(seller.TkId))
-        {
-            return;
-        }
-
-        var userBiChan = taiKhoanDaDangKy.FirstOrDefault(x =>
-                x.TkSeedId != seller.TkSeedId &&
-                !string.IsNullOrWhiteSpace(x.TkId) &&
-                !daCo.Contains((seller.TkSeedId, x.TkSeedId)) &&
-                !capTheoDoi.Contains((seller.TkSeedId, x.TkSeedId)) &&
-                !capTheoDoi.Contains((x.TkSeedId, seller.TkSeedId)))
-            ?? taiKhoanDaDangKy.FirstOrDefault(x =>
-                x.TkSeedId != seller.TkSeedId &&
-                !string.IsNullOrWhiteSpace(x.TkId) &&
-                !daCo.Contains((seller.TkSeedId, x.TkSeedId)));
-
-        if (userBiChan is null)
-        {
-            return;
-        }
-
-        await TaoQuanHeChanAsync(seller, userBiChan, daCo);
     }
 
     private async Task<bool> TaoQuanHeChanAsync(
@@ -726,6 +414,7 @@ public sealed class ChuanBiDuLieuMoi
             ChanTkId = nguoiChan.TkId,
             BiChanTkSeedId = nguoiBiChan.TkSeedId,
             BiChanTkId = nguoiBiChan.TkId,
+            ChanLuc = DateTimeOffset.Now,
             TrangThai = "dang_chan"
         });
         daCo.Add((nguoiChan.TkSeedId, nguoiBiChan.TkSeedId));

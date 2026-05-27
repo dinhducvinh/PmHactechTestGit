@@ -7,7 +7,7 @@ GO
 
     Cột mat_khau_hien_tai ở thời điểm này là mật khẩu dự kiến sẽ dùng để gọi
     POST /auth/signup. Sau khi signup thành công, chương trình C# sẽ cập nhật lại:
-      - tk_id
+      - tk_id_server
       - trang_thai_dang_ky = N'da_dang_ky'
       - mat_khau_hien_tai = mật khẩu thực tế vừa dùng để signup
       - dang_ky_luc
@@ -31,7 +31,7 @@ BEGIN
     BEGIN
         INSERT INTO dbo.taikhoan_seed
         (
-            tk_id,
+            tk_id_server,
             sdt,
             mat_khau_hien_tai,
             uuid,

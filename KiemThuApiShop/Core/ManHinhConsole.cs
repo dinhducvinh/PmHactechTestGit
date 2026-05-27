@@ -29,7 +29,7 @@ public static class ManHinhConsole
         Console.WriteLine($"Base URL hiện tại: {cauHinh.BaseUrl}");
         Console.WriteLine("Chọn chế độ chạy:");
         Console.WriteLine("1. Chạy tất cả test case");
-        Console.WriteLine("2. Chạy theo nhóm Auth/User/Product");
+        Console.WriteLine("2. Chạy theo nhóm Auth/User/Search/FollowBlock/DevTokenPush");
         Console.WriteLine("3. Chọn mã test case cụ thể");
         Console.WriteLine("4. Chỉ liệt kê test case");
         Console.Write("Nhập lựa chọn: ");
@@ -78,7 +78,7 @@ public static class ManHinhConsole
 
     private static IReadOnlyList<KichBanApi> ChonTheoNhom(IReadOnlyList<KichBanApi> tatCa)
     {
-        Console.Write("Nhập nhóm cần chạy (Auth/User/Product): ");
+        Console.Write("Nhập nhóm cần chạy (Auth/User/Search/FollowBlock/DevTokenPush): ");
         var nhom = Console.ReadLine()?.Trim();
         return tatCa.Where(x => string.Equals(x.Nhom, nhom, StringComparison.OrdinalIgnoreCase)).ToList();
     }
