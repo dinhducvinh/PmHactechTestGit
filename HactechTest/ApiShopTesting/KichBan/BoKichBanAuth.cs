@@ -1,4 +1,5 @@
 ﻿using HactechTest.ApiShopTesting.Core;
+using static HactechTest.ApiShopTesting.Core.HelperTC;
 using HactechTest.ApiShopTesting.Seed;
 
 namespace HactechTest.ApiShopTesting.KichBan;
@@ -23,8 +24,8 @@ public static partial class BoKichBanApi
             "Lấy số chưa đăng ký từ taikhoan_seed và gọi /auth/signup.",
             ctx =>
             {
-                var tk = ctx.YeuCauTaiKhoanChuaDangKy();
-                var req = new YeuCauApi(HttpMethod.Post, "/auth/signup", NguCanhKiemThu.TaoBodyDangKy(tk));
+                var tk = YeuCauTaiKhoanChuaDangKy(ctx);
+                var req = new YeuCauApi(HttpMethod.Post, "/auth/signup", TaoBodyDangKy(tk));
                 req.Tam["taiKhoan"] = tk;
                 req.Tam["matKhauDaDungDeDangKy"] = tk.MatKhauHienTai;
                 return Task.FromResult(req);
@@ -35,17 +36,31 @@ public static partial class BoKichBanApi
             {
                 var tk = (TaiKhoanChuaDangKySeed)request.Tam["taiKhoan"]!;
                 var matKhauDaDungDeDangKy = (string)request.Tam["matKhauDaDungDeDangKy"]!;
-                var taiKhoanDaDangKy = NguCanhKiemThu.TaoTaiKhoanSauDangKy(tk, response.Data, matKhauDaDungDeDangKy);
-                ctx.KhoSeed.DuLieu.TaiKhoanChuaDangKySeed.Remove(tk);
-                ctx.KhoSeed.DuLieu.TaiKhoanSignupThanhCongSeed.Add(taiKhoanDaDangKy);
-                await ctx.KhoSeed.LuuAsync();
+                var taiKhoanDaDangKy = new TaiKhoanSignupThanhCongSeed
+                {
+                    TaiKhoanIdServer = response.Data?["id"]?.GetValue<int>() ?? 0,
+                    SoDienThoai = tk.SoDienThoai,
+                    MatKhauHienTai = matKhauDaDungDeDangKy,
+                    DangKyLuc = DateTimeOffset.Now,
+                    GhiChu = tk.GhiChu,
+                    SoThuTu = tk.SoThuTu,
+                    UuidThietBi = tk.UuidThietBi
+                };
+                if (taiKhoanDaDangKy.TaiKhoanIdServer <= 0)
+                {
+                    throw new BoQuaKiemThuException("API /auth/signup trả thành công nhưng không có id tài khoản.");
+                }
+
+                ctx.CapNhatDB.DuLieu.TaiKhoanChuaDangKySeed.Remove(tk);
+                ctx.CapNhatDB.DuLieu.TaiKhoanSignupThanhCongSeed.Add(taiKhoanDaDangKy);
+                await ctx.CapNhatDB.LuuAsync();
             });
 
         Them(ds, "AUTH-SIGNUP-02", "Auth", "Đăng ký bằng số điện thoại đã tồn tại",
             "Dùng tài khoản đã đăng ký trong taikhoan_signupthanhcong.",
             async ctx =>
             {
-                var tk = await ctx.YeuCauTaiKhoanDaDangKyAsync();
+                var tk = await YeuCauTaiKhoanDaDangKyAsync(ctx);
                 return new YeuCauApi(HttpMethod.Post, "/auth/signup", Obj(("phone_number", tk.SoDienThoai), ("password", tk.MatKhauHienTai), ("uuid", tk.UuidThietBi)));
             },
             Tap("1004", "9996"));
@@ -72,7 +87,7 @@ public static partial class BoKichBanApi
             "Dùng số điện thoại đã đăng ký và mật khẩu hiện tại trong taikhoan_signupthanhcong.",
             async ctx =>
             {
-                var tk = await ctx.YeuCauTaiKhoanDaDangKyAsync();
+                var tk = await YeuCauTaiKhoanDaDangKyAsync(ctx);
                 return new YeuCauApi(HttpMethod.Post, "/auth/login", Obj(("phone_number", tk.SoDienThoai), ("password", tk.MatKhauHienTai), ("devtoken", tk.UuidThietBi)));
             },
             Ok,
@@ -82,7 +97,7 @@ public static partial class BoKichBanApi
             "Dùng tài khoản chưa đăng ký từ taikhoan_seed.",
             ctx =>
             {
-                var tk = ctx.YeuCauTaiKhoanChuaDangKy();
+                var tk = YeuCauTaiKhoanChuaDangKy(ctx);
                 return Req(HttpMethod.Post, "/auth/login", Obj(("phone_number", tk.SoDienThoai), ("password", tk.MatKhauHienTai), ("devtoken", tk.UuidThietBi)));
             },
             Tap("9995"));
@@ -102,7 +117,7 @@ public static partial class BoKichBanApi
     {
         Them(ds, "AUTH-ME-01", "Auth", "Lấy thông tin current user bằng token hợp lệ",
             "Login trước để lấy token rồi gọi GET /auth/me.",
-            async ctx => new YeuCauApi(HttpMethod.Get, "/auth/me", token: await ctx.YeuCauTokenHopLeAsync()),
+            async ctx => new YeuCauApi(HttpMethod.Get, "/auth/me", token: await YeuCauTokenHopLeAsync(ctx)),
             Ok,
             DataCoTruong("username"));
 
@@ -128,7 +143,7 @@ public static partial class BoKichBanApi
             "Gọi /auth/create_code_reset_password bằng số đã đăng ký.",
             async ctx =>
             {
-                var tk = await ctx.YeuCauTaiKhoanDaDangKyAsync();
+                var tk = await YeuCauTaiKhoanDaDangKyAsync(ctx);
                 return new YeuCauApi(HttpMethod.Post, "/auth/create_code_reset_password", Obj(("phone_number", tk.SoDienThoai)));
             },
             Ok);
@@ -142,7 +157,7 @@ public static partial class BoKichBanApi
             "Dùng tài khoản chưa đăng ký từ seed.",
             ctx =>
             {
-                var tk = ctx.YeuCauTaiKhoanChuaDangKy();
+                var tk = YeuCauTaiKhoanChuaDangKy(ctx);
                 return Req(HttpMethod.Post, "/auth/create_code_reset_password", Obj(("phone_number", tk.SoDienThoai)));
             },
             Tap("9995"));
@@ -151,8 +166,8 @@ public static partial class BoKichBanApi
             "Tạo OTP trước rồi gọi check bằng mã đúng.",
             async ctx =>
             {
-                var tk = await ctx.YeuCauTaiKhoanDaDangKyAsync();
-                var otp = await ctx.YeuCauOtpResetMatKhauAsync(tk);
+                var tk = await YeuCauTaiKhoanDaDangKyAsync(ctx);
+                var otp = await LayOtpResetMatKhauAsync(ctx, tk);
                 return new YeuCauApi(HttpMethod.Post, "/auth/check_code_reset_password", Obj(("phone_number", tk.SoDienThoai), ("reset_code", otp)));
             },
             Ok);
@@ -161,8 +176,8 @@ public static partial class BoKichBanApi
             "Tạo OTP rồi gửi mã sai.",
             async ctx =>
             {
-                var tk = await ctx.YeuCauTaiKhoanDaDangKyAsync();
-                _ = await ctx.YeuCauOtpResetMatKhauAsync(tk);
+                var tk = await YeuCauTaiKhoanDaDangKyAsync(ctx);
+                _ = await LayOtpResetMatKhauAsync(ctx, tk);
                 return new YeuCauApi(HttpMethod.Post, "/auth/check_code_reset_password", Obj(("phone_number", tk.SoDienThoai), ("reset_code", "000000")));
             },
             Tap("9993"));
@@ -171,8 +186,8 @@ public static partial class BoKichBanApi
             "Check OTP đúng một lần rồi dùng lại OTP cũ.",
             async ctx =>
             {
-                var tk = await ctx.YeuCauTaiKhoanDaDangKyAsync();
-                var otp = await ctx.YeuCauOtpResetMatKhauAsync(tk);
+                var tk = await YeuCauTaiKhoanDaDangKyAsync(ctx);
+                var otp = await LayOtpResetMatKhauAsync(ctx, tk);
                 var first = new YeuCauApi(HttpMethod.Post, "/auth/check_code_reset_password", Obj(("phone_number", tk.SoDienThoai), ("reset_code", otp)));
                 _ = await ctx.Api.GuiAsync(first);
                 return new YeuCauApi(HttpMethod.Post, "/auth/check_code_reset_password", Obj(("phone_number", tk.SoDienThoai), ("reset_code", otp)));
@@ -183,7 +198,7 @@ public static partial class BoKichBanApi
             "Gửi mã OTP không còn tồn tại trong server.",
             async ctx =>
             {
-                var tk = await ctx.YeuCauTaiKhoanDaDangKyAsync();
+                var tk = await YeuCauTaiKhoanDaDangKyAsync(ctx);
                 return new YeuCauApi(HttpMethod.Post, "/auth/check_code_reset_password", Obj(("phone_number", tk.SoDienThoai), ("reset_code", "123456")));
             },
             Tap("9993"));
@@ -195,8 +210,8 @@ public static partial class BoKichBanApi
             "Chuẩn bị OTP verified rồi gọi reset password.",
             async ctx =>
             {
-                var tk = await ctx.YeuCauTaiKhoanDaDangKyAsync();
-                await ctx.XacThucOtpResetMatKhauAsync(tk);
+                var tk = await YeuCauTaiKhoanDaDangKyAsync(ctx);
+                await XacThucOtpResetMatKhauAsync(ctx, tk);
                 var matKhauMoi = $"Reset{DateTimeOffset.Now:HHmmss}";
                 var req = new YeuCauApi(HttpMethod.Post, "/auth/reset_password", Obj(("phone_number", tk.SoDienThoai), ("password", matKhauMoi)));
                 req.Tam["taiKhoan"] = tk;
@@ -206,15 +221,15 @@ public static partial class BoKichBanApi
             Ok,
             sauKhiDat: async (_, request, ctx) =>
             {
-                await ctx.CapNhatMatKhauAsync((TaiKhoanSignupThanhCongSeed)request.Tam["taiKhoan"]!, (string)request.Tam["matKhauMoi"]!);
+                await CapNhatMatKhauAsync(ctx, (TaiKhoanSignupThanhCongSeed)request.Tam["taiKhoan"]!, (string)request.Tam["matKhauMoi"]!);
             });
 
         Them(ds, "AUTH-RESET-02", "Auth", "Reset password với mật khẩu mới sai quy tắc",
             "Chuẩn bị verified flag rồi gửi password invalid.",
             async ctx =>
             {
-                var tk = await ctx.YeuCauTaiKhoanDaDangKyAsync();
-                await ctx.XacThucOtpResetMatKhauAsync(tk);
+                var tk = await YeuCauTaiKhoanDaDangKyAsync(ctx);
+                await XacThucOtpResetMatKhauAsync(ctx, tk);
                 return new YeuCauApi(HttpMethod.Post, "/auth/reset_password", Obj(("phone_number", tk.SoDienThoai), ("password", "123")));
             },
             SaiGiaTri);
@@ -223,7 +238,7 @@ public static partial class BoKichBanApi
             "Gửi body thiếu password.",
             async ctx =>
             {
-                var tk = await ctx.YeuCauTaiKhoanDaDangKyAsync();
+                var tk = await YeuCauTaiKhoanDaDangKyAsync(ctx);
                 return new YeuCauApi(HttpMethod.Post, "/auth/reset_password", Obj(("phone_number", tk.SoDienThoai)));
             },
             ThieuThamSo);
@@ -235,8 +250,8 @@ public static partial class BoKichBanApi
             "Login lấy token, gửi mật khẩu cũ đúng và mật khẩu mới hợp lệ.",
             async ctx =>
             {
-                var tk = await ctx.YeuCauTaiKhoanDaDangKyAsync();
-                var token = await ctx.YeuCauTokenCuaTaiKhoanAsync(tk);
+                var tk = await YeuCauTaiKhoanDaDangKyAsync(ctx);
+                var token = await LayTokenCuaTaiKhoanAsync(ctx, tk);
                 var matKhauMoi = $"Change{DateTimeOffset.Now:HHmmss}";
                 var req = new YeuCauApi(HttpMethod.Post, "/auth/change_password", Obj(("password", tk.MatKhauHienTai), ("new_password", matKhauMoi)), token);
                 req.Tam["taiKhoan"] = tk;
@@ -246,15 +261,15 @@ public static partial class BoKichBanApi
             Ok,
             sauKhiDat: async (_, request, ctx) =>
             {
-                await ctx.CapNhatMatKhauAsync((TaiKhoanSignupThanhCongSeed)request.Tam["taiKhoan"]!, (string)request.Tam["matKhauMoi"]!);
+                await CapNhatMatKhauAsync(ctx, (TaiKhoanSignupThanhCongSeed)request.Tam["taiKhoan"]!, (string)request.Tam["matKhauMoi"]!);
             });
 
         Them(ds, "AUTH-CHANGE-PASS-02", "Auth", "Đổi mật khẩu với mật khẩu cũ sai",
             "Login lấy token rồi gửi password cũ không đúng.",
             async ctx =>
             {
-                var tk = await ctx.YeuCauTaiKhoanDaDangKyAsync();
-                var token = await ctx.YeuCauTokenCuaTaiKhoanAsync(tk);
+                var tk = await YeuCauTaiKhoanDaDangKyAsync(ctx);
+                var token = await LayTokenCuaTaiKhoanAsync(ctx, tk);
                 return new YeuCauApi(HttpMethod.Post, "/auth/change_password", Obj(("password", "SaiMatKhau123"), ("new_password", "NewPass123")), token);
             },
             SaiGiaTri);
@@ -269,15 +284,15 @@ public static partial class BoKichBanApi
             "Gửi new_password quá ngắn/trùng mật khẩu cũ.",
             async ctx =>
             {
-                var tk = await ctx.YeuCauTaiKhoanDaDangKyAsync();
-                var token = await ctx.YeuCauTokenCuaTaiKhoanAsync(tk);
+                var tk = await YeuCauTaiKhoanDaDangKyAsync(ctx);
+                var token = await LayTokenCuaTaiKhoanAsync(ctx, tk);
                 return new YeuCauApi(HttpMethod.Post, "/auth/change_password", Obj(("password", tk.MatKhauHienTai), ("new_password", "123")), token);
             },
             SaiGiaTri);
 
         Them(ds, "AUTH-CHANGE-PASS-05", "Auth", "Đổi mật khẩu thiếu field bắt buộc",
             "Gửi body thiếu password hoặc new_password.",
-            async ctx => new YeuCauApi(HttpMethod.Post, "/auth/change_password", Obj(("password", "abc")), await ctx.YeuCauTokenHopLeAsync()),
+            async ctx => new YeuCauApi(HttpMethod.Post, "/auth/change_password", Obj(("password", "abc")), await YeuCauTokenHopLeAsync(ctx)),
             ThieuThamSo);
 
         Them(ds, "AUTH-CHANGE-PASS-06", "Auth", "Đổi mật khẩu với token không hợp lệ",
@@ -294,7 +309,7 @@ public static partial class BoKichBanApi
             "Dùng token hợp lệ và username/avatar hợp lệ.",
             async ctx => new YeuCauApi(HttpMethod.Post, "/auth/change_info_after_signup",
                 Obj(("username", $"user_test_{DateTimeOffset.Now:HHmmss}"), ("avatar", "https://example.com/avatar.jpg")),
-                await ctx.YeuCauTokenHopLeAsync()),
+                await YeuCauTokenHopLeAsync(ctx)),
             Ok);
 
         Them(ds, "AUTH-CHANGE-INFO-02", "Auth", "Cập nhật info với token trống hoặc quá ngắn",
@@ -309,7 +324,7 @@ public static partial class BoKichBanApi
 
         Them(ds, "AUTH-CHANGE-INFO-04", "Auth", "Cập nhật info với username không hợp lệ",
             "Gửi username sai format/độ dài.",
-            async ctx => new YeuCauApi(HttpMethod.Post, "/auth/change_info_after_signup", Obj(("username", "a")), await ctx.YeuCauTokenHopLeAsync()),
+            async ctx => new YeuCauApi(HttpMethod.Post, "/auth/change_info_after_signup", Obj(("username", "a")), await YeuCauTokenHopLeAsync(ctx)),
             SaiGiaTri);
 
         Them(ds, "AUTH-CHANGE-INFO-05", "Auth", "Username không hợp lệ đến mức tài khoản bị khóa",
@@ -329,7 +344,7 @@ public static partial class BoKichBanApi
     {
         Them(ds, "AUTH-LOGOUT-01", "Auth", "Đăng xuất thành công",
             "Login lấy token hợp lệ rồi gọi /auth/logout.",
-            async ctx => new YeuCauApi(HttpMethod.Post, "/auth/logout", new Dictionary<string, object?>(), await ctx.YeuCauTokenHopLeAsync()),
+            async ctx => new YeuCauApi(HttpMethod.Post, "/auth/logout", new Dictionary<string, object?>(), await YeuCauTokenHopLeAsync(ctx)),
             Ok);
 
         Them(ds, "AUTH-LOGOUT-02", "Auth", "Đăng xuất với token không hợp lệ",
@@ -338,6 +353,11 @@ public static partial class BoKichBanApi
             SaiToken);
     }
 }
+
+
+
+
+
 
 
 

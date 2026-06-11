@@ -1,5 +1,6 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using HactechTest.ApiShopTesting.Core;
+using static HactechTest.ApiShopTesting.Core.HelperTC;
 using HactechTest.ApiShopTesting.Seed;
 
 namespace HactechTest.ApiShopTesting.KichBan;
@@ -28,13 +29,13 @@ public static partial class BoKichBanApi
             "Token hợp lệ, address và address_id lấy từ Provinces_seed/Wards_seed.",
             async ctx =>
             {
-                var taiKhoan = await ctx.YeuCauTaiKhoanDaDangKyAsync();
+                var taiKhoan = await YeuCauTaiKhoanDaDangKyAsync(ctx);
                 var duLieu = TaoDuLieuThemDiaChi(ctx, taiKhoan, "ORDER-ADDR-ADD-02");
                 var req = new YeuCauApi(
                     HttpMethod.Post,
                     "/order/add_order_address",
                     duLieu.Body,
-                    await ctx.YeuCauTokenCuaTaiKhoanAsync(taiKhoan));
+                    await LayTokenCuaTaiKhoanAsync(ctx, taiKhoan));
                 req.Tam["taiKhoan"] = taiKhoan;
                 req.Tam["duLieuDiaChi"] = duLieu;
                 return req;
@@ -47,25 +48,25 @@ public static partial class BoKichBanApi
             "Token hợp lệ, body hợp lệ nhưng address_id truyền ward/province không tồn tại trong database.",
             async ctx =>
             {
-                var taiKhoan = await ctx.YeuCauTaiKhoanDaDangKyAsync();
+                var taiKhoan = await YeuCauTaiKhoanDaDangKyAsync(ctx);
                 var duLieu = TaoDuLieuThemDiaChi(ctx, taiKhoan, "ORDER-ADDR-ADD-03");
                 duLieu.Body["address_id"] = new[] { 999999, 999999 };
                 return new YeuCauApi(
                     HttpMethod.Post,
                     "/order/add_order_address",
                     duLieu.Body,
-                    await ctx.YeuCauTokenCuaTaiKhoanAsync(taiKhoan));
+                    await LayTokenCuaTaiKhoanAsync(ctx, taiKhoan));
             },
             SaiGiaTri);
     }
 
     private static DuLieuThemDiaChi TaoDuLieuThemDiaChi(NguCanhKiemThu ctx, TaiKhoanSignupThanhCongSeed? taiKhoan, string maTestCase)
     {
-        var ward = ctx.KhoSeed.DuLieu.PhuongXaSeed
+        var ward = ctx.CapNhatDB.DuLieu.PhuongXaSeed
             .OrderBy(x => x.PhuongXaId)
             .FirstOrDefault()
             ?? throw new BoQuaKiemThuException("Thiếu Wards_seed để tạo body /order/add_order_address.");
-        var province = ctx.KhoSeed.DuLieu.TinhThanhSeed
+        var province = ctx.CapNhatDB.DuLieu.TinhThanhSeed
             .FirstOrDefault(x => x.TinhThanhId == ward.TinhThanhId)
             ?? throw new BoQuaKiemThuException($"Thiếu Provinces_seed id {ward.TinhThanhId} tương ứng với ward {ward.PhuongXaId}.");
 
@@ -100,7 +101,7 @@ public static partial class BoKichBanApi
             }
 
             var id = DocIdDiaChi(response.Data);
-            return Task.FromResult(string.IsNullOrWhiteSpace(id)
+            return Task.FromResult(id is not > 0
                 ? new KetQuaKiemTraThem(false, "Response thêm địa chỉ thành công nhưng thiếu id/address_id.")
                 : KetQuaKiemTraThem.ThanhCong);
         };
@@ -109,20 +110,19 @@ public static partial class BoKichBanApi
     private static async Task LuuDiaChiVaoSeedSauKhiDatAsync(PhanHoiApi response, YeuCauApi request, NguCanhKiemThu ctx)
     {
         var diaChiIdServer = DocIdDiaChi(response.Data);
-        if (string.IsNullOrWhiteSpace(diaChiIdServer))
+        if (diaChiIdServer is not > 0)
         {
             return;
         }
 
         var taiKhoan = (TaiKhoanSignupThanhCongSeed)request.Tam["taiKhoan"]!;
         var duLieu = (DuLieuThemDiaChi)request.Tam["duLieuDiaChi"]!;
-        var hienCo = ctx.KhoSeed.DuLieu.DiaChiTaiKhoanSeed
+        var hienCo = ctx.CapNhatDB.DuLieu.DiaChiTaiKhoanSeed
             .FirstOrDefault(x => x.DiaChiIdServer == diaChiIdServer);
         if (hienCo is null)
         {
-            ctx.KhoSeed.DuLieu.DiaChiTaiKhoanSeed.Add(new DiaChiTaiKhoanSeed
+            ctx.CapNhatDB.DuLieu.DiaChiTaiKhoanSeed.Add(new DiaChiTaiKhoanSeed
             {
-                DiaChiSeedId = ctx.KhoSeed.DuLieu.DiaChiTaiKhoanSeed.Select(x => x.DiaChiSeedId).DefaultIfEmpty(0).Max() + 1,
                 TaiKhoanIdServer = taiKhoan.TaiKhoanIdServer,
                 DiaChiIdServer = diaChiIdServer,
                 PhuongXaId = duLieu.PhuongXa.PhuongXaId,
@@ -161,23 +161,12 @@ public static partial class BoKichBanApi
             hienCo.GhiChu = "Cập nhật bởi testcase ORDER-ADDR-ADD-02";
         }
 
-        await ctx.KhoSeed.LuuAsync();
+        await ctx.CapNhatDB.LuuAsync();
     }
 
-    private static string? DocIdDiaChi(JsonNode? node)
+    private static int? DocIdDiaChi(JsonNode? node)
     {
-        var trucTiep = TienIchJson.DocChuoi(node, "id", "address_id", "diachi_id");
-        if (!string.IsNullOrWhiteSpace(trucTiep))
-        {
-            return trucTiep;
-        }
-
-        if (node is not JsonObject obj)
-        {
-            return null;
-        }
-
-        return TienIchJson.DocChuoi(obj["address"], "id", "address_id", "diachi_id");
+        return node?["id"]?.GetValue<int>();
     }
 
     private sealed record DuLieuThemDiaChi(
@@ -191,6 +180,11 @@ public static partial class BoKichBanApi
         string TenNguoiNhan,
         string SoDienThoaiNguoiNhan);
 }
+
+
+
+
+
 
 
 

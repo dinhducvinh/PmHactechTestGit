@@ -1,16 +1,16 @@
 using HactechTest.Services.App;
-using HactechTest.Services.Data;
+using HactechTest.Services.Configuration;
 using Microsoft.Data.SqlClient;
 
 namespace HactechTest.Services.History
 {
     public sealed class PhienChayStore
     {
-        private readonly Database _db;
+        private readonly string _connectionString;
 
-        public PhienChayStore(Database db)
+        public PhienChayStore(string connectionString)
         {
-            _db = db;
+            _connectionString = connectionString;
         }
 
         public async Task<int> LuuPhienChayAsync(
@@ -20,7 +20,7 @@ namespace HactechTest.Services.History
             IReadOnlyList<ChiTietKetQuaTestCase> ketQua,
             CancellationToken ct = default)
         {
-            await using var conn = await _db.OpenConnectionAsync(ct);
+            await using var conn = await CauHinhUngDung.OpenConnectionAsync(_connectionString, ct);
             await using var tran = (SqlTransaction)await conn.BeginTransactionAsync(ct);
 
             var cheDoChayDb = string.Equals(cheDoChay, "selected", StringComparison.OrdinalIgnoreCase)
@@ -97,7 +97,7 @@ namespace HactechTest.Services.History
         public async Task<List<PhienChayDaLuu>> LayDanhSachAsync(string keyword, CancellationToken ct = default)
         {
             var tomTat = new List<PhienChayTomTat>();
-            await using var conn = await _db.OpenConnectionAsync(ct);
+            await using var conn = await CauHinhUngDung.OpenConnectionAsync(_connectionString, ct);
             await using (var cmd = conn.CreateCommand())
             {
                 cmd.CommandText = """
@@ -163,7 +163,7 @@ namespace HactechTest.Services.History
 
         public async Task XoaTatCaAsync(CancellationToken ct = default)
         {
-            await using var conn = await _db.OpenConnectionAsync(ct);
+            await using var conn = await CauHinhUngDung.OpenConnectionAsync(_connectionString, ct);
             await using var cmd = conn.CreateCommand();
             cmd.CommandText = """
                 DELETE FROM dbo.chi_tiet_phien_chay;

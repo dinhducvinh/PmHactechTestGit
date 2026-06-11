@@ -1,5 +1,6 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using HactechTest.ApiShopTesting.Core;
+using static HactechTest.ApiShopTesting.Core.HelperTC;
 using HactechTest.ApiShopTesting.Seed;
 
 namespace HactechTest.ApiShopTesting.KichBan;
@@ -27,12 +28,12 @@ public static partial class BoKichBanApi
             "Token hợp lệ, index/count hợp lệ. Nếu response có data thì đồng bộ notification vào thongbao_seed.",
             async ctx =>
             {
-                var taiKhoan = LayTaiKhoanUuTienCoThongBao(ctx) ?? await ctx.YeuCauTaiKhoanDaDangKyAsync();
+                var taiKhoan = LayTaiKhoanUuTienCoThongBao(ctx) ?? await YeuCauTaiKhoanDaDangKyAsync(ctx);
                 var request = new YeuCauApi(
                     HttpMethod.Post,
                     "/notification/get_notification",
                     Obj(("index", 1), ("count", 20), ("group", 0)),
-                    await ctx.YeuCauTokenCuaTaiKhoanAsync(taiKhoan));
+                    await LayTokenCuaTaiKhoanAsync(ctx, taiKhoan));
 
                 request.Tam["taiKhoan"] = taiKhoan;
                 return request;
@@ -68,8 +69,8 @@ public static partial class BoKichBanApi
                 var request = new YeuCauApi(
                     HttpMethod.Post,
                     "/notification/set_read_notification",
-                    Obj(("notification_id", SoIdBatBuoc(thongBao.NotificationIdServer, "thongbao_seed.notification_id_server"))),
-                    await ctx.YeuCauTokenCuaTaiKhoanAsync(taiKhoan));
+                    Obj(("notification_id", IdBatBuoc(thongBao.NotificationIdServer, "thongbao_seed.notification_id_server"))),
+                    await LayTokenCuaTaiKhoanAsync(ctx, taiKhoan));
 
                 request.Tam["thongBao"] = thongBao;
                 return request;
@@ -83,7 +84,7 @@ public static partial class BoKichBanApi
                 thongBao.TrangThai = "da_doc";
                 thongBao.DocLuc = DateTimeOffset.Now;
                 thongBao.GhiChu = "Đã đọc bởi testcase NOTIFICATION-READ-02.";
-                await ctx.KhoSeed.LuuAsync();
+                await ctx.CapNhatDB.LuuAsync();
             });
 
         Them(ds, "NOTIFICATION-READ-03", "Notification", "Đánh dấu đã đọc thông báo không tồn tại",
@@ -92,7 +93,7 @@ public static partial class BoKichBanApi
                 HttpMethod.Post,
                 "/notification/set_read_notification",
                 Obj(("notification_id", 999999999)),
-                await ctx.YeuCauTokenHopLeAsync()),
+                await YeuCauTokenHopLeAsync(ctx)),
             SaiGiaTri);
     }
 
@@ -110,12 +111,12 @@ public static partial class BoKichBanApi
                 return Task.FromResult(new KetQuaKiemTraThem(false, "data của get_notification không phải mảng Notification[]."));
             }
 
-            if (!TienIchJson.CoTruong(response.Json, "last_update"))
+            if (response.Json is not JsonObject root || !root.ContainsKey("last_update"))
             {
                 return Task.FromResult(new KetQuaKiemTraThem(false, "Response thiếu trường last_update."));
             }
 
-            if (!TienIchJson.CoTruong(response.Json, "badge"))
+            if (!root.ContainsKey("badge"))
             {
                 return Task.FromResult(new KetQuaKiemTraThem(false, "Response thiếu trường badge."));
             }
@@ -136,25 +137,25 @@ public static partial class BoKichBanApi
         foreach (var item in LayObjectThongBao(response.Data))
         {
             var notificationId = DocNotificationIdServer(item);
-            if (string.IsNullOrWhiteSpace(notificationId))
+            if (notificationId is not > 0)
             {
                 continue;
             }
 
-            UpsertThongBaoSeed(ctx, taiKhoan, notificationId, item);
+            UpsertThongBaoSeed(ctx, taiKhoan, notificationId.Value, item);
             coThayDoi = true;
         }
 
         if (coThayDoi)
         {
-            await ctx.KhoSeed.LuuAsync();
+            await ctx.CapNhatDB.LuuAsync();
         }
     }
 
     private static TaiKhoanSignupThanhCongSeed? LayTaiKhoanUuTienCoThongBao(NguCanhKiemThu ctx)
     {
-        var thongBao = ctx.KhoSeed.DuLieu.ThongBaoSeed
-            .Where(x => !string.IsNullOrWhiteSpace(x.NotificationIdServer))
+        var thongBao = ctx.CapNhatDB.DuLieu.ThongBaoSeed
+            .Where(x => x.NotificationIdServer is > 0)
             .OrderBy(x => x.DaDoc == true ? 1 : 0)
             .ThenBy(x => x.ThongBaoSeedId)
             .FirstOrDefault();
@@ -166,8 +167,8 @@ public static partial class BoKichBanApi
 
     private static ThongBaoSeed LayThongBaoChuaDoc(NguCanhKiemThu ctx)
     {
-        return ctx.KhoSeed.DuLieu.ThongBaoSeed
-            .Where(x => !string.IsNullOrWhiteSpace(x.NotificationIdServer))
+        return ctx.CapNhatDB.DuLieu.ThongBaoSeed
+            .Where(x => x.NotificationIdServer is > 0)
             .Where(x => x.DaDoc != true || string.Equals(x.TrangThai, "dang_luu", StringComparison.OrdinalIgnoreCase))
             .OrderBy(x => x.ThongBaoSeedId)
             .FirstOrDefault()
@@ -176,32 +177,31 @@ public static partial class BoKichBanApi
 
     private static long LayNotificationIdDangCoHoacMacDinh(NguCanhKiemThu ctx)
     {
-        var thongBao = ctx.KhoSeed.DuLieu.ThongBaoSeed
-            .Where(x => !string.IsNullOrWhiteSpace(x.NotificationIdServer))
+        var thongBao = ctx.CapNhatDB.DuLieu.ThongBaoSeed
+            .Where(x => x.NotificationIdServer is > 0)
             .OrderBy(x => x.ThongBaoSeedId)
             .FirstOrDefault();
 
         return thongBao is null
             ? 999999999
-            : SoIdBatBuoc(thongBao.NotificationIdServer, "thongbao_seed.notification_id_server");
+            : IdBatBuoc(thongBao.NotificationIdServer, "thongbao_seed.notification_id_server");
     }
 
-    private static void UpsertThongBaoSeed(NguCanhKiemThu ctx, TaiKhoanSignupThanhCongSeed taiKhoan, string notificationId, JsonObject item)
+    private static void UpsertThongBaoSeed(NguCanhKiemThu ctx, TaiKhoanSignupThanhCongSeed taiKhoan, int notificationId, JsonObject item)
     {
-        var daDocTuServer = TienIchJson.DocBool(item, "read", "is_read", "seen", "da_doc");
-        var thongBao = ctx.KhoSeed.DuLieu.ThongBaoSeed.FirstOrDefault(x => x.NotificationIdServer == notificationId);
+        var daDocTuServer = item["read"]?.GetValue<bool>();
+        var thongBao = ctx.CapNhatDB.DuLieu.ThongBaoSeed.FirstOrDefault(x => x.NotificationIdServer == notificationId);
         if (thongBao is null)
         {
             var daDoc = daDocTuServer ?? false;
-            ctx.KhoSeed.DuLieu.ThongBaoSeed.Add(new ThongBaoSeed
+            ctx.CapNhatDB.DuLieu.ThongBaoSeed.Add(new ThongBaoSeed
             {
-                ThongBaoSeedId = TaoIdThongBaoMoi(ctx),
                 NotificationIdServer = notificationId,
                 TaiKhoanIdServer = taiKhoan.TaiKhoanIdServer,
-                Title = TienIchJson.DocChuoi(item, "title"),
-                Content = TienIchJson.DocChuoi(item, "content", "message"),
-                ObjectIdServer = TienIchJson.DocChuoi(item, "object_id", "objectId", "target_id"),
-                NotificationType = TienIchJson.DocChuoi(item, "type", "notification_type"),
+                Title = item["title"]?.ToString(),
+                Content = item["content"]?.ToString(),
+                ObjectIdServer = item["object_id"]?.GetValue<int>(),
+                NotificationType = item["type"]?.ToString(),
                 DaDoc = daDoc,
                 TrangThai = daDoc ? "da_doc" : "dang_luu",
                 LayLuc = DateTimeOffset.Now,
@@ -212,10 +212,10 @@ public static partial class BoKichBanApi
 
         var daDocHienTai = daDocTuServer ?? thongBao.DaDoc ?? false;
         thongBao.TaiKhoanIdServer = taiKhoan.TaiKhoanIdServer;
-        thongBao.Title = TienIchJson.DocChuoi(item, "title");
-        thongBao.Content = TienIchJson.DocChuoi(item, "content", "message");
-        thongBao.ObjectIdServer = TienIchJson.DocChuoi(item, "object_id", "objectId", "target_id");
-        thongBao.NotificationType = TienIchJson.DocChuoi(item, "type", "notification_type");
+        thongBao.Title = item["title"]?.ToString();
+        thongBao.Content = item["content"]?.ToString();
+        thongBao.ObjectIdServer = item["object_id"]?.GetValue<int>();
+        thongBao.NotificationType = item["type"]?.ToString();
         thongBao.DaDoc = daDocHienTai;
         thongBao.TrangThai = daDocHienTai ? "da_doc" : "dang_luu";
         thongBao.LayLuc = DateTimeOffset.Now;
@@ -239,15 +239,15 @@ public static partial class BoKichBanApi
         }
     }
 
-    private static string? DocNotificationIdServer(JsonNode? node)
+    private static int? DocNotificationIdServer(JsonNode? node)
     {
-        return TienIchJson.DocChuoi(node, "id", "notification_id", "notificationId");
+        return node?["id"]?.GetValue<int>();
     }
 
-    private static int TaoIdThongBaoMoi(NguCanhKiemThu ctx)
-    {
-        return ctx.KhoSeed.DuLieu.ThongBaoSeed.Count == 0
-            ? 1
-            : ctx.KhoSeed.DuLieu.ThongBaoSeed.Max(x => x.ThongBaoSeedId) + 1;
-    }
 }
+
+
+
+
+
+

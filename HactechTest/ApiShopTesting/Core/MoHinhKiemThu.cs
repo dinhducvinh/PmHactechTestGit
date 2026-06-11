@@ -1,6 +1,6 @@
-﻿using System.Diagnostics;
 using System.Net;
 using System.Text.Json.Nodes;
+using HactechTest.ApiShopTesting.Seed;
 
 namespace HactechTest.ApiShopTesting.Core;
 
@@ -44,6 +44,25 @@ public sealed class PhanHoiApi
     public string MaSoSanh => string.IsNullOrWhiteSpace(Code)
         ? $"HTTP_{(int)HttpStatusCode}"
         : Code!;
+}
+
+public sealed class NguCanhKiemThu
+{
+    public NguCanhKiemThu(CauHinhChay cauHinh, MayKhachApi api, CapNhatDB capNhatDB)
+    {
+        CauHinh = cauHinh;
+        Api = api;
+        CapNhatDB = capNhatDB;
+    }
+
+    public CauHinhChay CauHinh { get; }
+    public MayKhachApi Api { get; }
+    public CapNhatDB CapNhatDB { get; }
+
+    public string TokenSaiDinhDang => "abcxyz-token-sai-dinh-dang";
+
+    public string TokenHetHanGiaLap =>
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsImV4cCI6MX0.sai-chu-ky";
 }
 
 public sealed class KichBanApi

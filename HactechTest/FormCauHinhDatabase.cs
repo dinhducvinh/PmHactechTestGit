@@ -1,6 +1,5 @@
 using HactechTest.Services.App;
 using HactechTest.Services.Configuration;
-using HactechTest.Services.Data;
 
 namespace HactechTest
 {
@@ -42,8 +41,7 @@ namespace HactechTest
             try
             {
                 var connectionString = LayConnectionString();
-                var database = new Database(connectionString);
-                var hopLe = await database.KiemTraSchemaCoBanAsync();
+                var hopLe = await CauHinhUngDung.KiemTraSchemaCoBanAsync(connectionString);
                 if (!hopLe)
                 {
                     lblThongBao.ForeColor = Color.FromArgb(220, 53, 69);

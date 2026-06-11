@@ -1,8 +1,56 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace HactechTest.ApiShopTesting.Seed;
 
-public sealed class DuLieuSeed
+public static class YeuCauDuLieuSeed
+{
+    public const int SoTaiKhoanDaDangKyToiThieu = 100;
+    public const int SoSavedSearchToiThieu = 2;
+    public const int SoQuanHeChinhToiThieu = 2;
+    public const int SoQuanHeChinhMucTieu = 3;
+    public const int SoTinhThanhToiThieu = 5;
+    public const int SoPhuongXaToiThieu = 28;
+    public const int SoDiaChiTaiKhoanMucTieu = 50;
+    public const int SoDanhMucToiThieu = 1;
+    public const int SoSellerSanPhamMucTieu = 20;
+    public const int SoSanPhamToiThieuMoiSeller = 3;
+    public const int SoSanPhamToiThieu = SoSellerSanPhamMucTieu * SoSanPhamToiThieuMoiSeller;
+    public const int SoLikeSanPhamMucTieu = 5;
+    public const int SoTinNhanMucTieu = 5;
+}
+
+public enum HangMucChuanBiDuLieuSeed
+{
+    TaiKhoanDaDangKy,
+    DanhMucVaThuongHieu,
+    DiaChiTaiKhoan,
+    Chan,
+    TheoDoi,
+    TimKiem,
+    SanPham,
+    LikeSanPham,
+    TinNhan,
+    ThongBao
+}
+
+public sealed class KeHoachChuanBiDuLieuSeed
+{
+    public KeHoachChuanBiDuLieuSeed(IEnumerable<HangMucChuanBiDuLieuSeed> hangMucCanChuanBi)
+    {
+        HangMucCanChuanBi = hangMucCanChuanBi.Distinct().ToArray();
+    }
+
+    public IReadOnlyList<HangMucChuanBiDuLieuSeed> HangMucCanChuanBi { get; }
+
+    public bool CoHangMucCanChuanBi => HangMucCanChuanBi.Count > 0;
+
+    public bool CanChuanBi(HangMucChuanBiDuLieuSeed hangMuc)
+    {
+        return HangMucCanChuanBi.Contains(hangMuc);
+    }
+}
+
+public sealed class BoDuLieuSeed
 {
     [JsonPropertyName("taikhoan_seed")]
     public List<TaiKhoanChuaDangKySeed> TaiKhoanChuaDangKySeed { get; set; } = [];
@@ -78,7 +126,7 @@ public sealed class TaiKhoanChuaDangKySeed
 public sealed class TaiKhoanSignupThanhCongSeed
 {
     [JsonPropertyName("tk_id_server")]
-    public string TaiKhoanIdServer { get; set; } = "";
+    public int TaiKhoanIdServer { get; set; }
 
     [JsonPropertyName("sdt")]
     public string SoDienThoai { get; set; } = "";
@@ -108,10 +156,10 @@ public sealed class TaiKhoanTimKiemSeed
     public int TaiKhoanTimKiemSeedId { get; set; }
 
     [JsonPropertyName("tk_id_server")]
-    public string? TaiKhoanIdServer { get; set; }
+    public int? TaiKhoanIdServer { get; set; }
 
     [JsonPropertyName("saved_search_id_server")]
-    public string? SavedSearchIdServer { get; set; }
+    public int? SavedSearchIdServer { get; set; }
 
     [JsonPropertyName("keyword")]
     public string Keyword { get; set; } = "";
@@ -138,10 +186,10 @@ public sealed class TaiKhoanTheoDoiSeed
     public int TheoDoiSeedId { get; set; }
 
     [JsonPropertyName("follower_tk_id_server")]
-    public string? FollowerTaiKhoanIdServer { get; set; }
+    public int? FollowerTaiKhoanIdServer { get; set; }
 
     [JsonPropertyName("followee_tk_id_server")]
-    public string? FolloweeTaiKhoanIdServer { get; set; }
+    public int? FolloweeTaiKhoanIdServer { get; set; }
 
     [JsonPropertyName("theo_doi_luc")]
     public DateTimeOffset? TheoDoiLuc { get; set; }
@@ -159,10 +207,10 @@ public sealed class TaiKhoanChanSeed
     public int ChanSeedId { get; set; }
 
     [JsonPropertyName("blocker_tk_id_server")]
-    public string? BlockerTaiKhoanIdServer { get; set; }
+    public int? BlockerTaiKhoanIdServer { get; set; }
 
     [JsonPropertyName("blocked_tk_id_server")]
-    public string? BlockedTaiKhoanIdServer { get; set; }
+    public int? BlockedTaiKhoanIdServer { get; set; }
 
     [JsonPropertyName("chan_luc")]
     public DateTimeOffset? ChanLuc { get; set; }
@@ -201,10 +249,10 @@ public sealed class DiaChiTaiKhoanSeed
     public int DiaChiSeedId { get; set; }
 
     [JsonPropertyName("tk_id_server")]
-    public string? TaiKhoanIdServer { get; set; }
+    public int? TaiKhoanIdServer { get; set; }
 
     [JsonPropertyName("diachi_id_server")]
-    public string? DiaChiIdServer { get; set; }
+    public int? DiaChiIdServer { get; set; }
 
     [JsonPropertyName("ward_id")]
     public int PhuongXaId { get; set; }
@@ -255,13 +303,13 @@ public sealed class DiaChiTaiKhoanSeed
 public sealed class DanhMucSeed
 {
     [JsonPropertyName("dm_id_server")]
-    public string DanhMucIdServer { get; set; } = "";
+    public int DanhMucIdServer { get; set; }
 
     [JsonPropertyName("ten_danh_muc")]
     public string TenDanhMuc { get; set; } = "";
 
     [JsonPropertyName("dm_cha_id_server")]
-    public string? DanhMucChaIdServer { get; set; }
+    public int? DanhMucChaIdServer { get; set; }
 
     [JsonPropertyName("co_danh_muc_con")]
     public bool? CoDanhMucCon { get; set; }
@@ -285,13 +333,13 @@ public sealed class DanhMucSeed
 public sealed class ThuongHieuSeed
 {
     [JsonPropertyName("thuonghieu_id_server")]
-    public string ThuongHieuIdServer { get; set; } = "";
+    public int ThuongHieuIdServer { get; set; }
 
     [JsonPropertyName("ten_thuong_hieu")]
     public string TenThuongHieu { get; set; } = "";
 
     [JsonPropertyName("dm_id_server")]
-    public string? DanhMucIdServer { get; set; }
+    public int? DanhMucIdServer { get; set; }
 
     [JsonPropertyName("trang_thai")]
     public string TrangThai { get; set; } = "san_sang";
@@ -306,19 +354,19 @@ public sealed class SanPhamSeed
     public int ThuTuNoiBo { get; set; }
 
     [JsonPropertyName("sp_id_server")]
-    public string? SanPhamIdServer { get; set; }
+    public int? SanPhamIdServer { get; set; }
 
     [JsonPropertyName("tk_id_server")]
-    public string? TaiKhoanIdServer { get; set; }
+    public int? TaiKhoanIdServer { get; set; }
 
     [JsonPropertyName("dm_id_server")]
-    public string? DanhMucIdServer { get; set; }
+    public int? DanhMucIdServer { get; set; }
 
     [JsonPropertyName("thuonghieu_id_server")]
-    public string? ThuongHieuIdServer { get; set; }
+    public int? ThuongHieuIdServer { get; set; }
 
     [JsonPropertyName("ship_from_id_server")]
-    public string? DiaChiGuiHangIdServer { get; set; }
+    public int? DiaChiGuiHangIdServer { get; set; }
 
     [JsonPropertyName("ten_sp")]
     public string TenSanPham { get; set; } = "";
@@ -348,10 +396,10 @@ public sealed class TaiKhoanThichSanPhamSeed
     public int ThichSanPhamSeedId { get; set; }
 
     [JsonPropertyName("tk_id_server")]
-    public string? TaiKhoanIdServer { get; set; }
+    public int? TaiKhoanIdServer { get; set; }
 
     [JsonPropertyName("sp_id_server")]
-    public string? SanPhamIdServer { get; set; }
+    public int? SanPhamIdServer { get; set; }
 
     [JsonPropertyName("thich_luc")]
     public DateTimeOffset? ThichLuc { get; set; }
@@ -369,19 +417,19 @@ public sealed class TinNhanSeed
     public int TinNhanSeedId { get; set; }
 
     [JsonPropertyName("conversation_id_server")]
-    public string? ConversationIdServer { get; set; }
+    public int? ConversationIdServer { get; set; }
 
     [JsonPropertyName("message_id_server")]
-    public string? MessageIdServer { get; set; }
+    public int? MessageIdServer { get; set; }
 
     [JsonPropertyName("sender_tk_id_server")]
-    public string? SenderTaiKhoanIdServer { get; set; }
+    public int? SenderTaiKhoanIdServer { get; set; }
 
     [JsonPropertyName("receiver_tk_id_server")]
-    public string? ReceiverTaiKhoanIdServer { get; set; }
+    public int? ReceiverTaiKhoanIdServer { get; set; }
 
     [JsonPropertyName("product_id_server")]
-    public string? SanPhamIdServer { get; set; }
+    public int? SanPhamIdServer { get; set; }
 
     [JsonPropertyName("type_message")]
     public string TypeMessage { get; set; } = "text";
@@ -408,10 +456,10 @@ public sealed class ThongBaoSeed
     public int ThongBaoSeedId { get; set; }
 
     [JsonPropertyName("notification_id_server")]
-    public string? NotificationIdServer { get; set; }
+    public int? NotificationIdServer { get; set; }
 
     [JsonPropertyName("tk_id_server")]
-    public string? TaiKhoanIdServer { get; set; }
+    public int? TaiKhoanIdServer { get; set; }
 
     [JsonPropertyName("title")]
     public string? Title { get; set; }
@@ -420,7 +468,7 @@ public sealed class ThongBaoSeed
     public string? Content { get; set; }
 
     [JsonPropertyName("object_id_server")]
-    public string? ObjectIdServer { get; set; }
+    public int? ObjectIdServer { get; set; }
 
     [JsonPropertyName("notification_type")]
     public string? NotificationType { get; set; }
@@ -440,6 +488,7 @@ public sealed class ThongBaoSeed
     [JsonPropertyName("ghi_chu")]
     public string? GhiChu { get; set; }
 }
+
 
 
 

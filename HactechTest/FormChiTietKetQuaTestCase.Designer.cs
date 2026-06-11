@@ -1,4 +1,4 @@
-﻿namespace HactechTest
+namespace HactechTest
 {
     partial class FormChiTietKetQuaTestCase
     {

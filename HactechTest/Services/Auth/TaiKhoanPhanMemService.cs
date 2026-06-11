@@ -1,17 +1,17 @@
 using System.Security.Cryptography;
 using System.Text;
-using HactechTest.Services.Data;
+using HactechTest.Services.Configuration;
 using Microsoft.Data.SqlClient;
 
 namespace HactechTest.Services.Auth
 {
     public sealed class TaiKhoanPhanMemService
     {
-        private readonly Database _database;
+        private readonly string _connectionString;
 
-        public TaiKhoanPhanMemService(Database database)
+        public TaiKhoanPhanMemService(string connectionString)
         {
-            _database = database;
+            _connectionString = connectionString;
         }
 
         public async Task<TaiKhoanPhanMem?> DangNhapAsync(
@@ -25,7 +25,7 @@ namespace HactechTest.Services.Auth
                 return null;
             }
 
-            await using var conn = await _database.OpenConnectionAsync(ct);
+            await using var conn = await CauHinhUngDung.OpenConnectionAsync(_connectionString, ct);
             await using var cmd = conn.CreateCommand();
             cmd.CommandText = """
                 SELECT TOP 1
@@ -60,7 +60,7 @@ namespace HactechTest.Services.Auth
         public async Task<IReadOnlyList<TaiKhoanPhanMem>> LayDanhSachAsync(CancellationToken ct = default)
         {
             var ketQua = new List<TaiKhoanPhanMem>();
-            await using var conn = await _database.OpenConnectionAsync(ct);
+            await using var conn = await CauHinhUngDung.OpenConnectionAsync(_connectionString, ct);
             await using var cmd = conn.CreateCommand();
             cmd.CommandText = """
                 SELECT
@@ -89,7 +89,7 @@ namespace HactechTest.Services.Auth
             var salt = TaoSalt();
             var hash = HashMatKhau(request.MatKhau!, salt);
 
-            await using var conn = await _database.OpenConnectionAsync(ct);
+            await using var conn = await CauHinhUngDung.OpenConnectionAsync(_connectionString, ct);
             await using var cmd = conn.CreateCommand();
             cmd.CommandText = """
                 IF EXISTS (SELECT 1 FROM dbo.taikhoan_phanmemtest WHERE ten_dang_nhap = @ten_dang_nhap)
@@ -117,7 +117,7 @@ namespace HactechTest.Services.Auth
 
             KiemTraDuLieuTaiKhoan(request.TenDangNhap, request.MatKhauMoi, request.VaiTro, batBuocMatKhau: false);
 
-            await using var conn = await _database.OpenConnectionAsync(ct);
+            await using var conn = await CauHinhUngDung.OpenConnectionAsync(_connectionString, ct);
             if (request.TrangThai != "hoat_dong" || request.VaiTro != "admin")
             {
                 await DamBaoKhongKhoaAdminCuoiAsync(conn, request.Id, ct);
@@ -178,7 +178,7 @@ namespace HactechTest.Services.Auth
                 throw new InvalidOperationException("Mật khẩu mới phải có ít nhất 4 ký tự.");
             }
 
-            await using var conn = await _database.OpenConnectionAsync(ct);
+            await using var conn = await CauHinhUngDung.OpenConnectionAsync(_connectionString, ct);
             string hashDaLuu;
             string saltDaLuu;
 

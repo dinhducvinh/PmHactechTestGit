@@ -1,6 +1,7 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Diagnostics;
 using HactechTest.ApiShopTesting.Core;
+using static HactechTest.ApiShopTesting.Core.HelperTC;
 using HactechTest.ApiShopTesting.Seed;
 
 namespace HactechTest.ApiShopTesting.KichBan;
@@ -45,8 +46,8 @@ public static partial class BoKichBanApi
     {
         ThemTai(ds,
             "LOAD-AUTH-ME-100-01",
-            "100 tài khoản gọi GET /auth/me đồng thời",
-            "Chuẩn bị token cho 100 tài khoản seed rồi gọi GET /auth/me cùng lúc bằng token riêng của từng tài khoản.",
+            "100 tài khoản gửi GET /auth/me đồng thời",
+            "Chuẩn bị token cho 100 tài khoản seed rồi gửi GET /auth/me cùng lúc bằng token riêng của từng tài khoản.",
             loiToiDaPhanTram: 10,
             tbToiDaMs: 2000,
             p95ToiDaMs: 6000,
@@ -57,7 +58,7 @@ public static partial class BoKichBanApi
                 return await ChayTaiAsync(
                     ctx,
                     "LOAD-AUTH-ME-100-01",
-                    "100 tài khoản gọi GET /auth/me đồng thời",
+                    "100 tài khoản gửi GET /auth/me đồng thời",
                     "GET /auth/me x100",
                     loiToiDaPhanTram: 10,
                     tbToiDaMs: 2000,
@@ -75,8 +76,8 @@ public static partial class BoKichBanApi
     {
         ThemTai(ds,
             "LOAD-USER-INFO-100-01",
-            "100 tài khoản gọi POST /users/get_user_info đồng thời",
-            "Chuẩn bị token cho 100 tài khoản seed rồi gọi POST /users/get_user_info cùng lúc, mỗi tài khoản đọc hồ sơ của chính mình.",
+            "100 tài khoản gửi POST /users/get_user_info đồng thời",
+            "Chuẩn bị token cho 100 tài khoản seed rồi gửi POST /users/get_user_info cùng lúc, mỗi tài khoản đọc hộ sơ của chính mình.",
             loiToiDaPhanTram: 10,
             tbToiDaMs: 2500,
             p95ToiDaMs: 7000,
@@ -87,7 +88,7 @@ public static partial class BoKichBanApi
                 return await ChayTaiAsync(
                     ctx,
                     "LOAD-USER-INFO-100-01",
-                    "100 tài khoản gọi POST /users/get_user_info đồng thời",
+                    "100 tài khoản gửi POST /users/get_user_info đồng thời",
                     "POST /users/get_user_info x100",
                     loiToiDaPhanTram: 10,
                     tbToiDaMs: 2500,
@@ -170,9 +171,9 @@ public static partial class BoKichBanApi
 
     private static IReadOnlyList<TaiKhoanSignupThanhCongSeed> LayMotTramTaiKhoanDaDangKy(NguCanhKiemThu ctx)
     {
-        var taiKhoan = ctx.KhoSeed.DuLieu.TaiKhoanSignupThanhCongSeed
+        var taiKhoan = ctx.CapNhatDB.DuLieu.TaiKhoanSignupThanhCongSeed
             .Where(x =>
-                !string.IsNullOrWhiteSpace(x.TaiKhoanIdServer) &&
+                x.TaiKhoanIdServer is > 0 &&
                 !string.IsNullOrWhiteSpace(x.SoDienThoai) &&
                 !string.IsNullOrWhiteSpace(x.MatKhauHienTai))
             .OrderBy(x => x.SoThuTu)
@@ -182,7 +183,7 @@ public static partial class BoKichBanApi
         if (taiKhoan.Count < SoTaiKhoanKiemThuTai)
         {
             throw new LoiChuanBiKiemThuException(
-                $"Cần {SoTaiKhoanKiemThuTai} tài khoản seed đã đăng ký để chạy test tải, hiện chỉ có {taiKhoan.Count}. Hãy bấm Kiểm tra seed để chuẩn bị đủ dữ liệu mồi.");
+                $"Cần {SoTaiKhoanKiemThuTai} tài khoản seed đã đăng ký để chạy test tải, hiện chỉ có {taiKhoan.Count}. Hãy bấm Kiểm tra seed để chuẩn bị đủ dữ liệu mới.");
         }
 
         return taiKhoan;
@@ -206,7 +207,7 @@ public static partial class BoKichBanApi
                     new YeuCauApi(HttpMethod.Post, "/auth/login", TaoBodyDangNhap(tk)),
                     cancellationToken);
                 var token = response.MaSoSanh == "1000"
-                    ? TienIchJson.DocChuoi(response.Data, "token", "access_token", "jwt_token")
+                    ? response.Data?["token"]?.ToString()
                     : null;
 
                 if (string.IsNullOrWhiteSpace(token))
@@ -223,7 +224,7 @@ public static partial class BoKichBanApi
             }
             catch (Exception ex)
             {
-                loi.Add($"tk_id_server {tk.TaiKhoanIdServer}: {TienIchJson.RutGon(ex.Message, 160)}");
+                loi.Add($"tk_id_server {tk.TaiKhoanIdServer}: {RutGon(ex.Message, 160)}");
             }
             finally
             {
@@ -301,13 +302,24 @@ public static partial class BoKichBanApi
         catch (HttpRequestException ex)
         {
             dongHo.Stop();
-            return new KetQuaLanTai(false, "ENV_ERROR", dongHo.Elapsed, $"tk_id_server {taiKhoan.TaiKhoanIdServer}: không gọi được API. {ex.Message}", LoiMoiTruong: true);
+            return new KetQuaLanTai(false, "ENV_ERROR", dongHo.Elapsed, $"tk_id_server {taiKhoan.TaiKhoanIdServer}: không gửi được API. {ex.Message}", LoiMoiTruong: true);
         }
         catch (Exception ex)
         {
             dongHo.Stop();
-            return new KetQuaLanTai(false, "ERROR", dongHo.Elapsed, $"tk_id_server {taiKhoan.TaiKhoanIdServer}: {TienIchJson.RutGon(ex.Message, 180)}", LoiMoiTruong: false);
+            return new KetQuaLanTai(false, "ERROR", dongHo.Elapsed, $"tk_id_server {taiKhoan.TaiKhoanIdServer}: {RutGon(ex.Message, 180)}", LoiMoiTruong: false);
         }
+    }
+
+    private static string RutGon(string? raw, int max)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return "";
+        }
+
+        var motDong = raw.Replace(Environment.NewLine, " ");
+        return motDong.Length <= max ? motDong : motDong[..max] + "...";
     }
 
     private static Dictionary<string, object?> TaoBodyDangNhap(TaiKhoanSignupThanhCongSeed taiKhoan)
@@ -375,6 +387,10 @@ public static partial class BoKichBanApi
         string? Loi,
         bool LoiMoiTruong);
 }
+
+
+
+
 
 
 

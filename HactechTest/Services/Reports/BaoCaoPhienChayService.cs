@@ -9,7 +9,7 @@ namespace HactechTest.Services.Reports
 {
     public sealed class BaoCaoPhienChayService
     {
-        private static readonly JsonSerializerOptions TuyChonJsonBaoCao = new()
+        private static readonly JsonSerializerOptions JsonOptionsBaoCao = new()
         {
             WriteIndented = true,
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
@@ -26,7 +26,7 @@ namespace HactechTest.Services.Reports
             var duongDanJson = Path.Combine(folder, tenFile + ".json");
             var duLieuBaoCao = TaoDuLieuBaoCao(thongTin, ketQua);
 
-            File.WriteAllText(duongDanJson, JsonSerializer.Serialize(duLieuBaoCao, TuyChonJsonBaoCao), Encoding.UTF8);
+            File.WriteAllText(duongDanJson, JsonSerializer.Serialize(duLieuBaoCao, JsonOptionsBaoCao), Encoding.UTF8);
             File.WriteAllText(duongDanHtml, TaoHtmlBaoCao(duLieuBaoCao), Encoding.UTF8);
 
             return new KetQuaLuuBaoCao(duongDanHtml, duongDanJson);

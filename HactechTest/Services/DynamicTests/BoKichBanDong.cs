@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using HactechTest.ApiShopTesting.Core;
 
@@ -34,7 +34,7 @@ namespace HactechTest.Services.DynamicTests
             var endpoint = ApDungPathParams(testCase.Endpoint, testCase.PathParamsJson);
             var body = DocBodyJson(testCase.BodyJson);
             var token = string.Equals(testCase.AuthMode, "bearer_seed", StringComparison.OrdinalIgnoreCase)
-                ? await ctx.YeuCauTokenHopLeAsync()
+                ? await HelperTC.YeuCauTokenHopLeAsync(ctx)
                 : null;
 
             var request = new YeuCauApi(new HttpMethod(testCase.HttpMethod), endpoint, body, token);
@@ -53,7 +53,7 @@ namespace HactechTest.Services.DynamicTests
             {
                 return Task.FromResult(new KetQuaKiemTraThem(
                     false,
-                    $"HTTP status phải là {testCase.ExpectedHttpStatus.Value}, thực tế là {(int)response.HttpStatusCode}."));
+                    $"HTTP status pháº£i lÃ  {testCase.ExpectedHttpStatus.Value}, thá»±c táº¿ lÃ  {(int)response.HttpStatusCode}."));
             }
 
             if (!string.IsNullOrWhiteSpace(testCase.ExpectedJsonPath))
@@ -61,7 +61,7 @@ namespace HactechTest.Services.DynamicTests
                 var node = LayJsonPath(response.Json, testCase.ExpectedJsonPath);
                 if (node is null)
                 {
-                    return Task.FromResult(new KetQuaKiemTraThem(false, $"Response không có JSON path `{testCase.ExpectedJsonPath}`."));
+                    return Task.FromResult(new KetQuaKiemTraThem(false, $"Response khÃ´ng cÃ³ JSON path `{testCase.ExpectedJsonPath}`."));
                 }
 
                 if (!string.IsNullOrWhiteSpace(testCase.ExpectedJsonValue))
@@ -71,7 +71,7 @@ namespace HactechTest.Services.DynamicTests
                     {
                         return Task.FromResult(new KetQuaKiemTraThem(
                             false,
-                            $"JSON path `{testCase.ExpectedJsonPath}` phải bằng `{testCase.ExpectedJsonValue}`, thực tế là `{actual}`."));
+                            $"JSON path `{testCase.ExpectedJsonPath}` pháº£i báº±ng `{testCase.ExpectedJsonValue}`, thá»±c táº¿ lÃ  `{actual}`."));
                     }
                 }
             }
@@ -92,7 +92,7 @@ namespace HactechTest.Services.DynamicTests
         private static string TaoMoTa(TestCaseDong testCase)
         {
             var moTa = string.IsNullOrWhiteSpace(testCase.MoTa)
-                ? "Test case cơ bản do người dùng cấu hình trong phần mềm."
+                ? "Test case cÆ¡ báº£n do ngÆ°á»i dÃ¹ng cáº¥u hÃ¬nh trong pháº§n má»m."
                 : testCase.MoTa;
 
             return $"{moTa}{Environment.NewLine}{testCase.HttpMethod} {testCase.Endpoint}";
@@ -123,7 +123,7 @@ namespace HactechTest.Services.DynamicTests
                 var tenParam = match.Groups[1].Value;
                 if (!pathParams.TryGetValue(tenParam, out var giaTri) || string.IsNullOrWhiteSpace(giaTri))
                 {
-                    throw new InvalidOperationException($"Endpoint `{endpoint}` cần path param `{tenParam}`. Hãy nhập Path params JSON, ví dụ {{ \"{tenParam}\": \"123\" }}.");
+                    throw new InvalidOperationException($"Endpoint `{endpoint}` cáº§n path param `{tenParam}`. HÃ£y nháº­p Path params JSON, vÃ­ dá»¥ {{ \"{tenParam}\": \"123\" }}.");
                 }
 
                 ketQua = ketQua.Replace(match.Value, Uri.EscapeDataString(giaTri));
@@ -143,7 +143,7 @@ namespace HactechTest.Services.DynamicTests
             var node = JsonNode.Parse(json);
             if (node is not JsonObject obj)
             {
-                throw new InvalidOperationException("Path params JSON phải là object, ví dụ { \"id\": \"123\" }.");
+                throw new InvalidOperationException("Path params JSON pháº£i lÃ  object, vÃ­ dá»¥ { \"id\": \"123\" }.");
             }
 
             foreach (var item in obj)
@@ -165,7 +165,7 @@ namespace HactechTest.Services.DynamicTests
             var node = JsonNode.Parse(json);
             if (node is not JsonObject obj)
             {
-                throw new InvalidOperationException("Headers JSON phải là object, ví dụ { \"X-Test\": \"1\" }.");
+                throw new InvalidOperationException("Headers JSON pháº£i lÃ  object, vÃ­ dá»¥ { \"X-Test\": \"1\" }.");
             }
 
             foreach (var item in obj)
@@ -235,3 +235,4 @@ namespace HactechTest.Services.DynamicTests
         }
     }
 }
+

@@ -1,6 +1,6 @@
 using HactechTest.Services.Auth;
 using HactechTest.Services.Configuration;
-using HactechTest.Services.Data;
+using Microsoft.Data.SqlClient;
 
 namespace HactechTest.Services.App
 {
@@ -10,8 +10,6 @@ namespace HactechTest.Services.App
     public sealed class AppHost
     {
         private static AppHost? _instance;
-
-        public Database Database { get; private set; }
 
         public TaiKhoanPhanMemService TaiKhoanPhanMem { get; private set; }
 
@@ -28,16 +26,15 @@ namespace HactechTest.Services.App
 
         public static async Task<AppHost> InitializeAsync(CancellationToken ct = default)
         {
-            var host = new AppHost(new Database(CauHinhUngDung.Instance.ConnectionString));
+            var host = new AppHost();
             await host.KiemTraDatabaseAsync(ct);
             _instance = host;
             return host;
         }
 
-        private AppHost(Database database)
+        private AppHost()
         {
-            Database = database;
-            TaiKhoanPhanMem = new TaiKhoanPhanMemService(database);
+            TaiKhoanPhanMem = new TaiKhoanPhanMemService(CauHinhUngDung.Instance.ConnectionString);
         }
 
         public void DatTaiKhoanDangNhap(TaiKhoanPhanMem taiKhoan)
@@ -47,7 +44,7 @@ namespace HactechTest.Services.App
 
         public async Task<bool> NapLaiDatabaseAsync(CancellationToken ct = default)
         {
-            GanDatabase(new Database(CauHinhUngDung.Instance.ConnectionString));
+            TaiKhoanPhanMem = new TaiKhoanPhanMemService(CauHinhUngDung.Instance.ConnectionString);
             return await KiemTraDatabaseAsync(ct);
         }
 
@@ -56,17 +53,18 @@ namespace HactechTest.Services.App
             TaiKhoanDangNhap = null;
         }
 
-        private void GanDatabase(Database database)
+        public string ConnectionString => CauHinhUngDung.Instance.ConnectionString;
+
+        public Task<SqlConnection> OpenConnectionAsync(CancellationToken ct = default)
         {
-            Database = database;
-            TaiKhoanPhanMem = new TaiKhoanPhanMemService(database);
+            return CauHinhUngDung.Instance.OpenConnectionAsync(ct);
         }
 
         private async Task<bool> KiemTraDatabaseAsync(CancellationToken ct)
         {
             try
             {
-                DatabaseSanSang = await Database.KiemTraSchemaCoBanAsync(ct);
+                DatabaseSanSang = await CauHinhUngDung.Instance.KiemTraSchemaCoBanAsync(ct);
             }
             catch
             {

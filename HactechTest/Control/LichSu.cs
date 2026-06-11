@@ -194,7 +194,7 @@ namespace HactechTest.Control
         private static PhienChayStore? TaoStore()
         {
             return AppHost.IsInitialized && AppHost.Instance.DatabaseSanSang
-                ? new PhienChayStore(AppHost.Instance.Database)
+                ? new PhienChayStore(AppHost.Instance.ConnectionString)
                 : null;
         }
     }

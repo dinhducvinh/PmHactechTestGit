@@ -1,4 +1,5 @@
 ﻿using HactechTest.ApiShopTesting.Core;
+using static HactechTest.ApiShopTesting.Core.HelperTC;
 
 using System.Text.Json.Nodes;
 
@@ -16,28 +17,28 @@ public static partial class BoKichBanApi
 
     private static void ThemDevToken(List<KichBanApi> ds)
     {
-        Them(ds, "DEV-TOKEN-01", "DevTokenPush", "Đăng ký device token hợp lệ",
-            "Token hợp lệ, devtype/devtoken đúng định dạng.",
+        Them(ds, "DEV-TOKEN-01", "DevTokenPush", "ÄÄƒng kÃ½ device token há»£p lá»‡",
+            "Token há»£p lá»‡, devtype/devtoken Ä‘Ãºng Ä‘á»‹nh dáº¡ng.",
             async ctx => new YeuCauApi(HttpMethod.Post, "/dev_tokens/set_devtoken",
                 Obj(("devtype", "0"), ("devtoken", $"device_token_seed_{DateTimeOffset.Now:yyyyMMddHHmmss}")),
-                await ctx.YeuCauTokenHopLeAsync()),
+                await YeuCauTokenHopLeAsync(ctx)),
             Ok,
             DataOkHoacKhongCanKiemTra());
 
-        Them(ds, "DEV-TOKEN-02", "DevTokenPush", "Đăng ký device token không gửi token",
-            "Không kèm Authorization.",
+        Them(ds, "DEV-TOKEN-02", "DevTokenPush", "ÄÄƒng kÃ½ device token khÃ´ng gá»­i token",
+            "KhÃ´ng kÃ¨m Authorization.",
             _ => Req(HttpMethod.Post, "/dev_tokens/set_devtoken", Obj(("devtype", "0"), ("devtoken", "device_token_no_auth"))),
             DevTokenPushSaiToken);
 
-        Them(ds, "DEV-TOKEN-03", "DevTokenPush", "Đăng ký device token thiếu devtoken",
-            "Có token và devtype nhưng thiếu devtoken.",
+        Them(ds, "DEV-TOKEN-03", "DevTokenPush", "ÄÄƒng kÃ½ device token thiáº¿u devtoken",
+            "CÃ³ token vÃ  devtype nhÆ°ng thiáº¿u devtoken.",
             async ctx => new YeuCauApi(HttpMethod.Post, "/dev_tokens/set_devtoken",
                 Obj(("devtype", "0")),
-                await ctx.YeuCauTokenHopLeAsync()),
+                await YeuCauTokenHopLeAsync(ctx)),
             ThieuThamSo);
 
-        Them(ds, "DEV-TOKEN-04", "DevTokenPush", "Đăng ký device token với token không hợp lệ",
-            "Token sai/hết hạn, body hợp lệ.",
+        Them(ds, "DEV-TOKEN-04", "DevTokenPush", "ÄÄƒng kÃ½ device token vá»›i token khÃ´ng há»£p lá»‡",
+            "Token sai/háº¿t háº¡n, body há»£p lá»‡.",
             ctx => Req(HttpMethod.Post, "/dev_tokens/set_devtoken",
                 Obj(("devtype", "1"), ("devtoken", "device_token_bad_auth")),
                 ctx.TokenSaiDinhDang),
@@ -46,52 +47,52 @@ public static partial class BoKichBanApi
 
     private static void ThemPushSetting(List<KichBanApi> ds)
     {
-        Them(ds, "PUSH-GET-01", "DevTokenPush", "Lấy cấu hình push setting",
-            "Token hợp lệ của user đang tồn tại.",
-            async ctx => new YeuCauApi(HttpMethod.Post, "/push_settings/get_push_setting", Obj(), await ctx.YeuCauTokenHopLeAsync()),
+        Them(ds, "PUSH-GET-01", "DevTokenPush", "Láº¥y cáº¥u hÃ¬nh push setting",
+            "Token há»£p lá»‡ cá»§a user Ä‘ang tá»“n táº¡i.",
+            async ctx => new YeuCauApi(HttpMethod.Post, "/push_settings/get_push_setting", Obj(), await YeuCauTokenHopLeAsync(ctx)),
             Ok,
             DataCoTruong("like", "comment", "transaction", "announcement", "sound_on", "sound_default"));
 
-        Them(ds, "PUSH-GET-02", "DevTokenPush", "Lấy push setting với token không hợp lệ",
-            "Token sai/hết hạn.",
+        Them(ds, "PUSH-GET-02", "DevTokenPush", "Láº¥y push setting vá»›i token khÃ´ng há»£p lá»‡",
+            "Token sai/háº¿t háº¡n.",
             ctx => Req(HttpMethod.Post, "/push_settings/get_push_setting", Obj(), ctx.TokenSaiDinhDang),
             DevTokenPushSaiToken);
 
-        Them(ds, "PUSH-GET-03", "DevTokenPush", "Lấy push setting không gửi token",
-            "Không kèm Authorization.",
+        Them(ds, "PUSH-GET-03", "DevTokenPush", "Láº¥y push setting khÃ´ng gá»­i token",
+            "KhÃ´ng kÃ¨m Authorization.",
             _ => Req(HttpMethod.Post, "/push_settings/get_push_setting", Obj()),
             DevTokenPushSaiToken);
 
-        Them(ds, "PUSH-SET-01", "DevTokenPush", "Cập nhật nhiều push setting",
-            "Cập nhật nhiều field cấu hình bằng giá trị string 0/1.",
+        Them(ds, "PUSH-SET-01", "DevTokenPush", "Cáº­p nháº­t nhiá»u push setting",
+            "Cáº­p nháº­t nhiá»u field cáº¥u hÃ¬nh báº±ng giÃ¡ trá»‹ string 0/1.",
             async ctx => new YeuCauApi(HttpMethod.Post, "/push_settings/set_push_setting",
                 Obj(("like", "0"), ("comment", "1"), ("transaction", "1"), ("announcement", "1"), ("sound_on", "0"), ("sound_default", "string")),
-                await ctx.YeuCauTokenHopLeAsync()),
+                await YeuCauTokenHopLeAsync(ctx)),
             Ok,
             DataOkHoacKhongCanKiemTra(),
             KiemTraPushSettingSauCapNhatAsync(("like", "0"), ("comment", "1"), ("transaction", "1"), ("announcement", "1"), ("sound_on", "0")));
 
-        Them(ds, "PUSH-SET-02", "DevTokenPush", "Cập nhật một push setting",
-            "Chỉ cập nhật announcement, các field còn lại giữ nguyên.",
+        Them(ds, "PUSH-SET-02", "DevTokenPush", "Cáº­p nháº­t má»™t push setting",
+            "Chá»‰ cáº­p nháº­t announcement, cÃ¡c field cÃ²n láº¡i giá»¯ nguyÃªn.",
             async ctx => new YeuCauApi(HttpMethod.Post, "/push_settings/set_push_setting",
                 Obj(("announcement", "0")),
-                await ctx.YeuCauTokenHopLeAsync()),
+                await YeuCauTokenHopLeAsync(ctx)),
             Ok,
             DataOkHoacKhongCanKiemTra(),
             KiemTraPushSettingSauCapNhatAsync(("announcement", "0")));
 
-        Them(ds, "PUSH-SET-03", "DevTokenPush", "Cập nhật push setting với token không hợp lệ",
-            "Token sai/hết hạn, body hợp lệ.",
+        Them(ds, "PUSH-SET-03", "DevTokenPush", "Cáº­p nháº­t push setting vá»›i token khÃ´ng há»£p lá»‡",
+            "Token sai/háº¿t háº¡n, body há»£p lá»‡.",
             ctx => Req(HttpMethod.Post, "/push_settings/set_push_setting",
                 Obj(("like", "1"), ("comment", "1")),
                 ctx.TokenSaiDinhDang),
             DevTokenPushSaiToken);
 
-        Them(ds, "PUSH-SET-04", "DevTokenPush", "Cập nhật push setting giá trị không hợp lệ",
+        Them(ds, "PUSH-SET-04", "DevTokenPush", "Cáº­p nháº­t push setting giÃ¡ trá»‹ khÃ´ng há»£p lá»‡",
             "like = 2, sound_on = abc.",
             async ctx => new YeuCauApi(HttpMethod.Post, "/push_settings/set_push_setting",
                 Obj(("like", "2"), ("sound_on", "abc")),
-                await ctx.YeuCauTokenHopLeAsync()),
+                await YeuCauTokenHopLeAsync(ctx)),
             SaiGiaTri);
     }
 
@@ -117,7 +118,7 @@ public static partial class BoKichBanApi
             var data = response.Data.ToString().Trim('"');
             return string.Equals(data, "OK", StringComparison.OrdinalIgnoreCase)
                 ? Task.FromResult(KetQuaKiemTraThem.ThanhCong)
-                : Task.FromResult(new KetQuaKiemTraThem(false, $"data mong đợi là OK, thực tế là {response.Data}."));
+                : Task.FromResult(new KetQuaKiemTraThem(false, $"data mong Ä‘á»£i lÃ  OK, thá»±c táº¿ lÃ  {response.Data}."));
         };
     }
 
@@ -139,15 +140,15 @@ public static partial class BoKichBanApi
 
             if (!LaMaThanhCong(response))
             {
-                throw new LoiChuanBiKiemThuException($"Đã cập nhật push setting nhưng không gọi lại được /push_settings/get_push_setting để xác minh. Mã thực tế: {response.MaSoSanh}.");
+                throw new LoiChuanBiKiemThuException($"ÄÃ£ cáº­p nháº­t push setting nhÆ°ng khÃ´ng gá»i láº¡i Ä‘Æ°á»£c /push_settings/get_push_setting Ä‘á»ƒ xÃ¡c minh. MÃ£ thá»±c táº¿: {response.MaSoSanh}.");
             }
 
             foreach (var (tenTruong, giaTriMongDoi) in truongCanKiemTra)
             {
-                var giaTriThucTe = TienIchJson.DocChuoi(response.Data, tenTruong);
+                var giaTriThucTe = response.Data?[tenTruong]?.ToString();
                 if (!CungGiaTriPushSetting(giaTriThucTe, giaTriMongDoi))
                 {
-                    throw new LoiChuanBiKiemThuException($"Push setting `{tenTruong}` chưa cập nhật đúng. Mong đợi {giaTriMongDoi}, thực tế {giaTriThucTe ?? "null"}.");
+                    throw new LoiChuanBiKiemThuException($"Push setting `{tenTruong}` chÆ°a cáº­p nháº­t Ä‘Ãºng. Mong Ä‘á»£i {giaTriMongDoi}, thá»±c táº¿ {giaTriThucTe ?? "null"}.");
                 }
             }
         };
@@ -173,5 +174,7 @@ public static partial class BoKichBanApi
         return false;
     }
 }
+
+
 
 

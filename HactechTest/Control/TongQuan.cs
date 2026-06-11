@@ -44,7 +44,7 @@ namespace HactechTest.Control
 
             try
             {
-                await using var conn = await AppHost.Instance.Database.OpenConnectionAsync();
+                await using var conn = await AppHost.Instance.OpenConnectionAsync();
                 await using var cmd = conn.CreateCommand();
                 cmd.CommandText = """
                     SELECT
@@ -110,7 +110,7 @@ namespace HactechTest.Control
             {
                 try
                 {
-                    await using var conn = await AppHost.Instance.Database.OpenConnectionAsync();
+                    await using var conn = await AppHost.Instance.OpenConnectionAsync();
                     await using var cmd = conn.CreateCommand();
                     cmd.CommandText = """
                         SELECT DISTINCT nguoi_chay

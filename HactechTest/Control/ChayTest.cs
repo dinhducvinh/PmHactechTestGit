@@ -1,20 +1,26 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using HactechTest.ApiShopTesting.Core;
 using HactechTest.ApiShopTesting.KichBan;
 using HactechTest.ApiShopTesting.Seed;
 using HactechTest.Services.App;
 using HactechTest.Services.Configuration;
-using HactechTest.Services.Data;
 using HactechTest.Services.DynamicTests;
 using HactechTest.Services.History;
 using HactechTest.Services.Reports;
-using HactechTest.Services.Seed;
 
 namespace HactechTest.Control
 {
     public partial class ChayTest : UserControl
     {
+        private static readonly JsonSerializerOptions JsonOptions = new()
+        {
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        };
+
         private readonly IReadOnlyList<KichBanApi> _kichBanCode = BoKichBanApi.TaoTatCaKichBan();
         private readonly List<KichBanApi> _tatCaKichBan = new();
         private readonly List<KichBanApi> _dsTestCaseHienThi = new();
@@ -28,17 +34,13 @@ namespace HactechTest.Control
         private DateTimeOffset? _batDauLuc;
         private DateTimeOffset? _ketThucLuc;
 
-        private CauHinhChay _cauHinhMacDinh = new();
-
         public ChayTest()
         {
             InitializeComponent();
             if (!DesignMode)
             {
-                _cauHinhMacDinh = CauHinhUngDung.Instance.TaoCauHinhChay();
-
                 KhoiTaoSuKienKetQua();
-                GanCauHinhMacDinhLenGiaoDien();
+                NapCauHinhUngDungLenGiaoDien();
 
                 Load += ChayTest_Load;
                 btnTaiTestCase.Click += async (_, _) => await TaiTestCaseTheoBoLocAsync();
@@ -85,15 +87,16 @@ namespace HactechTest.Control
         // ----------------------------------------------------------------
         // Cấu hình chạy bộ testcase API Shop
         // ----------------------------------------------------------------
-        private void GanCauHinhMacDinhLenGiaoDien()
+        private void NapCauHinhUngDungLenGiaoDien()
         {
-            txtBaseUrl.Text = _cauHinhMacDinh.BaseUrl;
-            numTimeout.Value = Math.Clamp(_cauHinhMacDinh.TimeoutGiay, 3, 300);
+            var cauHinh = CauHinhUngDung.Instance;
+            txtBaseUrl.Text = cauHinh.BaseUrl;
+            numTimeout.Value = Math.Clamp(cauHinh.TimeoutGiay, 3, 300);
         }
 
         private bool TaoCauHinhChay(out CauHinhChay cauHinh)
         {
-            cauHinh = _cauHinhMacDinh;
+            cauHinh = new CauHinhChay();
             if (!LayBaseUrlHopLe(out var baseUrl))
             {
                 return false;
@@ -106,7 +109,7 @@ namespace HactechTest.Control
                 return false;
             }
 
-            cauHinh = _cauHinhMacDinh with
+            cauHinh = new CauHinhChay
             {
                 BaseUrl = baseUrl,
                 TimeoutGiay = (int)numTimeout.Value,
@@ -139,7 +142,6 @@ namespace HactechTest.Control
 
             CauHinhUngDung.LuuBaseUrlApi(baseUrl);
             txtBaseUrl.Text = baseUrl;
-            _cauHinhMacDinh = _cauHinhMacDinh with { BaseUrl = baseUrl };
 
             MessageBox.Show("Đã lưu Restful API URL. Lần sau mở phần mềm sẽ tự điền URL này.", "Thành công",
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -152,9 +154,7 @@ namespace HactechTest.Control
                 return;
             }
 
-            var dichVu = new DichVuKiemTraDuLieuSeed();
             using var formThongBao = new FormThongBaoChuanBiSeed();
-            dichVu.TrangThaiThayDoi += formThongBao.CapNhatTrangThai;
 
             KetQuaChuanBiDuLieuSeed ketQua;
             try
@@ -165,7 +165,7 @@ namespace HactechTest.Control
                 else formThongBao.Show();
 
                 formThongBao.CapNhatTrangThai("Đang quét database seed theo cấu hình hiện tại...");
-                ketQua = await dichVu.KiemTraVaChuanBiAsync(cauHinh);
+                ketQua = await ChuanBiSeed.KiemTraVaChuanBiAsync(cauHinh, formThongBao.CapNhatTrangThai);
             }
             catch (Exception ex)
             {
@@ -186,7 +186,7 @@ namespace HactechTest.Control
             }
 
             MessageBox.Show(
-                DichVuKiemTraDuLieuSeed.TaoNoiDungThongBao(ketQua),
+                ChuanBiSeed.TaoNoiDungThongBao(ketQua),
                 ketQua.DaDuSauKhiChuanBi ? "Dữ liệu seed" : "Cảnh báo dữ liệu seed",
                 MessageBoxButtons.OK,
                 ketQua.DaDuSauKhiChuanBi ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
@@ -270,8 +270,7 @@ namespace HactechTest.Control
 
             try
             {
-                var database = new Database(connectionString);
-                var store = new TestCaseDongStore(database);
+                var store = new TestCaseDongStore(connectionString);
                 var testCaseDong = await store.LayDanhSachAsync();
                 _tatCaKichBan.AddRange(testCaseDong.Select(BoKichBanDong.TaoKichBan));
             }
@@ -329,11 +328,12 @@ namespace HactechTest.Control
             try
             {
                 lblTrangThaiChay.Text = "Đang nạp dữ liệu seed...";
-                var khoSeed = new KhoDuLieuSeedSqlServer(cauHinh.ChuoiKetNoiSqlServer);
-                await khoSeed.TaiAsync();
+                var duLieuSeed = await new SeedLoadCheck()
+                    .TaiAsync(cauHinh.ChuoiKetNoiSqlServer, _cts.Token);
+                var capNhatDB = new CapNhatDB(cauHinh.ChuoiKetNoiSqlServer, duLieuSeed);
 
-                using var mayKhach = new MayKhachApi(cauHinh.BaseUrl, TimeSpan.FromSeconds(cauHinh.TimeoutGiay));
-                var nguCanh = new NguCanhKiemThu(cauHinh, mayKhach, khoSeed);
+                using var mayKhach = new MayKhachApi(cauHinh);
+                var nguCanh = new NguCanhKiemThu(cauHinh, mayKhach, capNhatDB);
 
                 for (var i = 0; i < dsCanChay.Count; i++)
                 {
@@ -499,7 +499,7 @@ namespace HactechTest.Control
                 ThoiGian = response?.ThoiGianPhanHoi ?? thoiGian,
                 Endpoint = yeuCau is null ? null : $"{yeuCau.PhuongThuc} {yeuCau.DuongDan}",
                 RequestBodyJson = TaoRequestBodyJson(yeuCau?.Body),
-                ResponseRutGon = TienIchJson.RutGon(response?.NoiDungRaw, 2000)
+                ResponseRutGon = RutGon(response?.NoiDungRaw, 2000)
             };
         }
 
@@ -512,12 +512,23 @@ namespace HactechTest.Control
 
             try
             {
-                return JsonSerializer.Serialize(body, TuyChonJson.MacDinh);
+                return JsonSerializer.Serialize(body, JsonOptions);
             }
             catch
             {
                 return body.ToString();
             }
+        }
+
+        private static string RutGon(string? raw, int max)
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return "";
+            }
+
+            var motDong = raw.Replace(Environment.NewLine, " ");
+            return motDong.Length <= max ? motDong : motDong[..max] + "...";
         }
 
         private void ThemDongKetQua(KetQuaChay r)
@@ -575,9 +586,7 @@ namespace HactechTest.Control
             try
             {
                 btnLuuVaoCSDL.Enabled = false;
-                var database = new Database(cauHinh.ChuoiKetNoiSqlServer);
-
-                var store = new PhienChayStore(database);
+                var store = new PhienChayStore(cauHinh.ChuoiKetNoiSqlServer);
                 var ketQuaLuu = _ketQuaPhienHienTai
                     .Select((item, index) => TaoKetQuaLuuPhien(item, index + 1, cauHinh.BaseUrl))
                     .ToList();
@@ -821,5 +830,6 @@ namespace HactechTest.Control
 
     }
 }
+
 
 

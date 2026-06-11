@@ -272,7 +272,7 @@ namespace HactechTest.Control
                 return null;
             }
 
-            return new TestCaseDongStore(AppHost.Instance.Database);
+            return new TestCaseDongStore(AppHost.Instance.ConnectionString);
         }
 
         private string? LayNhomDangChon()

@@ -138,7 +138,7 @@ GO
 
 CREATE TABLE dbo.chi_tiet_phien_chay
 (
-    ID                      BIGINT          IDENTITY(1,1) NOT NULL,
+    ID                      INT             IDENTITY(1,1) NOT NULL,
     ID_phien_chay           INT             NOT NULL,
     so_thu_tu               INT             NOT NULL,
     ten_test_case           NVARCHAR(300)   NULL,
@@ -190,7 +190,7 @@ GO
 
 CREATE TABLE dbo.taikhoan_signupthanhcong
 (
-    tk_id_server NVARCHAR(64) NOT NULL CONSTRAINT PK_taikhoan_signupthanhcong PRIMARY KEY,
+    tk_id_server INT NOT NULL CONSTRAINT PK_taikhoan_signupthanhcong PRIMARY KEY,
     sdt NVARCHAR(20) NOT NULL,
     mat_khau_hien_tai NVARCHAR(255) NOT NULL,
     dang_ky_luc DATETIME2(0) NOT NULL
@@ -204,8 +204,8 @@ GO
 CREATE TABLE dbo.tk_timkiem_seed
 (
     tk_timkiem_seed_id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_tk_timkiem_seed PRIMARY KEY,
-    tk_id_server NVARCHAR(64) NOT NULL,
-    saved_search_id_server NVARCHAR(64) NULL,
+    tk_id_server INT NOT NULL,
+    saved_search_id_server INT NULL,
     keyword NVARCHAR(255) NOT NULL,
     trang_thai NVARCHAR(30) NOT NULL
         CONSTRAINT DF_tk_timkiem_seed_trang_thai DEFAULT N'dang_luu',
@@ -224,8 +224,8 @@ GO
 CREATE TABLE dbo.tk_theodoi_seed
 (
     td_seed_id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_tk_theodoi_seed PRIMARY KEY,
-    follower_tk_id_server NVARCHAR(64) NOT NULL,
-    followee_tk_id_server NVARCHAR(64) NOT NULL,
+    follower_tk_id_server INT NOT NULL,
+    followee_tk_id_server INT NOT NULL,
     theo_doi_luc DATETIME2(0) NOT NULL
         CONSTRAINT DF_tk_theodoi_seed_theo_doi_luc DEFAULT SYSDATETIME(),
     trang_thai NVARCHAR(30) NOT NULL
@@ -243,8 +243,8 @@ GO
 CREATE TABLE dbo.tk_chan_seed
 (
     chan_seed_id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_tk_chan_seed PRIMARY KEY,
-    blocker_tk_id_server NVARCHAR(64) NOT NULL,
-    blocked_tk_id_server NVARCHAR(64) NOT NULL,
+    blocker_tk_id_server INT NOT NULL,
+    blocked_tk_id_server INT NOT NULL,
     chan_luc DATETIME2(0) NOT NULL
         CONSTRAINT DF_tk_chan_seed_chan_luc DEFAULT SYSDATETIME(),
     trang_thai NVARCHAR(30) NOT NULL
@@ -284,8 +284,8 @@ GO
 CREATE TABLE dbo.diachi_tk_seed
 (
     diachi_seed_id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_diachi_tk_seed PRIMARY KEY,
-    tk_id_server NVARCHAR(64) NOT NULL,
-    diachi_id_server NVARCHAR(64) NULL,
+    tk_id_server INT NOT NULL,
+    diachi_id_server INT NULL,
     ward_id INT NOT NULL,
     province_id INT NOT NULL,
     address NVARCHAR(300) NOT NULL,
@@ -317,9 +317,9 @@ GO
 
 CREATE TABLE dbo.danhmuc_seed
 (
-    dm_id_server NVARCHAR(64) NOT NULL CONSTRAINT PK_danhmuc_seed PRIMARY KEY,
+    dm_id_server INT NOT NULL CONSTRAINT PK_danhmuc_seed PRIMARY KEY,
     ten_danh_muc NVARCHAR(255) NOT NULL,
-    dm_cha_id_server NVARCHAR(64) NULL,
+    dm_cha_id_server INT NULL,
     co_danh_muc_con BIT NULL,
     co_thuong_hieu BIT NULL,
     co_kich_co BIT NULL,
@@ -332,9 +332,9 @@ GO
 
 CREATE TABLE dbo.thuonghieu_seed
 (
-    thuonghieu_id_server NVARCHAR(64) NOT NULL CONSTRAINT PK_thuonghieu_seed PRIMARY KEY,
+    thuonghieu_id_server INT NOT NULL CONSTRAINT PK_thuonghieu_seed PRIMARY KEY,
     ten_thuong_hieu NVARCHAR(255) NOT NULL,
-    dm_id_server NVARCHAR(64) NULL,
+    dm_id_server INT NULL,
     trang_thai NVARCHAR(30) NOT NULL CONSTRAINT DF_thuonghieu_seed_trang_thai DEFAULT N'san_sang',
     dong_bo_luc DATETIME2(0) NULL
 );
@@ -344,11 +344,11 @@ GO
 
 CREATE TABLE dbo.sanpham_seed
 (
-    sp_id_server NVARCHAR(64) NOT NULL CONSTRAINT PK_sanpham_seed PRIMARY KEY,
-    tk_id_server NVARCHAR(64) NOT NULL,
-    dm_id_server NVARCHAR(64) NULL,
-    thuonghieu_id_server NVARCHAR(64) NULL,
-    ship_from_id_server NVARCHAR(64) NULL,
+    sp_id_server INT NOT NULL CONSTRAINT PK_sanpham_seed PRIMARY KEY,
+    tk_id_server INT NOT NULL,
+    dm_id_server INT NULL,
+    thuonghieu_id_server INT NULL,
+    ship_from_id_server INT NULL,
     ten_sp NVARCHAR(300) NOT NULL,
     gia DECIMAL(18,2) NOT NULL,
     trang_thai NVARCHAR(30) NOT NULL CONSTRAINT DF_sanpham_seed_trang_thai DEFAULT N'san_sang',
@@ -370,8 +370,8 @@ GO
 CREATE TABLE dbo.tk_thich_sanpham_seed
 (
     thich_seed_id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_tk_thich_sanpham_seed PRIMARY KEY,
-    tk_id_server NVARCHAR(64) NOT NULL,
-    sp_id_server NVARCHAR(64) NOT NULL,
+    tk_id_server INT NOT NULL,
+    sp_id_server INT NOT NULL,
     thich_luc DATETIME2(0) NOT NULL CONSTRAINT DF_tk_thich_sanpham_seed_thich_luc DEFAULT SYSDATETIME(),
     trang_thai NVARCHAR(30) NOT NULL CONSTRAINT DF_tk_thich_sanpham_seed_trang_thai DEFAULT N'san_sang',
     ghi_chu NVARCHAR(500) NULL,
@@ -387,11 +387,11 @@ GO
 CREATE TABLE dbo.tinnhan_seed
 (
     tn_seed_id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_tinnhan_seed PRIMARY KEY,
-    conversation_id_server NVARCHAR(64) NULL,
-    message_id_server NVARCHAR(64) NULL,
-    sender_tk_id_server NVARCHAR(64) NOT NULL,
-    receiver_tk_id_server NVARCHAR(64) NOT NULL,
-    product_id_server NVARCHAR(64) NULL,
+    conversation_id_server INT NULL,
+    message_id_server INT NULL,
+    sender_tk_id_server INT NOT NULL,
+    receiver_tk_id_server INT NOT NULL,
+    product_id_server INT NULL,
     type_message NVARCHAR(30) NOT NULL CONSTRAINT DF_tinnhan_seed_type_message DEFAULT N'text',
     noi_dung NVARCHAR(MAX) NULL,
     trang_thai NVARCHAR(30) NOT NULL CONSTRAINT DF_tinnhan_seed_trang_thai DEFAULT N'da_gui',
@@ -419,11 +419,11 @@ GO
 CREATE TABLE dbo.thongbao_seed
 (
     tb_seed_id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_thongbao_seed PRIMARY KEY,
-    notification_id_server NVARCHAR(64) NULL,
-    tk_id_server NVARCHAR(64) NOT NULL,
+    notification_id_server INT NULL,
+    tk_id_server INT NOT NULL,
     title NVARCHAR(300) NULL,
     content NVARCHAR(MAX) NULL,
-    object_id_server NVARCHAR(64) NULL,
+    object_id_server INT NULL,
     notification_type NVARCHAR(100) NULL,
     da_doc BIT NULL,
     trang_thai NVARCHAR(30) NOT NULL CONSTRAINT DF_thongbao_seed_trang_thai DEFAULT N'dang_luu',
@@ -501,4 +501,6 @@ GO
 
 PRINT N'Đã tạo xong CSDL HactechTestDb.';
 GO
+
+
 

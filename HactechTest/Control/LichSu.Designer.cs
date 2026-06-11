@@ -1,4 +1,4 @@
-﻿namespace HactechTest.Control
+namespace HactechTest.Control
 {
     partial class LichSu
     {

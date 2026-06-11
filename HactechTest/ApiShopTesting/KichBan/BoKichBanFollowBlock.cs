@@ -1,4 +1,5 @@
 ﻿using HactechTest.ApiShopTesting.Core;
+using static HactechTest.ApiShopTesting.Core.HelperTC;
 using HactechTest.ApiShopTesting.Seed;
 
 namespace HactechTest.ApiShopTesting.KichBan;
@@ -27,8 +28,8 @@ public static partial class BoKichBanApi
             {
                 var (taiKhoanTheoDoi, taiKhoanDuocTheoDoi) = ChonCapTaiKhoanChuaTheoDoi(ctx);
                 var req = new YeuCauApi(HttpMethod.Post, "/set_user_follow",
-                    Obj(("followee_id", SoIdBatBuoc(taiKhoanDuocTheoDoi.TaiKhoanIdServer, "followee_tk_id_server")), ("action", "follow")),
-                    await ctx.YeuCauTokenCuaTaiKhoanAsync(taiKhoanTheoDoi));
+                    Obj(("followee_id", IdBatBuoc(taiKhoanDuocTheoDoi.TaiKhoanIdServer, "followee_tk_id_server")), ("action", "follow")),
+                    await LayTokenCuaTaiKhoanAsync(ctx, taiKhoanTheoDoi));
                 req.Tam["taiKhoanTheoDoi"] = taiKhoanTheoDoi;
                 req.Tam["taiKhoanDuocTheoDoi"] = taiKhoanDuocTheoDoi;
                 return req;
@@ -38,14 +39,14 @@ public static partial class BoKichBanApi
             {
                 var taiKhoanTheoDoi = (TaiKhoanSignupThanhCongSeed)request.Tam["taiKhoanTheoDoi"]!;
                 var taiKhoanDuocTheoDoi = (TaiKhoanSignupThanhCongSeed)request.Tam["taiKhoanDuocTheoDoi"]!;
-                ctx.KhoSeed.DuLieu.TaiKhoanTheoDoiSeed.Add(new TaiKhoanTheoDoiSeed
+                ctx.CapNhatDB.DuLieu.TaiKhoanTheoDoiSeed.Add(new TaiKhoanTheoDoiSeed
                 {
                     FollowerTaiKhoanIdServer = taiKhoanTheoDoi.TaiKhoanIdServer,
                     FolloweeTaiKhoanIdServer = taiKhoanDuocTheoDoi.TaiKhoanIdServer,
                     TheoDoiLuc = DateTimeOffset.Now,
                     TrangThai = "dang_theo_doi"
                 });
-                await ctx.KhoSeed.LuuAsync();
+                await ctx.CapNhatDB.LuuAsync();
             });
 
         Them(ds, "FOLLOW-SET-03", "FollowBlock", "Unfollow user đang theo dõi",
@@ -55,8 +56,8 @@ public static partial class BoKichBanApi
                 var capTheoDoi = LayCapTaiKhoanDangTheoDoi(ctx, "Thiếu tk_theodoi_seed trạng thái dang_theo_doi.");
                 var follow = capTheoDoi.QuanHeTheoDoi;
                 var req = new YeuCauApi(HttpMethod.Post, "/set_user_follow",
-                    Obj(("followee_id", SoIdBatBuoc(follow.FolloweeTaiKhoanIdServer, "followee_tk_id_server")), ("action", "unfollow")),
-                    await ctx.YeuCauTokenCuaTaiKhoanAsync(capTheoDoi.TaiKhoanTheoDoi));
+                    Obj(("followee_id", IdBatBuoc(follow.FolloweeTaiKhoanIdServer, "followee_tk_id_server")), ("action", "unfollow")),
+                    await LayTokenCuaTaiKhoanAsync(ctx, capTheoDoi.TaiKhoanTheoDoi));
                 req.Tam["follow"] = follow;
                 return req;
             },
@@ -65,24 +66,24 @@ public static partial class BoKichBanApi
             {
                 var follow = (TaiKhoanTheoDoiSeed)request.Tam["follow"]!;
                 XoaQuanHeTheoDoiDangHoatDong(ctx, follow);
-                await ctx.KhoSeed.LuuAsync();
+                await ctx.CapNhatDB.LuuAsync();
             });
 
         Them(ds, "FOLLOW-SET-04", "FollowBlock", "Follow user không tồn tại",
             "followee_id = 999999999.",
             async ctx => new YeuCauApi(HttpMethod.Post, "/set_user_follow",
                 Obj(("followee_id", 999999999), ("action", "follow")),
-                await ctx.YeuCauTokenHopLeAsync()),
+                await YeuCauTokenHopLeAsync(ctx)),
             KhongCoNguoiDung);
 
         Them(ds, "FOLLOW-SET-05", "FollowBlock", "Follow chính mình",
             "followee_id là id của current user.",
             async ctx =>
             {
-                var tk = await ctx.YeuCauTaiKhoanDaDangKyAsync();
+                var tk = await YeuCauTaiKhoanDaDangKyAsync(ctx);
                 return new YeuCauApi(HttpMethod.Post, "/set_user_follow",
-                    Obj(("followee_id", SoIdBatBuoc(tk.TaiKhoanIdServer, "tk_id_server")), ("action", "follow")),
-                    await ctx.YeuCauTokenCuaTaiKhoanAsync(tk));
+                    Obj(("followee_id", IdBatBuoc(tk.TaiKhoanIdServer, "tk_id_server")), ("action", "follow")),
+                    await LayTokenCuaTaiKhoanAsync(ctx, tk));
             },
             SaiGiaTri);
 
@@ -93,8 +94,8 @@ public static partial class BoKichBanApi
                 var capTheoDoi = LayCapTaiKhoanDangTheoDoi(ctx, "Thiếu tk_theodoi_seed trạng thái dang_theo_doi.");
                 var follow = capTheoDoi.QuanHeTheoDoi;
                 return new YeuCauApi(HttpMethod.Post, "/set_user_follow",
-                    Obj(("followee_id", SoIdBatBuoc(follow.FolloweeTaiKhoanIdServer, "followee_tk_id_server")), ("action", "follow")),
-                    await ctx.YeuCauTokenCuaTaiKhoanAsync(capTheoDoi.TaiKhoanTheoDoi));
+                    Obj(("followee_id", IdBatBuoc(follow.FolloweeTaiKhoanIdServer, "followee_tk_id_server")), ("action", "follow")),
+                    await LayTokenCuaTaiKhoanAsync(ctx, capTheoDoi.TaiKhoanTheoDoi));
             },
             DaThucHienTruocDo);
 
@@ -104,8 +105,8 @@ public static partial class BoKichBanApi
             {
                 var (taiKhoanTheoDoi, taiKhoanDuocTheoDoi) = ChonCapTaiKhoanChuaTheoDoi(ctx);
                 return new YeuCauApi(HttpMethod.Post, "/set_user_follow",
-                    Obj(("followee_id", SoIdBatBuoc(taiKhoanDuocTheoDoi.TaiKhoanIdServer, "followee_tk_id_server")), ("action", "unfollow")),
-                    await ctx.YeuCauTokenCuaTaiKhoanAsync(taiKhoanTheoDoi));
+                    Obj(("followee_id", IdBatBuoc(taiKhoanDuocTheoDoi.TaiKhoanIdServer, "followee_tk_id_server")), ("action", "unfollow")),
+                    await LayTokenCuaTaiKhoanAsync(ctx, taiKhoanTheoDoi));
             },
             DaThucHienTruocDo);
     }
@@ -124,8 +125,8 @@ public static partial class BoKichBanApi
                 var capTheoDoi = LayCapTaiKhoanDangTheoDoi(ctx, "Thiếu tk_theodoi_seed trạng thái dang_theo_doi.");
                 var follow = capTheoDoi.QuanHeTheoDoi;
                 return new YeuCauApi(HttpMethod.Post, "/get_list_followed",
-                    Obj(("user_id", SoIdBatBuoc(follow.FolloweeTaiKhoanIdServer, "followee_tk_id_server")), ("index", 0), ("count", 10)),
-                    await ctx.YeuCauTokenCuaTaiKhoanAsync(capTheoDoi.TaiKhoanTheoDoi));
+                    Obj(("user_id", IdBatBuoc(follow.FolloweeTaiKhoanIdServer, "followee_tk_id_server")), ("index", 0), ("count", 10)),
+                    await LayTokenCuaTaiKhoanAsync(ctx, capTheoDoi.TaiKhoanTheoDoi));
             },
             Ok,
             DataLaMang());
@@ -134,7 +135,7 @@ public static partial class BoKichBanApi
             "user_id = 999999999.",
             async ctx => new YeuCauApi(HttpMethod.Post, "/get_list_followed",
                 Obj(("user_id", 999999999), ("index", 0), ("count", 10)),
-                await ctx.YeuCauTokenHopLeAsync()),
+                await YeuCauTokenHopLeAsync(ctx)),
             KhongCoNguoiDung);
 
         Them(ds, "FOLLOWED-LIST-04", "FollowBlock", "Lấy người theo dõi của user đang bị block",
@@ -144,8 +145,8 @@ public static partial class BoKichBanApi
                 var capChan = LayCapTaiKhoanDangChan(ctx, "Thiếu tk_chan_seed trạng thái dang_chan.");
                 var chan = capChan.QuanHeChan;
                 return new YeuCauApi(HttpMethod.Post, "/get_list_followed",
-                    Obj(("user_id", SoIdBatBuoc(chan.BlockedTaiKhoanIdServer, "blocked_tk_id_server")), ("index", 0), ("count", 10)),
-                    await ctx.YeuCauTokenCuaTaiKhoanAsync(capChan.TaiKhoanChan));
+                    Obj(("user_id", IdBatBuoc(chan.BlockedTaiKhoanIdServer, "blocked_tk_id_server")), ("index", 0), ("count", 10)),
+                    await LayTokenCuaTaiKhoanAsync(ctx, capChan.TaiKhoanChan));
             },
             KhongCoQuyen);
     }
@@ -164,8 +165,8 @@ public static partial class BoKichBanApi
                 var capTheoDoi = LayCapTaiKhoanDangTheoDoi(ctx, "Thiếu tk_theodoi_seed trạng thái dang_theo_doi.");
                 var follow = capTheoDoi.QuanHeTheoDoi;
                 return new YeuCauApi(HttpMethod.Post, "/get_list_following",
-                    Obj(("user_id", SoIdBatBuoc(capTheoDoi.TaiKhoanTheoDoi.TaiKhoanIdServer, "follower_tk_id_server")), ("index", 0), ("count", 10)),
-                    await ctx.YeuCauTokenCuaTaiKhoanAsync(capTheoDoi.TaiKhoanTheoDoi));
+                    Obj(("user_id", IdBatBuoc(capTheoDoi.TaiKhoanTheoDoi.TaiKhoanIdServer, "follower_tk_id_server")), ("index", 0), ("count", 10)),
+                    await LayTokenCuaTaiKhoanAsync(ctx, capTheoDoi.TaiKhoanTheoDoi));
             },
             Ok,
             DataLaMang());
@@ -174,7 +175,7 @@ public static partial class BoKichBanApi
             "user_id = 999999999.",
             async ctx => new YeuCauApi(HttpMethod.Post, "/get_list_following",
                 Obj(("user_id", 999999999), ("index", 0), ("count", 10)),
-                await ctx.YeuCauTokenHopLeAsync()),
+                await YeuCauTokenHopLeAsync(ctx)),
             KhongCoNguoiDung);
 
         Them(ds, "FOLLOWING-LIST-04", "FollowBlock", "Lấy following của user đang bị block",
@@ -184,8 +185,8 @@ public static partial class BoKichBanApi
                 var capChan = LayCapTaiKhoanDangChan(ctx, "Thiếu tk_chan_seed trạng thái dang_chan.");
                 var chan = capChan.QuanHeChan;
                 return new YeuCauApi(HttpMethod.Post, "/get_list_following",
-                    Obj(("user_id", SoIdBatBuoc(chan.BlockedTaiKhoanIdServer, "blocked_tk_id_server")), ("index", 0), ("count", 10)),
-                    await ctx.YeuCauTokenCuaTaiKhoanAsync(capChan.TaiKhoanChan));
+                    Obj(("user_id", IdBatBuoc(chan.BlockedTaiKhoanIdServer, "blocked_tk_id_server")), ("index", 0), ("count", 10)),
+                    await LayTokenCuaTaiKhoanAsync(ctx, capChan.TaiKhoanChan));
             },
             KhongCoQuyen);
     }
@@ -203,8 +204,8 @@ public static partial class BoKichBanApi
             {
                 var (taiKhoanChan, taiKhoanBiChan) = ChonCapTaiKhoanChuaChan(ctx);
                 var req = new YeuCauApi(HttpMethod.Post, "/set_user_block",
-                    Obj(("user_id", SoIdBatBuoc(taiKhoanBiChan.TaiKhoanIdServer, "blocked_tk_id_server")), ("type", 0)),
-                    await ctx.YeuCauTokenCuaTaiKhoanAsync(taiKhoanChan));
+                    Obj(("user_id", IdBatBuoc(taiKhoanBiChan.TaiKhoanIdServer, "blocked_tk_id_server")), ("type", 0)),
+                    await LayTokenCuaTaiKhoanAsync(ctx, taiKhoanChan));
                 req.Tam["taiKhoanChan"] = taiKhoanChan;
                 req.Tam["taiKhoanBiChan"] = taiKhoanBiChan;
                 return req;
@@ -214,14 +215,14 @@ public static partial class BoKichBanApi
             {
                 var taiKhoanChan = (TaiKhoanSignupThanhCongSeed)request.Tam["taiKhoanChan"]!;
                 var taiKhoanBiChan = (TaiKhoanSignupThanhCongSeed)request.Tam["taiKhoanBiChan"]!;
-                ctx.KhoSeed.DuLieu.TaiKhoanChanSeed.Add(new TaiKhoanChanSeed
+                ctx.CapNhatDB.DuLieu.TaiKhoanChanSeed.Add(new TaiKhoanChanSeed
                 {
                     BlockerTaiKhoanIdServer = taiKhoanChan.TaiKhoanIdServer,
                     BlockedTaiKhoanIdServer = taiKhoanBiChan.TaiKhoanIdServer,
                     ChanLuc = DateTimeOffset.Now,
                     TrangThai = "dang_chan"
                 });
-                await ctx.KhoSeed.LuuAsync();
+                await ctx.CapNhatDB.LuuAsync();
             });
 
         Them(ds, "BLOCK-SET-03", "FollowBlock", "Unblock user đang bị chặn",
@@ -231,8 +232,8 @@ public static partial class BoKichBanApi
                 var capChan = LayCapTaiKhoanDangChan(ctx, "Thiếu tk_chan_seed trạng thái dang_chan.");
                 var chan = capChan.QuanHeChan;
                 var req = new YeuCauApi(HttpMethod.Post, "/set_user_block",
-                    Obj(("user_id", SoIdBatBuoc(chan.BlockedTaiKhoanIdServer, "blocked_tk_id_server")), ("type", 1)),
-                    await ctx.YeuCauTokenCuaTaiKhoanAsync(capChan.TaiKhoanChan));
+                    Obj(("user_id", IdBatBuoc(chan.BlockedTaiKhoanIdServer, "blocked_tk_id_server")), ("type", 1)),
+                    await LayTokenCuaTaiKhoanAsync(ctx, capChan.TaiKhoanChan));
                 req.Tam["chan"] = chan;
                 return req;
             },
@@ -241,24 +242,24 @@ public static partial class BoKichBanApi
             {
                 var chan = (TaiKhoanChanSeed)request.Tam["chan"]!;
                 XoaQuanHeChanDangHoatDong(ctx, chan);
-                await ctx.KhoSeed.LuuAsync();
+                await ctx.CapNhatDB.LuuAsync();
             });
 
         Them(ds, "BLOCK-SET-04", "FollowBlock", "Block user không tồn tại",
             "user_id = 999999999.",
             async ctx => new YeuCauApi(HttpMethod.Post, "/set_user_block",
                 Obj(("user_id", 999999999), ("type", 0)),
-                await ctx.YeuCauTokenHopLeAsync()),
+                await YeuCauTokenHopLeAsync(ctx)),
             KhongCoNguoiDung);
 
         Them(ds, "BLOCK-SET-05", "FollowBlock", "Block chính mình",
             "user_id là id của current user.",
             async ctx =>
             {
-                var tk = await ctx.YeuCauTaiKhoanDaDangKyAsync();
+                var tk = await YeuCauTaiKhoanDaDangKyAsync(ctx);
                 return new YeuCauApi(HttpMethod.Post, "/set_user_block",
-                    Obj(("user_id", SoIdBatBuoc(tk.TaiKhoanIdServer, "tk_id_server")), ("type", 0)),
-                    await ctx.YeuCauTokenCuaTaiKhoanAsync(tk));
+                    Obj(("user_id", IdBatBuoc(tk.TaiKhoanIdServer, "tk_id_server")), ("type", 0)),
+                    await LayTokenCuaTaiKhoanAsync(ctx, tk));
             },
             SaiGiaTri);
 
@@ -269,8 +270,8 @@ public static partial class BoKichBanApi
                 var capChan = LayCapTaiKhoanDangChan(ctx, "Thiếu tk_chan_seed trạng thái dang_chan.");
                 var chan = capChan.QuanHeChan;
                 return new YeuCauApi(HttpMethod.Post, "/set_user_block",
-                    Obj(("user_id", SoIdBatBuoc(chan.BlockedTaiKhoanIdServer, "blocked_tk_id_server")), ("type", 0)),
-                    await ctx.YeuCauTokenCuaTaiKhoanAsync(capChan.TaiKhoanChan));
+                    Obj(("user_id", IdBatBuoc(chan.BlockedTaiKhoanIdServer, "blocked_tk_id_server")), ("type", 0)),
+                    await LayTokenCuaTaiKhoanAsync(ctx, capChan.TaiKhoanChan));
             },
             DaThucHienTruocDo);
 
@@ -280,8 +281,8 @@ public static partial class BoKichBanApi
             {
                 var (taiKhoanChan, taiKhoanBiChan) = ChonCapTaiKhoanChuaChan(ctx);
                 return new YeuCauApi(HttpMethod.Post, "/set_user_block",
-                    Obj(("user_id", SoIdBatBuoc(taiKhoanBiChan.TaiKhoanIdServer, "blocked_tk_id_server")), ("type", 1)),
-                    await ctx.YeuCauTokenCuaTaiKhoanAsync(taiKhoanChan));
+                    Obj(("user_id", IdBatBuoc(taiKhoanBiChan.TaiKhoanIdServer, "blocked_tk_id_server")), ("type", 1)),
+                    await LayTokenCuaTaiKhoanAsync(ctx, taiKhoanChan));
             },
             DaThucHienTruocDo);
     }
@@ -300,13 +301,18 @@ public static partial class BoKichBanApi
                 var capChan = LayCapTaiKhoanDangChan(ctx, "Thiếu tk_chan_seed trạng thái dang_chan.");
                 return new YeuCauApi(HttpMethod.Post, "/get_list_blocks",
                     Obj(("index", 0), ("count", 10)),
-                    await ctx.YeuCauTokenCuaTaiKhoanAsync(capChan.TaiKhoanChan));
+                    await LayTokenCuaTaiKhoanAsync(ctx, capChan.TaiKhoanChan));
             },
             Ok,
             DataLaMang());
     }
 
 }
+
+
+
+
+
 
 
 

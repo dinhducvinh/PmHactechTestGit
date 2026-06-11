@@ -27,8 +27,6 @@ DECLARE @sdt NVARCHAR(20);
 DECLARE @matKhau NVARCHAR(255);
 DECLARE @uuid NVARCHAR(255);
 
-SET IDENTITY_INSERT dbo.taikhoan_seed ON;
-
 WHILE @i <= 300
 BEGIN
     SET @ma = RIGHT(REPLICATE('0', 6) + CONVERT(VARCHAR(6), @i), 6);
@@ -42,31 +40,29 @@ BEGIN
         CONTINUE;
     END
 
-    IF EXISTS (SELECT 1 FROM dbo.taikhoan_seed WHERE tk_seed_id = @i)
+    IF EXISTS (SELECT 1 FROM dbo.taikhoan_seed WHERE sdt = @sdt)
     BEGIN
         UPDATE dbo.taikhoan_seed
         SET
-            sdt = @sdt,
             mat_khau_hien_tai = @matKhau,
             uuid = @uuid,
             trang_thai = N'san_sang',
             ghi_chu = N'Insert từ HactechTest/Database/InsertTaiKhoanSeed.sql',
             cap_nhat_luc = SYSDATETIME()
-        WHERE tk_seed_id = @i;
+        WHERE sdt = @sdt;
     END
     ELSE
     BEGIN
         INSERT INTO dbo.taikhoan_seed
-            (tk_seed_id, sdt, mat_khau_hien_tai, uuid, trang_thai, ghi_chu)
+            (sdt, mat_khau_hien_tai, uuid, trang_thai, ghi_chu)
         VALUES
-            (@i, @sdt, @matKhau, @uuid, N'san_sang',
+            (@sdt, @matKhau, @uuid, N'san_sang',
              N'Insert từ HactechTest/Database/InsertTaiKhoanSeed.sql');
     END
 
     SET @i += 1;
 END
 
-SET IDENTITY_INSERT dbo.taikhoan_seed OFF;
 GO
 
 SELECT
