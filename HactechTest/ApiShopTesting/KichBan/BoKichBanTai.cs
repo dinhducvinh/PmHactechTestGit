@@ -1,4 +1,3 @@
-﻿using System.Collections.Concurrent;
 using System.Diagnostics;
 using HactechTest.ApiShopTesting.Core;
 using static HactechTest.ApiShopTesting.Core.HelperTC;
@@ -53,8 +52,8 @@ public static partial class BoKichBanApi
             p95ToiDaMs: 6000,
             async (ctx, ct) =>
             {
-                var taiKhoan = LayMotTramTaiKhoanDaDangKy(ctx);
-                var tokenTheoTaiKhoan = await LayTokenChoTaiKhoanAsync(ctx, taiKhoan, ct);
+                var taiKhoan = LayDanhSachTaiKhoanDaDangKyBatBuoc(ctx, SoTaiKhoanKiemThuTai, $"Cần {SoTaiKhoanKiemThuTai} tài khoản seed đã đăng ký để chạy test tải. Hãy bấm Kiểm tra seed để chuẩn bị đủ dữ liệu mới.");
+                var tokenTheoTaiKhoan = await LayTokenChoDanhSachTaiKhoanAsync(ctx, taiKhoan, ct);
                 return await ChayTaiAsync(
                     ctx,
                     "LOAD-AUTH-ME-100-01",
@@ -83,8 +82,8 @@ public static partial class BoKichBanApi
             p95ToiDaMs: 7000,
             async (ctx, ct) =>
             {
-                var taiKhoan = LayMotTramTaiKhoanDaDangKy(ctx);
-                var tokenTheoTaiKhoan = await LayTokenChoTaiKhoanAsync(ctx, taiKhoan, ct);
+                var taiKhoan = LayDanhSachTaiKhoanDaDangKyBatBuoc(ctx, SoTaiKhoanKiemThuTai, $"Cần {SoTaiKhoanKiemThuTai} tài khoản seed đã đăng ký để chạy test tải. Hãy bấm Kiểm tra seed để chuẩn bị đủ dữ liệu mới.");
+                var tokenTheoTaiKhoan = await LayTokenChoDanhSachTaiKhoanAsync(ctx, taiKhoan, ct);
                 return await ChayTaiAsync(
                     ctx,
                     "LOAD-USER-INFO-100-01",
@@ -137,7 +136,7 @@ public static partial class BoKichBanApi
         Func<TaiKhoanSignupThanhCongSeed, int, Task<YeuCauApi>> taoYeuCau,
         IReadOnlyList<TaiKhoanSignupThanhCongSeed>? danhSachTaiKhoan = null)
     {
-        var taiKhoan = danhSachTaiKhoan ?? LayMotTramTaiKhoanDaDangKy(ctx);
+        var taiKhoan = danhSachTaiKhoan ?? LayDanhSachTaiKhoanDaDangKyBatBuoc(ctx, SoTaiKhoanKiemThuTai, $"Cần {SoTaiKhoanKiemThuTai} tài khoản seed đã đăng ký để chạy test tải. Hãy bấm Kiểm tra seed để chuẩn bị đủ dữ liệu mới.");
         var dongHoTong = Stopwatch.StartNew();
         var ketQua = await GuiSongSongAsync(ctx, taiKhoan, SoLuongChaySongSong, taoYeuCau, cancellationToken);
         dongHoTong.Stop();
@@ -167,81 +166,6 @@ public static partial class BoKichBanApi
             Endpoint = $"{endpoint}, song song {SoLuongChaySongSong}",
             ResponseRutGon = thongDiep
         };
-    }
-
-    private static IReadOnlyList<TaiKhoanSignupThanhCongSeed> LayMotTramTaiKhoanDaDangKy(NguCanhKiemThu ctx)
-    {
-        var taiKhoan = ctx.CapNhatDB.DuLieu.TaiKhoanSignupThanhCongSeed
-            .Where(x =>
-                x.TaiKhoanIdServer is > 0 &&
-                !string.IsNullOrWhiteSpace(x.SoDienThoai) &&
-                !string.IsNullOrWhiteSpace(x.MatKhauHienTai))
-            .OrderBy(x => x.SoThuTu)
-            .Take(SoTaiKhoanKiemThuTai)
-            .ToList();
-
-        if (taiKhoan.Count < SoTaiKhoanKiemThuTai)
-        {
-            throw new LoiChuanBiKiemThuException(
-                $"Cần {SoTaiKhoanKiemThuTai} tài khoản seed đã đăng ký để chạy test tải, hiện chỉ có {taiKhoan.Count}. Hãy bấm Kiểm tra seed để chuẩn bị đủ dữ liệu mới.");
-        }
-
-        return taiKhoan;
-    }
-
-    private static async Task<Dictionary<int, string>> LayTokenChoTaiKhoanAsync(
-        NguCanhKiemThu ctx,
-        IReadOnlyList<TaiKhoanSignupThanhCongSeed> taiKhoan,
-        CancellationToken cancellationToken)
-    {
-        var tokenTheoTaiKhoan = new ConcurrentDictionary<int, string>();
-        var loi = new ConcurrentBag<string>();
-        using var gioiHan = new SemaphoreSlim(20);
-
-        var congViec = taiKhoan.Select(async tk =>
-        {
-            await gioiHan.WaitAsync(cancellationToken);
-            try
-            {
-                var response = await ctx.Api.GuiAsync(
-                    new YeuCauApi(HttpMethod.Post, "/auth/login", TaoBodyDangNhap(tk)),
-                    cancellationToken);
-                var token = response.MaSoSanh == "1000"
-                    ? response.Data?["token"]?.ToString()
-                    : null;
-
-                if (string.IsNullOrWhiteSpace(token))
-                {
-                    loi.Add($"tk_id_server {tk.TaiKhoanIdServer}: login trả {response.MaSoSanh}");
-                    return;
-                }
-
-                tokenTheoTaiKhoan[tk.SoThuTu] = token;
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                loi.Add($"tk_id_server {tk.TaiKhoanIdServer}: {RutGon(ex.Message, 160)}");
-            }
-            finally
-            {
-                gioiHan.Release();
-            }
-        });
-
-        await Task.WhenAll(congViec);
-
-        if (tokenTheoTaiKhoan.Count < taiKhoan.Count)
-        {
-            var mauLoi = string.Join(" | ", loi.Take(5));
-            throw new LoiChuanBiKiemThuException(
-                $"Không lấy đủ token cho {taiKhoan.Count} tài khoản seed. Lấy được {tokenTheoTaiKhoan.Count}/{taiKhoan.Count}. {mauLoi}");
-        }
-
-        return tokenTheoTaiKhoan.ToDictionary(x => x.Key, x => x.Value);
     }
 
     private static async Task<IReadOnlyList<KetQuaLanTai>> GuiSongSongAsync(
@@ -309,25 +233,6 @@ public static partial class BoKichBanApi
             dongHo.Stop();
             return new KetQuaLanTai(false, "ERROR", dongHo.Elapsed, $"tk_id_server {taiKhoan.TaiKhoanIdServer}: {RutGon(ex.Message, 180)}", LoiMoiTruong: false);
         }
-    }
-
-    private static string RutGon(string? raw, int max)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-        {
-            return "";
-        }
-
-        var motDong = raw.Replace(Environment.NewLine, " ");
-        return motDong.Length <= max ? motDong : motDong[..max] + "...";
-    }
-
-    private static Dictionary<string, object?> TaoBodyDangNhap(TaiKhoanSignupThanhCongSeed taiKhoan)
-    {
-        return Obj(
-            ("phone_number", taiKhoan.SoDienThoai),
-            ("password", taiKhoan.MatKhauHienTai),
-            ("devtoken", taiKhoan.UuidThietBi));
     }
 
     private static double TinhP95Ms(IReadOnlyList<KetQuaLanTai> ketQua)

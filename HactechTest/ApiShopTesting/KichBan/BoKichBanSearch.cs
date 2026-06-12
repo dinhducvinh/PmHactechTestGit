@@ -80,16 +80,7 @@ public static partial class BoKichBanApi
                 var savedSearchIdServer = DocSavedSearchIdServer(response.Data)
                     ?? throw new LoiChuanBiKiemThuException("API /api/save_search trả 1000 nhưng response thiếu id saved search, không thể đồng bộ tk_timkiem_seed.");
 
-                ctx.CapNhatDB.DuLieu.TaiKhoanTimKiemSeed.Add(new TaiKhoanTimKiemSeed
-                {
-                    TaiKhoanIdServer = tk.TaiKhoanIdServer,
-                    SavedSearchIdServer = savedSearchIdServer,
-                    Keyword = keyword,
-                    TrangThai = "dang_luu",
-                    TaoBoiTest = true,
-                    TaoLuc = DateTimeOffset.Now
-                });
-                await ctx.CapNhatDB.LuuAsync();
+                await ctx.CapNhatDB.LuuTimKiemDaLuuAsync(tk, savedSearchIdServer, keyword);
             });
 
         Them(ds, "SEARCH-SAVE-02", "Search", "Lưu tìm kiếm không gửi token",

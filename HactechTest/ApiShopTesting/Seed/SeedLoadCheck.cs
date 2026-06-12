@@ -14,6 +14,7 @@ namespace HactechTest.ApiShopTesting.Seed
             await TaiTinhThanhAsync(connection);
             await TaiPhuongXaAsync(connection);
             await TaiTaiKhoanAsync(connection);
+            await TaiWalletAsync(connection);
             await TaiTimKiemAsync(connection);
             await TaiTheoDoiAsync(connection);
             await TaiChanAsync(connection);
@@ -122,6 +123,34 @@ namespace HactechTest.ApiShopTesting.Seed
                     DangKyLuc = DocNgayNull(readerDaDangKy, "dang_ky_luc"),
                     DoiMatKhauLuc = DocNgayNull(readerDaDangKy, "doi_mk_luc"),
                     GhiChu = DocChuoiNull(readerDaDangKy, "ghi_chu")
+                });
+            }
+        }
+
+        private async Task TaiWalletAsync(SqlConnection connection)
+        {
+            const string sql = """
+            SELECT wallet_id_server, tk_id_server, balance, available_balance, pending_balance,
+                   trang_thai, tao_luc, xac_minh_luc, ghi_chu
+            FROM dbo.wallet_seed
+            ORDER BY tk_id_server;
+            """;
+
+            await using var command = new SqlCommand(sql, connection);
+            await using var reader = await command.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                _duLieuDangTai.WalletSeed.Add(new WalletSeed
+                {
+                    WalletIdServer = DocChuoi(reader, "wallet_id_server"),
+                    TaiKhoanIdServer = DocIntNull(reader, "tk_id_server"),
+                    Balance = DocDecimal(reader, "balance"),
+                    AvailableBalance = DocDecimalNull(reader, "available_balance"),
+                    PendingBalance = DocDecimalNull(reader, "pending_balance"),
+                    TrangThai = DocChuoiNull(reader, "trang_thai"),
+                    TaoLuc = DocNgayNull(reader, "tao_luc"),
+                    XacMinhLuc = DocNgayNull(reader, "xac_minh_luc"),
+                    GhiChu = DocChuoiNull(reader, "ghi_chu")
                 });
             }
         }
@@ -324,7 +353,7 @@ namespace HactechTest.ApiShopTesting.Seed
         private async Task TaiThichSanPhamAsync(SqlConnection connection)
         {
             const string sql = """
-            SELECT thich_seed_id, tk_id_server, sp_id_server, thich_luc, trang_thai, ghi_chu
+            SELECT thich_seed_id, tk_id_server, sp_id_server, thich_luc, ghi_chu
             FROM dbo.tk_thich_sanpham_seed
             ORDER BY thich_seed_id;
             """;
@@ -339,7 +368,6 @@ namespace HactechTest.ApiShopTesting.Seed
                     TaiKhoanIdServer = DocIntNull(reader, "tk_id_server"),
                     SanPhamIdServer = DocIntNull(reader, "sp_id_server"),
                     ThichLuc = DocNgayNull(reader, "thich_luc"),
-                    TrangThai = DocChuoi(reader, "trang_thai"),
                     GhiChu = DocChuoiNull(reader, "ghi_chu")
                 });
             }
@@ -443,6 +471,11 @@ namespace HactechTest.ApiShopTesting.Seed
             return Convert.ToDecimal(reader[tenCot]);
         }
 
+        private static decimal? DocDecimalNull(SqlDataReader reader, string tenCot)
+        {
+            return reader[tenCot] == DBNull.Value ? null : Convert.ToDecimal(reader[tenCot]);
+        }
+
         private static DateTimeOffset? DocNgayNull(SqlDataReader reader, string tenCot)
         {
             if (reader[tenCot] == DBNull.Value)
@@ -505,7 +538,7 @@ namespace HactechTest.ApiShopTesting.Seed
                 SoThuongHieuSanSang = duLieu.ThuongHieuSeed.Count(x => x.TrangThai == "san_sang"),
                 SoSanPhamSanSang = duLieu.SanPhamSeed.Count(x => x.TrangThai == "san_sang" && x.SanPhamIdServer is > 0),
                 SoSanPhamCanCo = YeuCauDuLieuSeed.SoSanPhamToiThieu,
-                SoLikeSanPhamSanSang = duLieu.TaiKhoanThichSanPhamSeed.Count(x => x.TrangThai == "san_sang" && x.SanPhamIdServer is > 0),
+                SoLikeSanPhamDangLuu = duLieu.TaiKhoanThichSanPhamSeed.Count(x => x.TaiKhoanIdServer is > 0 && x.SanPhamIdServer is > 0),
                 SoLikeSanPhamCanCo = YeuCauDuLieuSeed.SoLikeSanPhamMucTieu,
                 SoTinNhanDaGui = duLieu.TinNhanSeed.Count(x => x.TrangThai == "da_gui"),
                 SoTinNhanCanCo = YeuCauDuLieuSeed.SoTinNhanMucTieu,
@@ -553,7 +586,7 @@ namespace HactechTest.ApiShopTesting.Seed
                 hangMuc.Add(HangMucChuanBiDuLieuSeed.SanPham);
             }
 
-            if (thongKe.SoLikeSanPhamSanSang < thongKe.SoLikeSanPhamCanCo)
+            if (thongKe.SoLikeSanPhamDangLuu < thongKe.SoLikeSanPhamCanCo)
             {
                 hangMuc.Add(HangMucChuanBiDuLieuSeed.LikeSanPham);
             }
@@ -626,9 +659,9 @@ namespace HactechTest.ApiShopTesting.Seed
                 thieu.Add($"Thiếu sản phẩm seed san_sang: hiện có {thongKe.SoSanPhamSanSang}/{thongKe.SoSanPhamCanCo}.");
             }
 
-            if (thongKe.SoLikeSanPhamSanSang < thongKe.SoLikeSanPhamCanCo)
+            if (thongKe.SoLikeSanPhamDangLuu < thongKe.SoLikeSanPhamCanCo)
             {
-                thieu.Add($"Thiếu like sản phẩm seed san_sang: hiện có {thongKe.SoLikeSanPhamSanSang}/{thongKe.SoLikeSanPhamCanCo}.");
+                thieu.Add($"Thiếu like sản phẩm seed đang lưu: hiện có {thongKe.SoLikeSanPhamDangLuu}/{thongKe.SoLikeSanPhamCanCo}.");
             }
 
             if (thongKe.SoTinNhanDaGui < thongKe.SoTinNhanCanCo)
@@ -695,7 +728,7 @@ namespace HactechTest.ApiShopTesting.Seed
         public int SoThuongHieuSanSang { get; init; }
         public int SoSanPhamSanSang { get; init; }
         public int SoSanPhamCanCo { get; init; }
-        public int SoLikeSanPhamSanSang { get; init; }
+        public int SoLikeSanPhamDangLuu { get; init; }
         public int SoLikeSanPhamCanCo { get; init; }
         public int SoTinNhanDaGui { get; init; }
         public int SoTinNhanCanCo { get; init; }

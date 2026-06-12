@@ -126,15 +126,16 @@ public sealed partial class ChuanBiSeed
         }
 
         var daThich = _nguCanh.CapNhatDB.DuLieu.TaiKhoanThichSanPhamSeed
-            .Where(x => x.TrangThai == "san_sang" &&
-                        x.TaiKhoanIdServer is > 0 &&
+            .Where(x => x.TaiKhoanIdServer is > 0 &&
                         x.SanPhamIdServer is > 0)
             .Select(x => (TaiKhoanIdServer: x.TaiKhoanIdServer!.Value, SanPhamIdServer: x.SanPhamIdServer!.Value))
             .ToHashSet();
 
         foreach (var sp in sanPham)
         {
-            if (_nguCanh.CapNhatDB.DuLieu.TaiKhoanThichSanPhamSeed.Count(x => x.TrangThai == "san_sang") >= YeuCauDuLieuSeed.SoLikeSanPhamMucTieu)
+            if (_nguCanh.CapNhatDB.DuLieu.TaiKhoanThichSanPhamSeed.Count(x =>
+                    x.TaiKhoanIdServer is > 0 &&
+                    x.SanPhamIdServer is > 0) >= YeuCauDuLieuSeed.SoLikeSanPhamMucTieu)
             {
                 break;
             }
@@ -176,7 +177,6 @@ public sealed partial class ChuanBiSeed
                 TaiKhoanIdServer = nguoiThich.TaiKhoanIdServer,
                 SanPhamIdServer = sp.SanPhamIdServer,
                 ThichLuc = DateTimeOffset.Now,
-                TrangThai = "san_sang",
                 GhiChu = "Tao bang API /api/like_product"
             });
             daThich.Add((nguoiThich.TaiKhoanIdServer, sp.SanPhamIdServer!.Value));

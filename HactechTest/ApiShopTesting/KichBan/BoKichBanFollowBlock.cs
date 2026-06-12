@@ -39,14 +39,7 @@ public static partial class BoKichBanApi
             {
                 var taiKhoanTheoDoi = (TaiKhoanSignupThanhCongSeed)request.Tam["taiKhoanTheoDoi"]!;
                 var taiKhoanDuocTheoDoi = (TaiKhoanSignupThanhCongSeed)request.Tam["taiKhoanDuocTheoDoi"]!;
-                ctx.CapNhatDB.DuLieu.TaiKhoanTheoDoiSeed.Add(new TaiKhoanTheoDoiSeed
-                {
-                    FollowerTaiKhoanIdServer = taiKhoanTheoDoi.TaiKhoanIdServer,
-                    FolloweeTaiKhoanIdServer = taiKhoanDuocTheoDoi.TaiKhoanIdServer,
-                    TheoDoiLuc = DateTimeOffset.Now,
-                    TrangThai = "dang_theo_doi"
-                });
-                await ctx.CapNhatDB.LuuAsync();
+                await ctx.CapNhatDB.ThemQuanHeTheoDoiAsync(taiKhoanTheoDoi, taiKhoanDuocTheoDoi);
             });
 
         Them(ds, "FOLLOW-SET-03", "FollowBlock", "Unfollow user đang theo dõi",
@@ -65,8 +58,7 @@ public static partial class BoKichBanApi
             sauKhiDat: async (_, request, ctx) =>
             {
                 var follow = (TaiKhoanTheoDoiSeed)request.Tam["follow"]!;
-                XoaQuanHeTheoDoiDangHoatDong(ctx, follow);
-                await ctx.CapNhatDB.LuuAsync();
+                await ctx.CapNhatDB.XoaQuanHeTheoDoiDangHoatDongAsync(follow);
             });
 
         Them(ds, "FOLLOW-SET-04", "FollowBlock", "Follow user không tồn tại",
@@ -215,14 +207,7 @@ public static partial class BoKichBanApi
             {
                 var taiKhoanChan = (TaiKhoanSignupThanhCongSeed)request.Tam["taiKhoanChan"]!;
                 var taiKhoanBiChan = (TaiKhoanSignupThanhCongSeed)request.Tam["taiKhoanBiChan"]!;
-                ctx.CapNhatDB.DuLieu.TaiKhoanChanSeed.Add(new TaiKhoanChanSeed
-                {
-                    BlockerTaiKhoanIdServer = taiKhoanChan.TaiKhoanIdServer,
-                    BlockedTaiKhoanIdServer = taiKhoanBiChan.TaiKhoanIdServer,
-                    ChanLuc = DateTimeOffset.Now,
-                    TrangThai = "dang_chan"
-                });
-                await ctx.CapNhatDB.LuuAsync();
+                await ctx.CapNhatDB.ThemQuanHeChanAsync(taiKhoanChan, taiKhoanBiChan);
             });
 
         Them(ds, "BLOCK-SET-03", "FollowBlock", "Unblock user đang bị chặn",
@@ -241,8 +226,7 @@ public static partial class BoKichBanApi
             sauKhiDat: async (_, request, ctx) =>
             {
                 var chan = (TaiKhoanChanSeed)request.Tam["chan"]!;
-                XoaQuanHeChanDangHoatDong(ctx, chan);
-                await ctx.CapNhatDB.LuuAsync();
+                await ctx.CapNhatDB.XoaQuanHeChanDangHoatDongAsync(chan);
             });
 
         Them(ds, "BLOCK-SET-04", "FollowBlock", "Block user không tồn tại",

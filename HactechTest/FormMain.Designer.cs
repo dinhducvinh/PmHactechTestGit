@@ -171,7 +171,7 @@ namespace HactechTest
             btnTongQuan.Padding = new Padding(24, 0, 0, 0);
             btnTongQuan.Size = new Size(248, 48);
             btnTongQuan.TabIndex = 3;
-            btnTongQuan.Text = "&Tổng quan";
+            btnTongQuan.Text = "Tổng quan";
             btnTongQuan.TextAlign = ContentAlignment.MiddleLeft;
             btnTongQuan.UseVisualStyleBackColor = false;
             // 

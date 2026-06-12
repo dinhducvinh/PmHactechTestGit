@@ -193,7 +193,7 @@ public sealed partial class ChuanBiSeed
         }
 
         dong.Add("");
-        dong.Add("Kiểm tra lại SQL Server, Base URL và các API signup/login, địa chỉ, danh mục/thương hiệu, sản phẩm, saved search, follow/block, tin nhắn.");
+        dong.Add("Kiểm tra lại SQL Server, Base URL và các API signup/login, wallet, địa chỉ, danh mục/thương hiệu, sản phẩm, saved search, follow/block, tin nhắn.");
         return string.Join(Environment.NewLine, dong);
     }
 
@@ -211,7 +211,7 @@ public sealed partial class ChuanBiSeed
         dong.Add($"- Danh mục seed san_sang: {thongKe.SoDanhMucSanSang}/{thongKe.SoDanhMucCanCo}.");
         dong.Add($"- Thương hiệu seed san_sang: {thongKe.SoThuongHieuSanSang}.");
         dong.Add($"- Sản phẩm seed san_sang: {thongKe.SoSanPhamSanSang}/{thongKe.SoSanPhamCanCo}.");
-        dong.Add($"- Like sản phẩm seed san_sang: {thongKe.SoLikeSanPhamSanSang}/{thongKe.SoLikeSanPhamCanCo}.");
+        dong.Add($"- Like sản phẩm seed đang lưu: {thongKe.SoLikeSanPhamDangLuu}/{thongKe.SoLikeSanPhamCanCo}.");
         dong.Add($"- Tin nhắn seed da_gui: {thongKe.SoTinNhanDaGui}/{thongKe.SoTinNhanCanCo}.");
         dong.Add($"- Thông báo seed dang_luu: {thongKe.SoThongBaoDangLuu}.");
     }

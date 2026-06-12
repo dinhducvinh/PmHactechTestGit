@@ -1,7 +1,6 @@
 using System.Text.Json.Nodes;
 using HactechTest.ApiShopTesting.Core;
 using static HactechTest.ApiShopTesting.Core.HelperTC;
-using HactechTest.ApiShopTesting.Seed;
 
 namespace HactechTest.ApiShopTesting.KichBan;
 
@@ -60,7 +59,7 @@ public static partial class BoKichBanApi
             },
             Ok,
             KiemTraGuiTinNhanTraVeId(),
-            DongBoTinNhanTuResponseAsync);
+            async (response, request, ctx) => await ctx.CapNhatDB.DongBoTinNhanTuResponseAsync(response, request));
 
         Them(ds, "CONVERSATION-SEND-03", "Conversation", "Gửi tin nhắn sản phẩm hợp lệ",
             "Token hợp lệ, to_id tồn tại, product_id lấy từ sanpham_seed; message có thể thiếu.",
@@ -84,7 +83,7 @@ public static partial class BoKichBanApi
             },
             Ok,
             KiemTraGuiTinNhanTraVeId(),
-            DongBoTinNhanTuResponseAsync);
+            async (response, request, ctx) => await ctx.CapNhatDB.DongBoTinNhanTuResponseAsync(response, request));
 
         Them(ds, "CONVERSATION-SEND-04", "Conversation", "Gửi tin nhắn thiếu message và product_id",
             "Có to_id và type_message nhưng không gửi message/product_id.",
@@ -149,7 +148,7 @@ public static partial class BoKichBanApi
             },
             Ok,
             KiemTraGuiTinNhanTraVeId(),
-            DongBoTinNhanTuResponseAsync);
+            async (response, request, ctx) => await ctx.CapNhatDB.DongBoTinNhanTuResponseAsync(response, request));
 
         Them(ds, "CONVERSATION-SEND-08A", "Conversation", "Gửi tin nhắn cho chính mình",
             "Token hợp lệ nhưng to_id là id của chính current user.",
@@ -525,90 +524,6 @@ public static partial class BoKichBanApi
             SaiGiaTri);
     }
 
-    private static TinNhanSeed LayTinNhanDaGuiBatBuoc(NguCanhKiemThu ctx)
-    {
-        return ctx.CapNhatDB.DuLieu.TinNhanSeed
-            .Where(x => x.TrangThai == "da_gui")
-            .Where(x => x.ConversationIdServer is > 0)
-            .Where(x => x.SenderTaiKhoanIdServer is > 0)
-            .Where(x => x.ReceiverTaiKhoanIdServer is > 0)
-            .OrderByDescending(x => x.GuiLuc ?? DateTimeOffset.MinValue)
-            .ThenByDescending(x => x.TinNhanSeedId)
-            .FirstOrDefault()
-            ?? throw new BoQuaKiemThuException("Thiếu dữ liệu tinnhan_seed trạng thái da_gui. Hãy bấm Kiểm tra seed để tạo tin nhắn mồi.");
-    }
-
-    private static TinNhanSeed LayTinNhanCoNoiDungDaGuiBatBuoc(NguCanhKiemThu ctx)
-    {
-        return ctx.CapNhatDB.DuLieu.TinNhanSeed
-            .Where(x => x.TrangThai == "da_gui")
-            .Where(x => x.ConversationIdServer is > 0)
-            .Where(x => x.MessageIdServer is > 0)
-            .Where(x => x.SenderTaiKhoanIdServer is > 0)
-            .Where(x => x.ReceiverTaiKhoanIdServer is > 0)
-            .Where(x => !string.IsNullOrWhiteSpace(x.NoiDung))
-            .OrderByDescending(x => x.GuiLuc ?? DateTimeOffset.MinValue)
-            .ThenByDescending(x => x.TinNhanSeedId)
-            .FirstOrDefault()
-            ?? throw new BoQuaKiemThuException("Thiếu tinnhan_seed dạng text có nội dung để đối chiếu get_conversation.");
-    }
-
-    private static TinNhanSeed LayTinNhanCoQuanHeChanBatBuoc(NguCanhKiemThu ctx)
-    {
-        return ctx.CapNhatDB.DuLieu.TinNhanSeed
-            .Where(x => x.TrangThai == "da_gui")
-            .Where(x => x.ConversationIdServer is > 0)
-            .Where(x => x.SenderTaiKhoanIdServer is > 0)
-            .Where(x => x.ReceiverTaiKhoanIdServer is > 0)
-            .Where(x => CoQuanHeChan(ctx, x.SenderTaiKhoanIdServer, x.ReceiverTaiKhoanIdServer))
-            .OrderByDescending(x => x.GuiLuc ?? DateTimeOffset.MinValue)
-            .ThenByDescending(x => x.TinNhanSeedId)
-            .FirstOrDefault()
-            ?? throw new BoQuaKiemThuException("Thiếu tinnhan_seed giữa hai tài khoản có quan hệ block. Có thể chạy CONVERSATION-SEND-07 trước để tạo dữ liệu này.");
-    }
-
-    private static CapHaiTaiKhoan ChonCapTaiKhoanChanChuaCoConversation(NguCanhKiemThu ctx)
-    {
-        foreach (var quanHe in LayDanhSachQuanHeChanDangHoatDong(ctx))
-        {
-            var blocker = LayTaiKhoanTheoServerId(ctx, quanHe.BlockerTaiKhoanIdServer);
-            var blocked = LayTaiKhoanTheoServerId(ctx, quanHe.BlockedTaiKhoanIdServer);
-            if (blocker is not null &&
-                blocked is not null &&
-                !CoConversationTrongSeed(ctx, blocker.TaiKhoanIdServer, blocked.TaiKhoanIdServer))
-            {
-                return new CapHaiTaiKhoan(blocker, blocked);
-            }
-        }
-
-        throw new BoQuaKiemThuException("Không tìm được cặp tài khoản có quan hệ block nhưng chưa có conversation trong tinnhan_seed.");
-    }
-
-    private static CapHaiTaiKhoan ChonCapTaiKhoanChuaCoConversation(NguCanhKiemThu ctx)
-    {
-        var taiKhoan = LayDanhSachTaiKhoanSanSang(ctx);
-        return ChonCapTaiKhoan(
-            taiKhoan,
-            taiKhoan,
-            (taiKhoanThuNhat, taiKhoanThuHai) =>
-                !CoQuanHeChan(ctx, taiKhoanThuNhat.TaiKhoanIdServer, taiKhoanThuHai.TaiKhoanIdServer) &&
-                !CoConversationTrongSeed(ctx, taiKhoanThuNhat.TaiKhoanIdServer, taiKhoanThuHai.TaiKhoanIdServer),
-            "Không tìm được cặp tài khoản chưa có conversation trong tinnhan_seed.");
-    }
-
-    private static bool CoConversationTrongSeed(NguCanhKiemThu ctx, int? taiKhoanIdServerA, int? taiKhoanIdServerB)
-    {
-        if (taiKhoanIdServerA is null or <= 0 || taiKhoanIdServerB is null or <= 0)
-        {
-            return false;
-        }
-
-        return ctx.CapNhatDB.DuLieu.TinNhanSeed.Any(x =>
-            x.TrangThai == "da_gui" &&
-            ((x.SenderTaiKhoanIdServer == taiKhoanIdServerA.Value && x.ReceiverTaiKhoanIdServer == taiKhoanIdServerB.Value) ||
-             (x.SenderTaiKhoanIdServer == taiKhoanIdServerB.Value && x.ReceiverTaiKhoanIdServer == taiKhoanIdServerA.Value)));
-    }
-
     private static Func<PhanHoiApi, YeuCauApi, NguCanhKiemThu, Task<KetQuaKiemTraThem>> KiemTraGuiTinNhanTraVeId()
     {
         return (response, _, _) =>
@@ -632,61 +547,6 @@ public static partial class BoKichBanApi
 
             return Task.FromResult(KetQuaKiemTraThem.ThanhCong);
         };
-    }
-
-    private static async Task DongBoTinNhanTuResponseAsync(PhanHoiApi response, YeuCauApi request, NguCanhKiemThu ctx)
-    {
-        if (!LaMaThanhCong(response))
-        {
-            return;
-        }
-
-        var conversationId = DocIdSau(response.Data, "conversation_id");
-        var messageId = DocIdSau(response.Data, "message_id");
-        if (conversationId is not > 0 || messageId is not > 0)
-        {
-            return;
-        }
-
-        var nguoiGui = (TaiKhoanSignupThanhCongSeed)request.Tam["nguoiGui"]!;
-        var nguoiNhan = (TaiKhoanSignupThanhCongSeed)request.Tam["nguoiNhan"]!;
-        var typeMessage = (string)request.Tam["typeMessage"]!;
-        var noiDung = request.Tam.TryGetValue("noiDung", out var noiDungRaw) ? noiDungRaw as string : null;
-        var productId = request.Tam.TryGetValue("productId", out var productIdRaw) && productIdRaw is int productIdValue
-            ? productIdValue
-            : (int?)null;
-
-        var tinNhanDaCo = ctx.CapNhatDB.DuLieu.TinNhanSeed.FirstOrDefault(x => x.MessageIdServer == messageId.Value);
-        if (tinNhanDaCo is null)
-        {
-            ctx.CapNhatDB.DuLieu.TinNhanSeed.Add(new TinNhanSeed
-            {
-                ConversationIdServer = conversationId.Value,
-                MessageIdServer = messageId.Value,
-                SenderTaiKhoanIdServer = nguoiGui.TaiKhoanIdServer,
-                ReceiverTaiKhoanIdServer = nguoiNhan.TaiKhoanIdServer,
-                SanPhamIdServer = productId,
-                TypeMessage = typeMessage,
-                NoiDung = noiDung,
-                TrangThai = "da_gui",
-                TaoBoiTest = true,
-                GuiLuc = DateTimeOffset.Now,
-                GhiChu = "Dong bo boi testcase conversation send"
-            });
-        }
-        else
-        {
-            tinNhanDaCo.ConversationIdServer = conversationId.Value;
-            tinNhanDaCo.SenderTaiKhoanIdServer = nguoiGui.TaiKhoanIdServer;
-            tinNhanDaCo.ReceiverTaiKhoanIdServer = nguoiNhan.TaiKhoanIdServer;
-            tinNhanDaCo.SanPhamIdServer = productId;
-            tinNhanDaCo.TypeMessage = typeMessage;
-            tinNhanDaCo.NoiDung = noiDung;
-            tinNhanDaCo.TrangThai = "da_gui";
-            tinNhanDaCo.GuiLuc = DateTimeOffset.Now;
-        }
-
-        await ctx.CapNhatDB.LuuAsync();
     }
 
     private static Func<PhanHoiApi, YeuCauApi, NguCanhKiemThu, Task<KetQuaKiemTraThem>> KiemTraDanhSachCoConversationSeed()

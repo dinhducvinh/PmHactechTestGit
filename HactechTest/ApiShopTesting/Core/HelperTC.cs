@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Nodes;
+using System.Collections.Concurrent;
 using HactechTest.ApiShopTesting.Seed;
 
 namespace HactechTest.ApiShopTesting.Core;
@@ -19,6 +20,17 @@ internal static class HelperTC
         }
 
         return dict;
+    }
+
+    internal static string RutGon(string? raw, int max)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return "";
+        }
+
+        var motDong = raw.Replace(Environment.NewLine, " ");
+        return motDong.Length <= max ? motDong : motDong[..max] + "...";
     }
 
     internal static int IdBatBuoc(int? giaTri, string tenDuLieu)
@@ -64,10 +76,7 @@ internal static class HelperTC
         var response = await ctx.Api.GuiAsync(new YeuCauApi(
             HttpMethod.Post,
             "/auth/login",
-            Obj(
-                ("phone_number", taiKhoan.SoDienThoai),
-                ("password", taiKhoan.MatKhauHienTai),
-                ("devtoken", taiKhoan.UuidThietBi))));
+            TaoBodyDangNhap(taiKhoan)));
 
         var token = response.MaSoSanh == "1000"
             ? response.Data?["token"]?.ToString()
@@ -80,6 +89,61 @@ internal static class HelperTC
 
         throw new BoQuaKiemThuException(
             $"Không lấy được token hợp lệ cho tài khoản seed {taiKhoan.SoThuTu}. Đây là lỗi chuẩn bị test nếu API login chưa sẵn sàng.");
+    }
+
+    internal static async Task<Dictionary<int, string>> LayTokenChoDanhSachTaiKhoanAsync(
+        NguCanhKiemThu ctx,
+        IReadOnlyList<TaiKhoanSignupThanhCongSeed> taiKhoan,
+        CancellationToken cancellationToken)
+    {
+        var tokenTheoTaiKhoan = new ConcurrentDictionary<int, string>();
+        var loi = new ConcurrentBag<string>();
+        using var gioiHan = new SemaphoreSlim(20);
+
+        var congViec = taiKhoan.Select(async tk =>
+        {
+            await gioiHan.WaitAsync(cancellationToken);
+            try
+            {
+                var response = await ctx.Api.GuiAsync(
+                    new YeuCauApi(HttpMethod.Post, "/auth/login", TaoBodyDangNhap(tk)),
+                    cancellationToken);
+                var token = response.MaSoSanh == "1000"
+                    ? response.Data?["token"]?.ToString()
+                    : null;
+
+                if (string.IsNullOrWhiteSpace(token))
+                {
+                    loi.Add($"tk_id_server {tk.TaiKhoanIdServer}: login trả {response.MaSoSanh}");
+                    return;
+                }
+
+                tokenTheoTaiKhoan[tk.SoThuTu] = token;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                loi.Add($"tk_id_server {tk.TaiKhoanIdServer}: {RutGon(ex.Message, 160)}");
+            }
+            finally
+            {
+                gioiHan.Release();
+            }
+        });
+
+        await Task.WhenAll(congViec);
+
+        if (tokenTheoTaiKhoan.Count < taiKhoan.Count)
+        {
+            var mauLoi = string.Join(" | ", loi.Take(5));
+            throw new LoiChuanBiKiemThuException(
+                $"Không lấy đủ token cho {taiKhoan.Count} tài khoản seed. Lấy được {tokenTheoTaiKhoan.Count}/{taiKhoan.Count}. {mauLoi}");
+        }
+
+        return tokenTheoTaiKhoan.ToDictionary(x => x.Key, x => x.Value);
     }
 
     internal static async Task<TaiKhoanSignupThanhCongSeed> DangKyTaiKhoanMoiAsync(NguCanhKiemThu ctx)
@@ -97,25 +161,10 @@ internal static class HelperTC
             throw new BoQuaKiemThuException("Không tạo được tài khoản đã đăng ký qua API /auth/signup. Kiểm tra base URL hoặc logic signup.");
         }
 
-        var taiKhoanDaDangKy = new TaiKhoanSignupThanhCongSeed
-        {
-            TaiKhoanIdServer = response.Data?["id"]?.GetValue<int>() ?? 0,
-            SoDienThoai = taiKhoan.SoDienThoai,
-            MatKhauHienTai = matKhauDungDeDangKy,
-            DangKyLuc = DateTimeOffset.Now,
-            GhiChu = taiKhoan.GhiChu,
-            SoThuTu = taiKhoan.SoThuTu,
-            UuidThietBi = taiKhoan.UuidThietBi
-        };
-
-        if (taiKhoanDaDangKy.TaiKhoanIdServer <= 0)
-        {
-            throw new BoQuaKiemThuException("API /auth/signup trả thành công nhưng không có id tài khoản.");
-        }
-
-        ctx.CapNhatDB.DuLieu.TaiKhoanChuaDangKySeed.Remove(taiKhoan);
-        ctx.CapNhatDB.DuLieu.TaiKhoanSignupThanhCongSeed.Add(taiKhoanDaDangKy);
-        await ctx.CapNhatDB.LuuAsync();
+        var taiKhoanDaDangKy = await ctx.CapNhatDB.LuuTaiKhoanDangKyThanhCongAsync(
+            response,
+            taiKhoan,
+            matKhauDungDeDangKy);
         return taiKhoanDaDangKy;
     }
 
@@ -161,11 +210,12 @@ internal static class HelperTC
             ("uuid", taiKhoan.UuidThietBi));
     }
 
-    internal static async Task CapNhatMatKhauAsync(NguCanhKiemThu ctx, TaiKhoanSignupThanhCongSeed taiKhoan, string matKhauMoi)
+    internal static Dictionary<string, object?> TaoBodyDangNhap(TaiKhoanSignupThanhCongSeed taiKhoan)
     {
-        taiKhoan.MatKhauHienTai = matKhauMoi;
-        taiKhoan.DoiMatKhauLuc = DateTimeOffset.Now;
-        await ctx.CapNhatDB.LuuAsync();
+        return Obj(
+            ("phone_number", taiKhoan.SoDienThoai),
+            ("password", taiKhoan.MatKhauHienTai),
+            ("devtoken", taiKhoan.UuidThietBi));
     }
 
     internal static TaiKhoanSignupThanhCongSeed? LayTaiKhoanDaDangKy(NguCanhKiemThu ctx)
@@ -290,6 +340,17 @@ internal static class HelperTC
         string Ten,
         decimal Gia);
 
+    internal sealed record DuLieuThemDiaChi(
+        PhuongXaSeed PhuongXa,
+        TinhThanhSeed TinhThanh,
+        Dictionary<string, object?> Body,
+        string DiaChi,
+        string DiaChiChiTiet,
+        decimal ViDo,
+        decimal KinhDo,
+        string TenNguoiNhan,
+        string SoDienThoaiNguoiNhan);
+
     internal static IReadOnlyList<TaiKhoanSignupThanhCongSeed> LayDanhSachTaiKhoanSanSang(NguCanhKiemThu ctx)
     {
         return ctx.CapNhatDB.DuLieu.TaiKhoanSignupThanhCongSeed
@@ -297,6 +358,25 @@ internal static class HelperTC
             .OrderBy(x => x.SoThuTu)
             .ThenBy(x => x.TaiKhoanIdServer)
             .ToList();
+    }
+
+    internal static IReadOnlyList<TaiKhoanSignupThanhCongSeed> LayDanhSachTaiKhoanDaDangKyBatBuoc(
+        NguCanhKiemThu ctx,
+        int soLuong,
+        string thongBaoKhiThieu)
+    {
+        var taiKhoan = ctx.CapNhatDB.DuLieu.TaiKhoanSignupThanhCongSeed
+            .Where(x =>
+                x.TaiKhoanIdServer is > 0 &&
+                !string.IsNullOrWhiteSpace(x.SoDienThoai) &&
+                !string.IsNullOrWhiteSpace(x.MatKhauHienTai))
+            .OrderBy(x => x.SoThuTu)
+            .Take(soLuong)
+            .ToList();
+
+        return taiKhoan.Count >= soLuong
+            ? taiKhoan
+            : throw new LoiChuanBiKiemThuException(thongBaoKhiThieu);
     }
 
     internal static TaiKhoanSignupThanhCongSeed? LayTaiKhoanTheoServerId(NguCanhKiemThu ctx, int? taiKhoanIdServer)
@@ -318,6 +398,41 @@ internal static class HelperTC
             .OrderBy(x => x.TaiKhoanTimKiemSeedId)
             .FirstOrDefault()
             ?? throw new BoQuaKiemThuException("Thiếu tk_timkiem_seed trạng thái dang_luu.");
+    }
+
+    internal static TaiKhoanSignupThanhCongSeed? LayTaiKhoanUuTienCoThongBao(NguCanhKiemThu ctx)
+    {
+        var thongBao = ctx.CapNhatDB.DuLieu.ThongBaoSeed
+            .Where(x => x.NotificationIdServer is > 0)
+            .OrderBy(x => x.DaDoc == true ? 1 : 0)
+            .ThenBy(x => x.ThongBaoSeedId)
+            .FirstOrDefault();
+
+        return thongBao is null
+            ? null
+            : LayTaiKhoanTheoServerId(ctx, thongBao.TaiKhoanIdServer);
+    }
+
+    internal static ThongBaoSeed LayThongBaoChuaDoc(NguCanhKiemThu ctx)
+    {
+        return ctx.CapNhatDB.DuLieu.ThongBaoSeed
+            .Where(x => x.NotificationIdServer is > 0)
+            .Where(x => x.DaDoc != true || string.Equals(x.TrangThai, "dang_luu", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(x => x.ThongBaoSeedId)
+            .FirstOrDefault()
+            ?? throw new BoQuaKiemThuException("Thiếu thông báo chưa đọc trong thongbao_seed. Hãy bấm Kiểm tra seed hoặc tạo nghiệp vụ phát sinh notification trước.");
+    }
+
+    internal static long LayNotificationIdDangCoHoacMacDinh(NguCanhKiemThu ctx)
+    {
+        var thongBao = ctx.CapNhatDB.DuLieu.ThongBaoSeed
+            .Where(x => x.NotificationIdServer is > 0)
+            .OrderBy(x => x.ThongBaoSeedId)
+            .FirstOrDefault();
+
+        return thongBao is null
+            ? 999999999
+            : IdBatBuoc(thongBao.NotificationIdServer, "thongbao_seed.notification_id_server");
     }
 
     internal static DanhMucSeed LayDanhMucSanSang(NguCanhKiemThu ctx)
@@ -552,6 +667,90 @@ internal static class HelperTC
             thongBaoKhiThieu);
     }
 
+    internal static TinNhanSeed LayTinNhanDaGuiBatBuoc(NguCanhKiemThu ctx)
+    {
+        return ctx.CapNhatDB.DuLieu.TinNhanSeed
+            .Where(x => x.TrangThai == "da_gui")
+            .Where(x => x.ConversationIdServer is > 0)
+            .Where(x => x.SenderTaiKhoanIdServer is > 0)
+            .Where(x => x.ReceiverTaiKhoanIdServer is > 0)
+            .OrderByDescending(x => x.GuiLuc ?? DateTimeOffset.MinValue)
+            .ThenByDescending(x => x.TinNhanSeedId)
+            .FirstOrDefault()
+            ?? throw new BoQuaKiemThuException("Thiếu dữ liệu tinnhan_seed trạng thái da_gui. Hãy bấm Kiểm tra seed để tạo tin nhắn mồi.");
+    }
+
+    internal static TinNhanSeed LayTinNhanCoNoiDungDaGuiBatBuoc(NguCanhKiemThu ctx)
+    {
+        return ctx.CapNhatDB.DuLieu.TinNhanSeed
+            .Where(x => x.TrangThai == "da_gui")
+            .Where(x => x.ConversationIdServer is > 0)
+            .Where(x => x.MessageIdServer is > 0)
+            .Where(x => x.SenderTaiKhoanIdServer is > 0)
+            .Where(x => x.ReceiverTaiKhoanIdServer is > 0)
+            .Where(x => !string.IsNullOrWhiteSpace(x.NoiDung))
+            .OrderByDescending(x => x.GuiLuc ?? DateTimeOffset.MinValue)
+            .ThenByDescending(x => x.TinNhanSeedId)
+            .FirstOrDefault()
+            ?? throw new BoQuaKiemThuException("Thiếu tinnhan_seed dạng text có nội dung để đối chiếu get_conversation.");
+    }
+
+    internal static TinNhanSeed LayTinNhanCoQuanHeChanBatBuoc(NguCanhKiemThu ctx)
+    {
+        return ctx.CapNhatDB.DuLieu.TinNhanSeed
+            .Where(x => x.TrangThai == "da_gui")
+            .Where(x => x.ConversationIdServer is > 0)
+            .Where(x => x.SenderTaiKhoanIdServer is > 0)
+            .Where(x => x.ReceiverTaiKhoanIdServer is > 0)
+            .Where(x => CoQuanHeChan(ctx, x.SenderTaiKhoanIdServer, x.ReceiverTaiKhoanIdServer))
+            .OrderByDescending(x => x.GuiLuc ?? DateTimeOffset.MinValue)
+            .ThenByDescending(x => x.TinNhanSeedId)
+            .FirstOrDefault()
+            ?? throw new BoQuaKiemThuException("Thiếu tinnhan_seed giữa hai tài khoản có quan hệ block. Có thể chạy CONVERSATION-SEND-07 trước để tạo dữ liệu này.");
+    }
+
+    internal static CapHaiTaiKhoan ChonCapTaiKhoanChanChuaCoConversation(NguCanhKiemThu ctx)
+    {
+        foreach (var quanHe in LayDanhSachQuanHeChanDangHoatDong(ctx))
+        {
+            var blocker = LayTaiKhoanTheoServerId(ctx, quanHe.BlockerTaiKhoanIdServer);
+            var blocked = LayTaiKhoanTheoServerId(ctx, quanHe.BlockedTaiKhoanIdServer);
+            if (blocker is not null &&
+                blocked is not null &&
+                !CoConversationTrongSeed(ctx, blocker.TaiKhoanIdServer, blocked.TaiKhoanIdServer))
+            {
+                return new CapHaiTaiKhoan(blocker, blocked);
+            }
+        }
+
+        throw new BoQuaKiemThuException("Không tìm được cặp tài khoản có quan hệ block nhưng chưa có conversation trong tinnhan_seed.");
+    }
+
+    internal static CapHaiTaiKhoan ChonCapTaiKhoanChuaCoConversation(NguCanhKiemThu ctx)
+    {
+        var taiKhoan = LayDanhSachTaiKhoanSanSang(ctx);
+        return ChonCapTaiKhoan(
+            taiKhoan,
+            taiKhoan,
+            (taiKhoanThuNhat, taiKhoanThuHai) =>
+                !CoQuanHeChan(ctx, taiKhoanThuNhat.TaiKhoanIdServer, taiKhoanThuHai.TaiKhoanIdServer) &&
+                !CoConversationTrongSeed(ctx, taiKhoanThuNhat.TaiKhoanIdServer, taiKhoanThuHai.TaiKhoanIdServer),
+            "Không tìm được cặp tài khoản chưa có conversation trong tinnhan_seed.");
+    }
+
+    internal static bool CoConversationTrongSeed(NguCanhKiemThu ctx, int? taiKhoanIdServerA, int? taiKhoanIdServerB)
+    {
+        if (taiKhoanIdServerA is null or <= 0 || taiKhoanIdServerB is null or <= 0)
+        {
+            return false;
+        }
+
+        return ctx.CapNhatDB.DuLieu.TinNhanSeed.Any(x =>
+            x.TrangThai == "da_gui" &&
+            ((x.SenderTaiKhoanIdServer == taiKhoanIdServerA.Value && x.ReceiverTaiKhoanIdServer == taiKhoanIdServerB.Value) ||
+             (x.SenderTaiKhoanIdServer == taiKhoanIdServerB.Value && x.ReceiverTaiKhoanIdServer == taiKhoanIdServerA.Value)));
+    }
+
     internal static SanPhamSeed LaySanPhamSanSang(NguCanhKiemThu ctx)
     {
         return LayDanhSachSanPhamSanSang(ctx).FirstOrDefault()
@@ -657,6 +856,40 @@ internal static class HelperTC
         return new DuLieuBodySanPham(body, danhMuc, thuongHieu, diaChi, ten, gia);
     }
 
+    internal static DuLieuThemDiaChi TaoDuLieuThemDiaChi(
+        NguCanhKiemThu ctx,
+        TaiKhoanSignupThanhCongSeed? taiKhoan,
+        string maTestCase)
+    {
+        var ward = ctx.CapNhatDB.DuLieu.PhuongXaSeed
+            .OrderBy(x => x.PhuongXaId)
+            .FirstOrDefault()
+            ?? throw new BoQuaKiemThuException("Thiếu Wards_seed để tạo body /order/add_order_address.");
+        var province = ctx.CapNhatDB.DuLieu.TinhThanhSeed
+            .FirstOrDefault(x => x.TinhThanhId == ward.TinhThanhId)
+            ?? throw new BoQuaKiemThuException($"Thiếu Provinces_seed id {ward.TinhThanhId} tương ứng với ward {ward.PhuongXaId}.");
+
+        var seedId = taiKhoan?.SoThuTu ?? 0;
+        var addressDetail = $"So {Math.Max(seedId, 1)}, duong Test";
+        var address = $"{addressDetail}, {ward.TenPhuongXa}, {province.TenTinhThanh}";
+        var phone = taiKhoan?.SoDienThoai ?? "0909000001";
+        var receiverName = $"Receiver {maTestCase}";
+        var lat = 21.0m + Math.Max(seedId, 1) / 10000m;
+        var lng = 105.8m + Math.Max(seedId, 1) / 10000m;
+        var body = Obj(
+            ("address", address),
+            ("is_default", true),
+            ("address_id", new[] { ward.PhuongXaId, province.TinhThanhId }),
+            ("lat", lat),
+            ("lng", lng),
+            ("receiver_name", receiverName),
+            ("phone", phone),
+            ("full_address", address),
+            ("address_detail", addressDetail));
+
+        return new DuLieuThemDiaChi(ward, province, body, address, addressDetail, lat, lng, receiverName, phone);
+    }
+
     internal static int? DocIdSanPham(JsonNode? data)
     {
         return data?["id"]?.GetValue<int>();
@@ -700,18 +933,17 @@ internal static class HelperTC
         throw new BoQuaKiemThuException("Thiếu cặp user/sản phẩm có quan hệ block trong tk_chan_seed.");
     }
 
-    internal static bool LikeSanPhamSanSang(TaiKhoanThichSanPhamSeed like)
+    internal static bool LikeSanPhamDangLuu(TaiKhoanThichSanPhamSeed like)
     {
-        return like.TrangThai == "san_sang" &&
-               like.TaiKhoanIdServer is > 0 &&
+        return like.TaiKhoanIdServer is > 0 &&
                like.SanPhamIdServer is > 0;
     }
 
     internal static CapTaiKhoanVaSanPham ChonCapTaiKhoanSanPhamChuaLike(NguCanhKiemThu ctx)
     {
         var taiKhoanSanSang = LayDanhSachTaiKhoanSanSang(ctx);
-        var likeSanSang = ctx.CapNhatDB.DuLieu.TaiKhoanThichSanPhamSeed
-            .Where(LikeSanPhamSanSang)
+        var likeDangLuu = ctx.CapNhatDB.DuLieu.TaiKhoanThichSanPhamSeed
+            .Where(LikeSanPhamDangLuu)
             .ToList();
 
         foreach (var sanPham in LayDanhSachSanPhamSanSang(ctx))
@@ -720,7 +952,7 @@ internal static class HelperTC
             var taiKhoan = taiKhoanSanSang.FirstOrDefault(user =>
                 user.TaiKhoanIdServer != sanPham.TaiKhoanIdServer &&
                 !CoQuanHeChan(ctx, user.TaiKhoanIdServer, sanPham.TaiKhoanIdServer) &&
-                !likeSanSang.Any(like =>
+                !likeDangLuu.Any(like =>
                     like.TaiKhoanIdServer == user.TaiKhoanIdServer &&
                     like.SanPhamIdServer == sanPhamIdServer));
 
@@ -733,10 +965,10 @@ internal static class HelperTC
         throw new BoQuaKiemThuException("Thiếu cặp tài khoản/sản phẩm chưa like để chạy PRODUCT-LIKE-01.");
     }
 
-    internal static CapLikeSanPham LayLikeSanPhamSanSang(NguCanhKiemThu ctx)
+    internal static CapLikeSanPham LayLikeSanPhamDangLuu(NguCanhKiemThu ctx)
     {
         foreach (var like in ctx.CapNhatDB.DuLieu.TaiKhoanThichSanPhamSeed
-                     .Where(LikeSanPhamSanSang)
+                     .Where(LikeSanPhamDangLuu)
                      .OrderBy(x => x.ThichSanPhamSeedId))
         {
             var taiKhoan = LayTaiKhoanTheoServerId(ctx, like.TaiKhoanIdServer);
@@ -747,21 +979,6 @@ internal static class HelperTC
             }
         }
 
-        throw new BoQuaKiemThuException("Thiếu tk_thich_sanpham_seed trạng thái san_sang để chạy PRODUCT-LIKE-02.");
-    }
-    internal static void XoaQuanHeTheoDoiDangHoatDong(NguCanhKiemThu ctx, TaiKhoanTheoDoiSeed quanHe)
-    {
-        ctx.CapNhatDB.DuLieu.TaiKhoanTheoDoiSeed.RemoveAll(x =>
-            QuanHeTheoDoiDangHoatDong(x) &&
-            x.FollowerTaiKhoanIdServer == quanHe.FollowerTaiKhoanIdServer &&
-            x.FolloweeTaiKhoanIdServer == quanHe.FolloweeTaiKhoanIdServer);
-    }
-
-    internal static void XoaQuanHeChanDangHoatDong(NguCanhKiemThu ctx, TaiKhoanChanSeed quanHe)
-    {
-        ctx.CapNhatDB.DuLieu.TaiKhoanChanSeed.RemoveAll(x =>
-            QuanHeChanDangHoatDong(x) &&
-            x.BlockerTaiKhoanIdServer == quanHe.BlockerTaiKhoanIdServer &&
-            x.BlockedTaiKhoanIdServer == quanHe.BlockedTaiKhoanIdServer);
+        throw new BoQuaKiemThuException("Thiếu tk_thich_sanpham_seed đang lưu để chạy PRODUCT-LIKE-02.");
     }
 }

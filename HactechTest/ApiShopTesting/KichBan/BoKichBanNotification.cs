@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Nodes;
+using System.Text.Json.Nodes;
 using HactechTest.ApiShopTesting.Core;
 using static HactechTest.ApiShopTesting.Core.HelperTC;
 using HactechTest.ApiShopTesting.Seed;
@@ -40,7 +40,7 @@ public static partial class BoKichBanApi
             },
             Ok,
             KiemTraResponseGetNotification(),
-            DongBoThongBaoTuResponseAsync);
+            async (response, request, ctx) => await ctx.CapNhatDB.DongBoThongBaoTuResponseAsync(response, request));
     }
 
     private static void ThemSetReadNotification(List<KichBanApi> ds)
@@ -80,11 +80,7 @@ public static partial class BoKichBanApi
             async (_, request, ctx) =>
             {
                 var thongBao = (ThongBaoSeed)request.Tam["thongBao"]!;
-                thongBao.DaDoc = true;
-                thongBao.TrangThai = "da_doc";
-                thongBao.DocLuc = DateTimeOffset.Now;
-                thongBao.GhiChu = "Đã đọc bởi testcase NOTIFICATION-READ-02.";
-                await ctx.CapNhatDB.LuuAsync();
+                await ctx.CapNhatDB.DanhDauThongBaoDaDocAsync(thongBao);
             });
 
         Them(ds, "NOTIFICATION-READ-03", "Notification", "Đánh dấu đã đọc thông báo không tồn tại",
@@ -123,125 +119,6 @@ public static partial class BoKichBanApi
 
             return Task.FromResult(KetQuaKiemTraThem.ThanhCong);
         };
-    }
-
-    private static async Task DongBoThongBaoTuResponseAsync(PhanHoiApi response, YeuCauApi request, NguCanhKiemThu ctx)
-    {
-        if (!LaMaThanhCong(response) || response.Data is not JsonArray)
-        {
-            return;
-        }
-
-        var taiKhoan = (TaiKhoanSignupThanhCongSeed)request.Tam["taiKhoan"]!;
-        var coThayDoi = false;
-        foreach (var item in LayObjectThongBao(response.Data))
-        {
-            var notificationId = DocNotificationIdServer(item);
-            if (notificationId is not > 0)
-            {
-                continue;
-            }
-
-            UpsertThongBaoSeed(ctx, taiKhoan, notificationId.Value, item);
-            coThayDoi = true;
-        }
-
-        if (coThayDoi)
-        {
-            await ctx.CapNhatDB.LuuAsync();
-        }
-    }
-
-    private static TaiKhoanSignupThanhCongSeed? LayTaiKhoanUuTienCoThongBao(NguCanhKiemThu ctx)
-    {
-        var thongBao = ctx.CapNhatDB.DuLieu.ThongBaoSeed
-            .Where(x => x.NotificationIdServer is > 0)
-            .OrderBy(x => x.DaDoc == true ? 1 : 0)
-            .ThenBy(x => x.ThongBaoSeedId)
-            .FirstOrDefault();
-
-        return thongBao is null
-            ? null
-            : LayTaiKhoanTheoServerId(ctx, thongBao.TaiKhoanIdServer);
-    }
-
-    private static ThongBaoSeed LayThongBaoChuaDoc(NguCanhKiemThu ctx)
-    {
-        return ctx.CapNhatDB.DuLieu.ThongBaoSeed
-            .Where(x => x.NotificationIdServer is > 0)
-            .Where(x => x.DaDoc != true || string.Equals(x.TrangThai, "dang_luu", StringComparison.OrdinalIgnoreCase))
-            .OrderBy(x => x.ThongBaoSeedId)
-            .FirstOrDefault()
-            ?? throw new BoQuaKiemThuException("Thiếu thông báo chưa đọc trong thongbao_seed. Hãy bấm Kiểm tra seed hoặc tạo nghiệp vụ phát sinh notification trước.");
-    }
-
-    private static long LayNotificationIdDangCoHoacMacDinh(NguCanhKiemThu ctx)
-    {
-        var thongBao = ctx.CapNhatDB.DuLieu.ThongBaoSeed
-            .Where(x => x.NotificationIdServer is > 0)
-            .OrderBy(x => x.ThongBaoSeedId)
-            .FirstOrDefault();
-
-        return thongBao is null
-            ? 999999999
-            : IdBatBuoc(thongBao.NotificationIdServer, "thongbao_seed.notification_id_server");
-    }
-
-    private static void UpsertThongBaoSeed(NguCanhKiemThu ctx, TaiKhoanSignupThanhCongSeed taiKhoan, int notificationId, JsonObject item)
-    {
-        var daDocTuServer = item["read"]?.GetValue<bool>();
-        var thongBao = ctx.CapNhatDB.DuLieu.ThongBaoSeed.FirstOrDefault(x => x.NotificationIdServer == notificationId);
-        if (thongBao is null)
-        {
-            var daDoc = daDocTuServer ?? false;
-            ctx.CapNhatDB.DuLieu.ThongBaoSeed.Add(new ThongBaoSeed
-            {
-                NotificationIdServer = notificationId,
-                TaiKhoanIdServer = taiKhoan.TaiKhoanIdServer,
-                Title = item["title"]?.ToString(),
-                Content = item["content"]?.ToString(),
-                ObjectIdServer = item["object_id"]?.GetValue<int>(),
-                NotificationType = item["type"]?.ToString(),
-                DaDoc = daDoc,
-                TrangThai = daDoc ? "da_doc" : "dang_luu",
-                LayLuc = DateTimeOffset.Now,
-                GhiChu = "Đồng bộ bởi testcase NOTIFICATION-GET-02."
-            });
-            return;
-        }
-
-        var daDocHienTai = daDocTuServer ?? thongBao.DaDoc ?? false;
-        thongBao.TaiKhoanIdServer = taiKhoan.TaiKhoanIdServer;
-        thongBao.Title = item["title"]?.ToString();
-        thongBao.Content = item["content"]?.ToString();
-        thongBao.ObjectIdServer = item["object_id"]?.GetValue<int>();
-        thongBao.NotificationType = item["type"]?.ToString();
-        thongBao.DaDoc = daDocHienTai;
-        thongBao.TrangThai = daDocHienTai ? "da_doc" : "dang_luu";
-        thongBao.LayLuc = DateTimeOffset.Now;
-    }
-
-    private static IEnumerable<JsonObject> LayObjectThongBao(JsonNode? node)
-    {
-        if (node is JsonArray array)
-        {
-            foreach (var item in array)
-            {
-                if (item is JsonObject obj)
-                {
-                    yield return obj;
-                }
-            }
-        }
-        else if (node is JsonObject obj)
-        {
-            yield return obj;
-        }
-    }
-
-    private static int? DocNotificationIdServer(JsonNode? node)
-    {
-        return node?["id"]?.GetValue<int>();
     }
 
 }

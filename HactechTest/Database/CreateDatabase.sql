@@ -20,7 +20,8 @@
     A. Tài khoản phần mềm    : taikhoan_phanmemtest
     B. Lịch sử chạy          : phien_chay, chi_tiet_phien_chay
     C. Seed runner API Shop  : taikhoan_seed, taikhoan_signupthanhcong,
-                               tk_timkiem_seed, tk_theodoi_seed, tk_chan_seed,
+                               wallet_seed, tk_timkiem_seed,
+                               tk_theodoi_seed, tk_chan_seed,
                                Provinces_seed, Wards_seed,
                                diachi_tk_seed, danhmuc_seed,
                                thuonghieu_seed, sanpham_seed,
@@ -201,6 +202,24 @@ CREATE TABLE dbo.taikhoan_signupthanhcong
 CREATE UNIQUE INDEX UX_taikhoan_signupthanhcong_sdt ON dbo.taikhoan_signupthanhcong(sdt);
 GO
 
+CREATE TABLE dbo.wallet_seed
+(
+    wallet_id_server NVARCHAR(100) NOT NULL CONSTRAINT PK_wallet_seed PRIMARY KEY,
+    tk_id_server INT NOT NULL,
+    balance DECIMAL(18,2) NOT NULL
+        CONSTRAINT DF_wallet_seed_balance DEFAULT 100000000,
+    available_balance DECIMAL(18,2) NULL,
+    pending_balance DECIMAL(18,2) NULL,
+    trang_thai NVARCHAR(30) NULL,
+    tao_luc DATETIME2(0) NULL,
+    xac_minh_luc DATETIME2(0) NULL,
+    ghi_chu NVARCHAR(500) NULL,
+    CONSTRAINT FK_wallet_seed_taikhoan_signupthanhcong FOREIGN KEY (tk_id_server)
+        REFERENCES dbo.taikhoan_signupthanhcong(tk_id_server)
+);
+CREATE UNIQUE INDEX UX_wallet_seed_tk_id_server ON dbo.wallet_seed(tk_id_server);
+GO
+
 CREATE TABLE dbo.tk_timkiem_seed
 (
     tk_timkiem_seed_id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_tk_timkiem_seed PRIMARY KEY,
@@ -373,7 +392,6 @@ CREATE TABLE dbo.tk_thich_sanpham_seed
     tk_id_server INT NOT NULL,
     sp_id_server INT NOT NULL,
     thich_luc DATETIME2(0) NOT NULL CONSTRAINT DF_tk_thich_sanpham_seed_thich_luc DEFAULT SYSDATETIME(),
-    trang_thai NVARCHAR(30) NOT NULL CONSTRAINT DF_tk_thich_sanpham_seed_trang_thai DEFAULT N'san_sang',
     ghi_chu NVARCHAR(500) NULL,
     CONSTRAINT FK_tk_thich_sanpham_seed_taikhoan_signupthanhcong FOREIGN KEY (tk_id_server)
         REFERENCES dbo.taikhoan_signupthanhcong(tk_id_server),

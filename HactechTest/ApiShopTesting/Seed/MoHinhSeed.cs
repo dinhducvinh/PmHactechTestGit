@@ -1,10 +1,11 @@
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace HactechTest.ApiShopTesting.Seed;
 
 public static class YeuCauDuLieuSeed
 {
     public const int SoTaiKhoanDaDangKyToiThieu = 100;
+    public const decimal SoDuViMacDinhSauSignup = 100000000m;
     public const int SoSavedSearchToiThieu = 2;
     public const int SoQuanHeChinhToiThieu = 2;
     public const int SoQuanHeChinhMucTieu = 3;
@@ -57,6 +58,9 @@ public sealed class BoDuLieuSeed
 
     [JsonPropertyName("taikhoan_signupthanhcong")]
     public List<TaiKhoanSignupThanhCongSeed> TaiKhoanSignupThanhCongSeed { get; set; } = [];
+
+    [JsonPropertyName("wallet_seed")]
+    public List<WalletSeed> WalletSeed { get; set; } = [];
 
     [JsonPropertyName("tk_timkiem_seed")]
     public List<TaiKhoanTimKiemSeed> TaiKhoanTimKiemSeed { get; set; } = [];
@@ -148,6 +152,36 @@ public sealed class TaiKhoanSignupThanhCongSeed
 
     [JsonIgnore]
     public string UuidThietBi { get; set; } = "";
+}
+
+public sealed class WalletSeed
+{
+    [JsonPropertyName("wallet_id_server")]
+    public string WalletIdServer { get; set; } = "";
+
+    [JsonPropertyName("tk_id_server")]
+    public int? TaiKhoanIdServer { get; set; }
+
+    [JsonPropertyName("balance")]
+    public decimal Balance { get; set; } = YeuCauDuLieuSeed.SoDuViMacDinhSauSignup;
+
+    [JsonPropertyName("available_balance")]
+    public decimal? AvailableBalance { get; set; }
+
+    [JsonPropertyName("pending_balance")]
+    public decimal? PendingBalance { get; set; }
+
+    [JsonPropertyName("trang_thai")]
+    public string? TrangThai { get; set; } = "san_sang";
+
+    [JsonPropertyName("tao_luc")]
+    public DateTimeOffset? TaoLuc { get; set; }
+
+    [JsonPropertyName("xac_minh_luc")]
+    public DateTimeOffset? XacMinhLuc { get; set; }
+
+    [JsonPropertyName("ghi_chu")]
+    public string? GhiChu { get; set; }
 }
 
 public sealed class TaiKhoanTimKiemSeed
@@ -403,9 +437,6 @@ public sealed class TaiKhoanThichSanPhamSeed
 
     [JsonPropertyName("thich_luc")]
     public DateTimeOffset? ThichLuc { get; set; }
-
-    [JsonPropertyName("trang_thai")]
-    public string TrangThai { get; set; } = "san_sang";
 
     [JsonPropertyName("ghi_chu")]
     public string? GhiChu { get; set; }

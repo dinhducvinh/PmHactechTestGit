@@ -388,22 +388,14 @@ public static partial class BoKichBanApi
             {
                 var taiKhoan = (TaiKhoanSignupThanhCongSeed)request.Tam["taiKhoan"]!;
                 var sanPham = (SanPhamSeed)request.Tam["sanPham"]!;
-                ctx.CapNhatDB.DuLieu.TaiKhoanThichSanPhamSeed.Add(new TaiKhoanThichSanPhamSeed
-                {
-                    TaiKhoanIdServer = taiKhoan.TaiKhoanIdServer,
-                    SanPhamIdServer = sanPham.SanPhamIdServer,
-                    ThichLuc = DateTimeOffset.Now,
-                    TrangThai = "san_sang",
-                    GhiChu = "Tạo bởi testcase PRODUCT-LIKE-01"
-                });
-                await ctx.CapNhatDB.LuuAsync();
+                await ctx.CapNhatDB.ThemLikeSanPhamAsync(taiKhoan, sanPham);
             });
 
         Them(ds, "PRODUCT-LIKE-02", "Product", "Unlike sản phẩm đã like",
-            "Dùng một dòng tk_thich_sanpham_seed đang san_sang.",
+            "Dùng một dòng đang có trong tk_thich_sanpham_seed.",
             async ctx =>
             {
-                var cap = LayLikeSanPhamSanSang(ctx);
+                var cap = LayLikeSanPhamDangLuu(ctx);
                 var req = new YeuCauApi(HttpMethod.Post, "/api/like_product",
                     Obj(("product_id", IdBatBuoc(cap.Like.SanPhamIdServer, "tk_thich_sanpham_seed.sp_id_server"))),
                     await LayTokenCuaTaiKhoanAsync(ctx, cap.TaiKhoan));
@@ -420,8 +412,7 @@ public static partial class BoKichBanApi
                 }
 
                 var like = (TaiKhoanThichSanPhamSeed)request.Tam["like"]!;
-                ctx.CapNhatDB.DuLieu.TaiKhoanThichSanPhamSeed.Remove(like);
-                await ctx.CapNhatDB.LuuAsync();
+                await ctx.CapNhatDB.XoaLikeSanPhamAsync(like);
             });
 
         Them(ds, "PRODUCT-LIKE-03", "Product", "Like sản phẩm không token",
@@ -535,22 +526,14 @@ public static partial class BoKichBanApi
                     ?? throw new LoiChuanBiKiemThuException(
                         "PRODUCT-ADD-01 đã thành công nhưng response thiếu product id nên không thể lưu sanpham_seed.");
 
-                ctx.CapNhatDB.DuLieu.SanPhamSeed.Add(new SanPhamSeed
-                {
-                    SanPhamIdServer = sanPhamIdServer,
-                    TaiKhoanIdServer = seller.TaiKhoanIdServer,
-                    DanhMucIdServer = duLieu.DanhMuc.DanhMucIdServer,
-                    ThuongHieuIdServer = duLieu.ThuongHieu?.ThuongHieuIdServer,
-                    DiaChiGuiHangIdServer = duLieu.DiaChi.DiaChiIdServer,
-                    TenSanPham = response.Data?["title"]?.ToString() ?? duLieu.Ten,
-                    Gia = duLieu.Gia,
-                    TrangThai = "san_sang",
-                    TaoBoiTest = true,
-                    TaoLuc = DateTimeOffset.Now,
-                    XacMinhLuc = DateTimeOffset.Now,
-                    GhiChu = "Tao boi testcase PRODUCT-ADD-01"
-                });
-                await ctx.CapNhatDB.LuuAsync();
+                await ctx.CapNhatDB.ThemSanPhamSauAddProductAsync(
+                    seller,
+                    sanPhamIdServer,
+                    duLieu.DanhMuc.DanhMucIdServer,
+                    duLieu.ThuongHieu?.ThuongHieuIdServer,
+                    duLieu.DiaChi.DiaChiIdServer,
+                    response.Data?["title"]?.ToString() ?? duLieu.Ten,
+                    duLieu.Gia);
             });
 
         Them(ds, "PRODUCT-ADD-02", "Product", "Thêm sản phẩm token sai",
@@ -616,11 +599,10 @@ public static partial class BoKichBanApi
             async (_, request, ctx) =>
             {
                 var sp = (SanPhamSeed)request.Tam["sanPham"]!;
-                sp.TenSanPham = (string)request.Tam["tenMoi"]!;
-                sp.Gia = (decimal)request.Tam["giaMoi"]!;
-                sp.XacMinhLuc = DateTimeOffset.Now;
-                sp.GhiChu = "Cap nhat boi testcase PRODUCT-UPDATE-01";
-                await ctx.CapNhatDB.LuuAsync();
+                await ctx.CapNhatDB.CapNhatSanPhamSauUpdateAsync(
+                    sp,
+                    (string)request.Tam["tenMoi"]!,
+                    (decimal)request.Tam["giaMoi"]!);
             });
 
         Them(ds, "PRODUCT-UPDATE-02", "Product", "Cập nhật sản phẩm token sai",
@@ -749,10 +731,7 @@ public static partial class BoKichBanApi
             async (_, request, ctx) =>
             {
                 var sp = (SanPhamSeed)request.Tam["sanPham"]!;
-                sp.TrangThai = "da_xoa";
-                sp.XacMinhLuc = DateTimeOffset.Now;
-                sp.GhiChu = "Xoa boi testcase PRODUCT-DELETE-01";
-                await ctx.CapNhatDB.LuuAsync();
+                await ctx.CapNhatDB.DanhDauSanPhamDaXoaAsync(sp);
             });
 
         Them(ds, "PRODUCT-DELETE-02", "Product", "Xóa sản phẩm không token",

@@ -173,6 +173,7 @@ namespace HactechTest.Services.Configuration
                             COL_LENGTH(N'dbo.tk_thich_sanpham_seed', N'sp_id_server') IS NOT NULL AND
                             COL_LENGTH(N'dbo.tk_thich_sanpham_seed', N'tk_seed_id') IS NULL AND
                             COL_LENGTH(N'dbo.tk_thich_sanpham_seed', N'sp_seed_id') IS NULL AND
+                            COL_LENGTH(N'dbo.tk_thich_sanpham_seed', N'trang_thai') IS NULL AND
                             COL_LENGTH(N'dbo.tinnhan_seed', N'sender_tk_id_server') IS NOT NULL AND
                             COL_LENGTH(N'dbo.tinnhan_seed', N'receiver_tk_id_server') IS NOT NULL AND
                             COL_LENGTH(N'dbo.tinnhan_seed', N'sender_tk_seed_id') IS NULL AND

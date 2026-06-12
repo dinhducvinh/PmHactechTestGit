@@ -26,6 +26,7 @@ public static partial class BoKichBanApi
         ThemKichBanProduct(ds);
         ThemKichBanSearch(ds);
         ThemKichBanOrder(ds);
+        ThemKichBanWallet(ds);
         ThemKichBanFollowBlock(ds);
         ThemKichBanConversation(ds);
         ThemKichBanNotification(ds);

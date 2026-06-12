@@ -36,24 +36,7 @@ public static partial class BoKichBanApi
             {
                 var tk = (TaiKhoanChuaDangKySeed)request.Tam["taiKhoan"]!;
                 var matKhauDaDungDeDangKy = (string)request.Tam["matKhauDaDungDeDangKy"]!;
-                var taiKhoanDaDangKy = new TaiKhoanSignupThanhCongSeed
-                {
-                    TaiKhoanIdServer = response.Data?["id"]?.GetValue<int>() ?? 0,
-                    SoDienThoai = tk.SoDienThoai,
-                    MatKhauHienTai = matKhauDaDungDeDangKy,
-                    DangKyLuc = DateTimeOffset.Now,
-                    GhiChu = tk.GhiChu,
-                    SoThuTu = tk.SoThuTu,
-                    UuidThietBi = tk.UuidThietBi
-                };
-                if (taiKhoanDaDangKy.TaiKhoanIdServer <= 0)
-                {
-                    throw new BoQuaKiemThuException("API /auth/signup trả thành công nhưng không có id tài khoản.");
-                }
-
-                ctx.CapNhatDB.DuLieu.TaiKhoanChuaDangKySeed.Remove(tk);
-                ctx.CapNhatDB.DuLieu.TaiKhoanSignupThanhCongSeed.Add(taiKhoanDaDangKy);
-                await ctx.CapNhatDB.LuuAsync();
+                await ctx.CapNhatDB.LuuTaiKhoanDangKyThanhCongAsync(response, tk, matKhauDaDungDeDangKy);
             });
 
         Them(ds, "AUTH-SIGNUP-02", "Auth", "Đăng ký bằng số điện thoại đã tồn tại",
@@ -221,7 +204,7 @@ public static partial class BoKichBanApi
             Ok,
             sauKhiDat: async (_, request, ctx) =>
             {
-                await CapNhatMatKhauAsync(ctx, (TaiKhoanSignupThanhCongSeed)request.Tam["taiKhoan"]!, (string)request.Tam["matKhauMoi"]!);
+                await ctx.CapNhatDB.CapNhatMatKhauAsync((TaiKhoanSignupThanhCongSeed)request.Tam["taiKhoan"]!, (string)request.Tam["matKhauMoi"]!);
             });
 
         Them(ds, "AUTH-RESET-02", "Auth", "Reset password với mật khẩu mới sai quy tắc",
@@ -261,7 +244,7 @@ public static partial class BoKichBanApi
             Ok,
             sauKhiDat: async (_, request, ctx) =>
             {
-                await CapNhatMatKhauAsync(ctx, (TaiKhoanSignupThanhCongSeed)request.Tam["taiKhoan"]!, (string)request.Tam["matKhauMoi"]!);
+                await ctx.CapNhatDB.CapNhatMatKhauAsync((TaiKhoanSignupThanhCongSeed)request.Tam["taiKhoan"]!, (string)request.Tam["matKhauMoi"]!);
             });
 
         Them(ds, "AUTH-CHANGE-PASS-02", "Auth", "Đổi mật khẩu với mật khẩu cũ sai",

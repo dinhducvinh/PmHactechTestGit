@@ -1,4 +1,8 @@
 ﻿using Microsoft.Data.SqlClient;
+using System.Globalization;
+using System.Text.Json.Nodes;
+using HactechTest.ApiShopTesting.Core;
+
 namespace HactechTest.ApiShopTesting.Seed;
 public sealed class CapNhatDB
 {
@@ -9,6 +13,343 @@ public sealed class CapNhatDB
         DuLieu = duLieu;
     }
     public BoDuLieuSeed DuLieu { get; }
+
+    internal async Task<TaiKhoanSignupThanhCongSeed> LuuTaiKhoanDangKyThanhCongAsync(
+        PhanHoiApi response,
+        TaiKhoanChuaDangKySeed taiKhoan,
+        string matKhauDungDeDangKy)
+    {
+        var taiKhoanDaDangKy = new TaiKhoanSignupThanhCongSeed
+        {
+            TaiKhoanIdServer = response.Data?["id"]?.GetValue<int>() ?? 0,
+            SoDienThoai = taiKhoan.SoDienThoai,
+            MatKhauHienTai = matKhauDungDeDangKy,
+            DangKyLuc = DateTimeOffset.Now,
+            GhiChu = taiKhoan.GhiChu,
+            SoThuTu = taiKhoan.SoThuTu,
+            UuidThietBi = taiKhoan.UuidThietBi
+        };
+
+        if (taiKhoanDaDangKy.TaiKhoanIdServer <= 0)
+        {
+            throw new LoiChuanBiKiemThuException("API /auth/signup trả thành công nhưng không có id tài khoản.");
+        }
+
+        var walletId = response.Data?["wallet_id"]?.ToString();
+        if (!string.IsNullOrWhiteSpace(walletId))
+        {
+            UpsertWalletSauSignup(taiKhoanDaDangKy, walletId);
+        }
+
+        DuLieu.TaiKhoanChuaDangKySeed.Remove(taiKhoan);
+        DuLieu.TaiKhoanSignupThanhCongSeed.Add(taiKhoanDaDangKy);
+        await LuuAsync();
+        return taiKhoanDaDangKy;
+    }
+
+    internal async Task CapNhatMatKhauAsync(TaiKhoanSignupThanhCongSeed taiKhoan, string matKhauMoi)
+    {
+        taiKhoan.MatKhauHienTai = matKhauMoi;
+        taiKhoan.DoiMatKhauLuc = DateTimeOffset.Now;
+        await LuuAsync();
+    }
+
+    internal async Task ThemQuanHeTheoDoiAsync(
+        TaiKhoanSignupThanhCongSeed taiKhoanTheoDoi,
+        TaiKhoanSignupThanhCongSeed taiKhoanDuocTheoDoi)
+    {
+        DuLieu.TaiKhoanTheoDoiSeed.Add(new TaiKhoanTheoDoiSeed
+        {
+            FollowerTaiKhoanIdServer = taiKhoanTheoDoi.TaiKhoanIdServer,
+            FolloweeTaiKhoanIdServer = taiKhoanDuocTheoDoi.TaiKhoanIdServer,
+            TheoDoiLuc = DateTimeOffset.Now,
+            TrangThai = "dang_theo_doi"
+        });
+        await LuuAsync();
+    }
+
+    internal async Task XoaQuanHeTheoDoiDangHoatDongAsync(TaiKhoanTheoDoiSeed quanHe)
+    {
+        DuLieu.TaiKhoanTheoDoiSeed.RemoveAll(x =>
+            QuanHeTheoDoiDangHoatDong(x) &&
+            x.FollowerTaiKhoanIdServer == quanHe.FollowerTaiKhoanIdServer &&
+            x.FolloweeTaiKhoanIdServer == quanHe.FolloweeTaiKhoanIdServer);
+        await LuuAsync();
+    }
+
+    internal async Task ThemQuanHeChanAsync(
+        TaiKhoanSignupThanhCongSeed taiKhoanChan,
+        TaiKhoanSignupThanhCongSeed taiKhoanBiChan)
+    {
+        DuLieu.TaiKhoanChanSeed.Add(new TaiKhoanChanSeed
+        {
+            BlockerTaiKhoanIdServer = taiKhoanChan.TaiKhoanIdServer,
+            BlockedTaiKhoanIdServer = taiKhoanBiChan.TaiKhoanIdServer,
+            ChanLuc = DateTimeOffset.Now,
+            TrangThai = "dang_chan"
+        });
+        await LuuAsync();
+    }
+
+    internal async Task XoaQuanHeChanDangHoatDongAsync(TaiKhoanChanSeed quanHe)
+    {
+        DuLieu.TaiKhoanChanSeed.RemoveAll(x =>
+            QuanHeChanDangHoatDong(x) &&
+            x.BlockerTaiKhoanIdServer == quanHe.BlockerTaiKhoanIdServer &&
+            x.BlockedTaiKhoanIdServer == quanHe.BlockedTaiKhoanIdServer);
+        await LuuAsync();
+    }
+
+    internal async Task LuuTimKiemDaLuuAsync(
+        TaiKhoanSignupThanhCongSeed taiKhoan,
+        int savedSearchIdServer,
+        string keyword)
+    {
+        DuLieu.TaiKhoanTimKiemSeed.Add(new TaiKhoanTimKiemSeed
+        {
+            TaiKhoanIdServer = taiKhoan.TaiKhoanIdServer,
+            SavedSearchIdServer = savedSearchIdServer,
+            Keyword = keyword,
+            TrangThai = "dang_luu",
+            TaoBoiTest = true,
+            TaoLuc = DateTimeOffset.Now
+        });
+        await LuuAsync();
+    }
+
+    internal async Task ThemLikeSanPhamAsync(TaiKhoanSignupThanhCongSeed taiKhoan, SanPhamSeed sanPham)
+    {
+        DuLieu.TaiKhoanThichSanPhamSeed.Add(new TaiKhoanThichSanPhamSeed
+        {
+            TaiKhoanIdServer = taiKhoan.TaiKhoanIdServer,
+            SanPhamIdServer = sanPham.SanPhamIdServer,
+            ThichLuc = DateTimeOffset.Now,
+            GhiChu = "Tạo bởi testcase PRODUCT-LIKE-01"
+        });
+        await LuuAsync();
+    }
+
+    internal async Task XoaLikeSanPhamAsync(TaiKhoanThichSanPhamSeed like)
+    {
+        DuLieu.TaiKhoanThichSanPhamSeed.Remove(like);
+        await LuuAsync();
+    }
+
+    internal async Task ThemSanPhamSauAddProductAsync(
+        TaiKhoanSignupThanhCongSeed seller,
+        int sanPhamIdServer,
+        int? danhMucIdServer,
+        int? thuongHieuIdServer,
+        int? diaChiGuiHangIdServer,
+        string tenSanPham,
+        decimal gia)
+    {
+        DuLieu.SanPhamSeed.Add(new SanPhamSeed
+        {
+            SanPhamIdServer = sanPhamIdServer,
+            TaiKhoanIdServer = seller.TaiKhoanIdServer,
+            DanhMucIdServer = danhMucIdServer,
+            ThuongHieuIdServer = thuongHieuIdServer,
+            DiaChiGuiHangIdServer = diaChiGuiHangIdServer,
+            TenSanPham = tenSanPham,
+            Gia = gia,
+            TrangThai = "san_sang",
+            TaoBoiTest = true,
+            TaoLuc = DateTimeOffset.Now,
+            XacMinhLuc = DateTimeOffset.Now,
+            GhiChu = "Tao boi testcase PRODUCT-ADD-01"
+        });
+        await LuuAsync();
+    }
+
+    internal async Task CapNhatSanPhamSauUpdateAsync(SanPhamSeed sanPham, string tenMoi, decimal giaMoi)
+    {
+        sanPham.TenSanPham = tenMoi;
+        sanPham.Gia = giaMoi;
+        sanPham.XacMinhLuc = DateTimeOffset.Now;
+        sanPham.GhiChu = "Cap nhat boi testcase PRODUCT-UPDATE-01";
+        await LuuAsync();
+    }
+
+    internal async Task DanhDauSanPhamDaXoaAsync(SanPhamSeed sanPham)
+    {
+        sanPham.TrangThai = "da_xoa";
+        sanPham.XacMinhLuc = DateTimeOffset.Now;
+        sanPham.GhiChu = "Xoa boi testcase PRODUCT-DELETE-01";
+        await LuuAsync();
+    }
+
+    internal async Task DongBoTinNhanTuResponseAsync(PhanHoiApi response, YeuCauApi request)
+    {
+        if (!LaMaThanhCong(response))
+        {
+            return;
+        }
+
+        var conversationId = DocIdSau(response.Data, "conversation_id");
+        var messageId = DocIdSau(response.Data, "message_id");
+        if (conversationId is not > 0 || messageId is not > 0)
+        {
+            return;
+        }
+
+        var nguoiGui = (TaiKhoanSignupThanhCongSeed)request.Tam["nguoiGui"]!;
+        var nguoiNhan = (TaiKhoanSignupThanhCongSeed)request.Tam["nguoiNhan"]!;
+        var typeMessage = (string)request.Tam["typeMessage"]!;
+        var noiDung = request.Tam.TryGetValue("noiDung", out var noiDungRaw) ? noiDungRaw as string : null;
+        var productId = request.Tam.TryGetValue("productId", out var productIdRaw) && productIdRaw is int productIdValue
+            ? productIdValue
+            : (int?)null;
+
+        var tinNhanDaCo = DuLieu.TinNhanSeed.FirstOrDefault(x => x.MessageIdServer == messageId.Value);
+        if (tinNhanDaCo is null)
+        {
+            DuLieu.TinNhanSeed.Add(new TinNhanSeed
+            {
+                ConversationIdServer = conversationId.Value,
+                MessageIdServer = messageId.Value,
+                SenderTaiKhoanIdServer = nguoiGui.TaiKhoanIdServer,
+                ReceiverTaiKhoanIdServer = nguoiNhan.TaiKhoanIdServer,
+                SanPhamIdServer = productId,
+                TypeMessage = typeMessage,
+                NoiDung = noiDung,
+                TrangThai = "da_gui",
+                TaoBoiTest = true,
+                GuiLuc = DateTimeOffset.Now,
+                GhiChu = "Dong bo boi testcase conversation send"
+            });
+        }
+        else
+        {
+            tinNhanDaCo.ConversationIdServer = conversationId.Value;
+            tinNhanDaCo.SenderTaiKhoanIdServer = nguoiGui.TaiKhoanIdServer;
+            tinNhanDaCo.ReceiverTaiKhoanIdServer = nguoiNhan.TaiKhoanIdServer;
+            tinNhanDaCo.SanPhamIdServer = productId;
+            tinNhanDaCo.TypeMessage = typeMessage;
+            tinNhanDaCo.NoiDung = noiDung;
+            tinNhanDaCo.TrangThai = "da_gui";
+            tinNhanDaCo.GuiLuc = DateTimeOffset.Now;
+        }
+
+        await LuuAsync();
+    }
+
+    internal async Task DongBoThongBaoTuResponseAsync(PhanHoiApi response, YeuCauApi request)
+    {
+        if (!LaMaThanhCong(response) || response.Data is not JsonArray)
+        {
+            return;
+        }
+
+        var taiKhoan = (TaiKhoanSignupThanhCongSeed)request.Tam["taiKhoan"]!;
+        var coThayDoi = false;
+        foreach (var item in LayObjectThongBao(response.Data))
+        {
+            var notificationId = DocNotificationIdServer(item);
+            if (notificationId is not > 0)
+            {
+                continue;
+            }
+
+            UpsertThongBaoSeed(taiKhoan, notificationId.Value, item);
+            coThayDoi = true;
+        }
+
+        if (coThayDoi)
+        {
+            await LuuAsync();
+        }
+    }
+
+    internal async Task DanhDauThongBaoDaDocAsync(ThongBaoSeed thongBao)
+    {
+        thongBao.DaDoc = true;
+        thongBao.TrangThai = "da_doc";
+        thongBao.DocLuc = DateTimeOffset.Now;
+        thongBao.GhiChu = "Đã đọc bởi testcase NOTIFICATION-READ-02.";
+        await LuuAsync();
+    }
+
+    internal async Task LuuDiaChiVaoSeedSauKhiDatAsync(PhanHoiApi response, YeuCauApi request)
+    {
+        var diaChiIdServer = DocIdDiaChi(response.Data);
+        if (diaChiIdServer is not > 0)
+        {
+            return;
+        }
+
+        var taiKhoan = (TaiKhoanSignupThanhCongSeed)request.Tam["taiKhoan"]!;
+        var duLieu = (HelperTC.DuLieuThemDiaChi)request.Tam["duLieuDiaChi"]!;
+        var hienCo = DuLieu.DiaChiTaiKhoanSeed.FirstOrDefault(x => x.DiaChiIdServer == diaChiIdServer);
+        if (hienCo is null)
+        {
+            DuLieu.DiaChiTaiKhoanSeed.Add(new DiaChiTaiKhoanSeed
+            {
+                TaiKhoanIdServer = taiKhoan.TaiKhoanIdServer,
+                DiaChiIdServer = diaChiIdServer,
+                PhuongXaId = duLieu.PhuongXa.PhuongXaId,
+                TinhThanhId = duLieu.TinhThanh.TinhThanhId,
+                DiaChi = duLieu.DiaChi,
+                DiaChiDayDu = duLieu.DiaChi,
+                DiaChiChiTiet = duLieu.DiaChiChiTiet,
+                ViDo = duLieu.ViDo,
+                KinhDo = duLieu.KinhDo,
+                TenNguoiNhan = duLieu.TenNguoiNhan,
+                SoDienThoaiNguoiNhan = duLieu.SoDienThoaiNguoiNhan,
+                LaMacDinh = true,
+                MucDichSeed = "ca_hai",
+                TrangThai = "san_sang",
+                TaoLuc = DateTimeOffset.Now,
+                XacMinhLuc = DateTimeOffset.Now,
+                GhiChu = "Tạo bởi testcase ORDER-ADDR-ADD-02"
+            });
+        }
+        else
+        {
+            hienCo.TaiKhoanIdServer = taiKhoan.TaiKhoanIdServer;
+            hienCo.PhuongXaId = duLieu.PhuongXa.PhuongXaId;
+            hienCo.TinhThanhId = duLieu.TinhThanh.TinhThanhId;
+            hienCo.DiaChi = duLieu.DiaChi;
+            hienCo.DiaChiDayDu = duLieu.DiaChi;
+            hienCo.DiaChiChiTiet = duLieu.DiaChiChiTiet;
+            hienCo.ViDo = duLieu.ViDo;
+            hienCo.KinhDo = duLieu.KinhDo;
+            hienCo.TenNguoiNhan = duLieu.TenNguoiNhan;
+            hienCo.SoDienThoaiNguoiNhan = duLieu.SoDienThoaiNguoiNhan;
+            hienCo.LaMacDinh = true;
+            hienCo.MucDichSeed = "ca_hai";
+            hienCo.TrangThai = "san_sang";
+            hienCo.XacMinhLuc = DateTimeOffset.Now;
+            hienCo.GhiChu = "Cập nhật bởi testcase ORDER-ADDR-ADD-02";
+        }
+
+        await LuuAsync();
+    }
+
+    internal async Task DongBoSoDuViSauKhiDatAsync(PhanHoiApi response, YeuCauApi request)
+    {
+        if (!LaMaThanhCong(response) ||
+            response.Data is not JsonObject data ||
+            request.Tam["taiKhoan"] is not TaiKhoanSignupThanhCongSeed taiKhoan)
+        {
+            return;
+        }
+
+        var wallet = DuLieu.WalletSeed.FirstOrDefault(x =>
+            x.TaiKhoanIdServer == taiKhoan.TaiKhoanIdServer);
+        if (wallet is null)
+        {
+            return;
+        }
+
+        wallet.Balance = DocDecimal(data["balance"]) ?? wallet.Balance;
+        wallet.AvailableBalance = DocDecimal(data["available_balance"]);
+        wallet.PendingBalance = DocDecimal(data["pending_balance"]);
+        wallet.XacMinhLuc = DateTimeOffset.Now;
+        wallet.TrangThai ??= "san_sang";
+        await LuuAsync();
+    }
+
     public async Task LuuAsync()
     {
         await using var connection = new SqlConnection(_chuoiKetNoi);
@@ -18,6 +359,7 @@ public sealed class CapNhatDB
         try
         {
             await LuuTaiKhoanAsync(connection, (SqlTransaction)transaction);
+            await LuuWalletAsync(connection, (SqlTransaction)transaction);
             await LuuTimKiemAsync(connection, (SqlTransaction)transaction);
             await LuuTheoDoiAsync(connection, (SqlTransaction)transaction);
             await LuuChanAsync(connection, (SqlTransaction)transaction);
@@ -34,6 +376,179 @@ public sealed class CapNhatDB
         {
             await transaction.RollbackAsync();
             throw;
+        }
+    }
+
+    private void UpsertWalletSauSignup(TaiKhoanSignupThanhCongSeed taiKhoan, string walletId)
+    {
+        var wallet = DuLieu.WalletSeed.FirstOrDefault(x =>
+            string.Equals(x.WalletIdServer, walletId, StringComparison.OrdinalIgnoreCase) ||
+            x.TaiKhoanIdServer == taiKhoan.TaiKhoanIdServer);
+
+        if (wallet is null)
+        {
+            DuLieu.WalletSeed.Add(new WalletSeed
+            {
+                WalletIdServer = walletId,
+                TaiKhoanIdServer = taiKhoan.TaiKhoanIdServer,
+                Balance = YeuCauDuLieuSeed.SoDuViMacDinhSauSignup,
+                TrangThai = "san_sang",
+                TaoLuc = DateTimeOffset.Now,
+                GhiChu = "Tạo sau signup seed."
+            });
+            return;
+        }
+
+        wallet.WalletIdServer = walletId;
+        wallet.TaiKhoanIdServer = taiKhoan.TaiKhoanIdServer;
+        wallet.Balance = wallet.Balance <= 0
+            ? YeuCauDuLieuSeed.SoDuViMacDinhSauSignup
+            : wallet.Balance;
+        wallet.TrangThai ??= "san_sang";
+        wallet.TaoLuc ??= DateTimeOffset.Now;
+    }
+
+    private void UpsertThongBaoSeed(TaiKhoanSignupThanhCongSeed taiKhoan, int notificationId, JsonObject item)
+    {
+        var daDocTuServer = item["read"]?.GetValue<bool>();
+        var thongBao = DuLieu.ThongBaoSeed.FirstOrDefault(x => x.NotificationIdServer == notificationId);
+        if (thongBao is null)
+        {
+            var daDoc = daDocTuServer ?? false;
+            DuLieu.ThongBaoSeed.Add(new ThongBaoSeed
+            {
+                NotificationIdServer = notificationId,
+                TaiKhoanIdServer = taiKhoan.TaiKhoanIdServer,
+                Title = item["title"]?.ToString(),
+                Content = item["content"]?.ToString(),
+                ObjectIdServer = item["object_id"]?.GetValue<int>(),
+                NotificationType = item["type"]?.ToString(),
+                DaDoc = daDoc,
+                TrangThai = daDoc ? "da_doc" : "dang_luu",
+                LayLuc = DateTimeOffset.Now,
+                GhiChu = "Đồng bộ bởi testcase NOTIFICATION-GET-02."
+            });
+            return;
+        }
+
+        var daDocHienTai = daDocTuServer ?? thongBao.DaDoc ?? false;
+        thongBao.TaiKhoanIdServer = taiKhoan.TaiKhoanIdServer;
+        thongBao.Title = item["title"]?.ToString();
+        thongBao.Content = item["content"]?.ToString();
+        thongBao.ObjectIdServer = item["object_id"]?.GetValue<int>();
+        thongBao.NotificationType = item["type"]?.ToString();
+        thongBao.DaDoc = daDocHienTai;
+        thongBao.TrangThai = daDocHienTai ? "da_doc" : "dang_luu";
+        thongBao.LayLuc = DateTimeOffset.Now;
+    }
+
+    private static bool QuanHeTheoDoiDangHoatDong(TaiKhoanTheoDoiSeed quanHe)
+    {
+        return quanHe.TrangThai == "dang_theo_doi" &&
+               quanHe.FollowerTaiKhoanIdServer is > 0 &&
+               quanHe.FolloweeTaiKhoanIdServer is > 0;
+    }
+
+    private static bool QuanHeChanDangHoatDong(TaiKhoanChanSeed quanHe)
+    {
+        return quanHe.TrangThai == "dang_chan" &&
+               quanHe.BlockerTaiKhoanIdServer is > 0 &&
+               quanHe.BlockedTaiKhoanIdServer is > 0;
+    }
+
+    private static bool LaMaThanhCong(PhanHoiApi response)
+    {
+        return string.Equals(response.MaSoSanh, "1000", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static IEnumerable<JsonObject> LayObjectThongBao(JsonNode? node)
+    {
+        if (node is JsonArray array)
+        {
+            foreach (var item in array)
+            {
+                if (item is JsonObject obj)
+                {
+                    yield return obj;
+                }
+            }
+        }
+        else if (node is JsonObject obj)
+        {
+            yield return obj;
+        }
+    }
+
+    private static int? DocNotificationIdServer(JsonNode? node)
+    {
+        return node?["id"]?.GetValue<int>();
+    }
+
+    private static int? DocIdDiaChi(JsonNode? node)
+    {
+        return node?["id"]?.GetValue<int>();
+    }
+
+    private static int? DocIdSau(JsonNode? node, string tenTruong)
+    {
+        return node?[tenTruong]?.GetValue<int>();
+    }
+
+    private static decimal? DocDecimal(JsonNode? node)
+    {
+        return decimal.TryParse(
+            node?.ToString(),
+            NumberStyles.Any,
+            CultureInfo.InvariantCulture,
+            out var giaTri)
+            ? giaTri
+            : null;
+    }
+
+    private async Task LuuWalletAsync(SqlConnection connection, SqlTransaction transaction)
+    {
+        const string sql = """
+            IF EXISTS (SELECT 1 FROM dbo.wallet_seed WHERE wallet_id_server = @wallet_id_server OR tk_id_server = @tk_id_server)
+            BEGIN
+                UPDATE dbo.wallet_seed
+                SET wallet_id_server = @wallet_id_server,
+                    tk_id_server = @tk_id_server,
+                    balance = @balance,
+                    available_balance = @available_balance,
+                    pending_balance = @pending_balance,
+                    trang_thai = @trang_thai,
+                    tao_luc = @tao_luc,
+                    xac_minh_luc = @xac_minh_luc,
+                    ghi_chu = @ghi_chu
+                WHERE wallet_id_server = @wallet_id_server OR tk_id_server = @tk_id_server;
+            END
+            ELSE
+            BEGIN
+                INSERT INTO dbo.wallet_seed
+                (wallet_id_server, tk_id_server, balance, available_balance, pending_balance, trang_thai, tao_luc, xac_minh_luc, ghi_chu)
+                VALUES (@wallet_id_server, @tk_id_server, @balance, @available_balance, @pending_balance, @trang_thai, @tao_luc, @xac_minh_luc, @ghi_chu);
+            END
+            """;
+
+        foreach (var item in DuLieu.WalletSeed)
+        {
+            if (string.IsNullOrWhiteSpace(item.WalletIdServer) ||
+                item.TaiKhoanIdServer is not > 0)
+            {
+                continue;
+            }
+
+            await using var command = TaoLenh(sql, connection, transaction);
+            Them(command, "@wallet_id_server", item.WalletIdServer);
+            Them(command, "@tk_id_server", item.TaiKhoanIdServer);
+            Them(command, "@balance", item.Balance);
+            Them(command, "@available_balance", item.AvailableBalance);
+            Them(command, "@pending_balance", item.PendingBalance);
+            Them(command, "@trang_thai", item.TrangThai);
+            Them(command, "@tao_luc", item.TaoLuc);
+            Them(command, "@xac_minh_luc", item.XacMinhLuc);
+            Them(command, "@ghi_chu", item.GhiChu);
+            await command.ExecuteNonQueryAsync();
         }
     }
 
@@ -449,11 +964,10 @@ public sealed class CapNhatDB
             ON target.tk_id_server = source.tk_id_server AND target.sp_id_server = source.sp_id_server
             WHEN MATCHED THEN
                 UPDATE SET thich_luc = @thich_luc,
-                    trang_thai = @trang_thai,
                     ghi_chu = @ghi_chu
             WHEN NOT MATCHED THEN
-                INSERT (tk_id_server, sp_id_server, thich_luc, trang_thai, ghi_chu)
-                VALUES (@tk_id_server, @sp_id_server, @thich_luc, @trang_thai, @ghi_chu);
+                INSERT (tk_id_server, sp_id_server, thich_luc, ghi_chu)
+                VALUES (@tk_id_server, @sp_id_server, @thich_luc, @ghi_chu);
             """;
 
         foreach (var item in DuLieu.TaiKhoanThichSanPhamSeed)
@@ -467,7 +981,6 @@ public sealed class CapNhatDB
             Them(command, "@tk_id_server", item.TaiKhoanIdServer);
             Them(command, "@sp_id_server", item.SanPhamIdServer);
             Them(command, "@thich_luc", item.ThichLuc ?? DateTimeOffset.Now);
-            Them(command, "@trang_thai", item.TrangThai);
             Them(command, "@ghi_chu", item.GhiChu);
             await command.ExecuteNonQueryAsync();
         }

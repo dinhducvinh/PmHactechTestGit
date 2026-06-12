@@ -3,7 +3,7 @@
   Reset dữ liệu seed API Shop
 
   Mục đích:
-    - Xóa dữ liệu mồi phụ thuộc: saved search, follow, block, địa chỉ,
+    - Xóa dữ liệu mồi phụ thuộc: ví, saved search, follow, block, địa chỉ,
       danh mục, thương hiệu, sản phẩm, like sản phẩm, tin nhắn, thông báo,
       tỉnh/thành phố, phường/xã.
     - Xóa tài khoản seed để chạy lại các file insert dữ liệu tĩnh từ đầu.
@@ -33,6 +33,7 @@ DELETE FROM dbo.thuonghieu_seed;
 DELETE FROM dbo.danhmuc_seed;
 DELETE FROM dbo.Wards_seed;
 DELETE FROM dbo.Provinces_seed;
+DELETE FROM dbo.wallet_seed;
 DELETE FROM dbo.taikhoan_signupthanhcong;
 DELETE FROM dbo.taikhoan_seed;
 GO
@@ -49,5 +50,6 @@ GO
 
 SELECT
     (SELECT COUNT(*) FROM dbo.taikhoan_seed) AS tai_khoan_chua_dang_ky,
-    (SELECT COUNT(*) FROM dbo.taikhoan_signupthanhcong) AS tai_khoan_signup_thanh_cong;
+    (SELECT COUNT(*) FROM dbo.taikhoan_signupthanhcong) AS tai_khoan_signup_thanh_cong,
+    (SELECT COUNT(*) FROM dbo.wallet_seed) AS wallet_seed;
 GO
