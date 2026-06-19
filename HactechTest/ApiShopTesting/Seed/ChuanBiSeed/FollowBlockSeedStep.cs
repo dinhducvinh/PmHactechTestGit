@@ -35,13 +35,15 @@ public sealed partial class ChuanBiSeed
             .OrderByDescending(x => x.Count())
             .Select(x => x.Key)
             .FirstOrDefault();
+        var coThayDoi = false;
         if (followerChinhId is > 0 &&
             ((blockerChinhId is > 0 && followerChinhId == blockerChinhId) ||
              biChanTrongSeed.Contains(followerChinhId.Value)))
         {
-            _nguCanh.CapNhatDB.DuLieu.TaiKhoanTheoDoiSeed.RemoveAll(x =>
+            var soLuongDaXoa = _nguCanh.CapNhatDB.DuLieu.TaiKhoanTheoDoiSeed.RemoveAll(x =>
                 x.TrangThai == "dang_theo_doi" &&
                 x.FollowerTaiKhoanIdServer == followerChinhId);
+            coThayDoi = soLuongDaXoa > 0;
             seedDangTheoDoi = _nguCanh.CapNhatDB.DuLieu.TaiKhoanTheoDoiSeed
                 .Where(x => x.TrangThai == "dang_theo_doi")
                 .ToList();
@@ -103,9 +105,13 @@ public sealed partial class ChuanBiSeed
                 TrangThai = "dang_theo_doi"
             });
             followeeDaCo.Add(nguoiDuocTheoDoi.TaiKhoanIdServer);
+            coThayDoi = true;
         }
 
-        await _nguCanh.CapNhatDB.LuuAsync();
+        if (coThayDoi)
+        {
+            await _nguCanh.CapNhatDB.LuuAsync(BangDuLieuSeed.TheoDoi);
+        }
     }
 
     private async Task TaoChanSeedAsync()
@@ -182,6 +188,7 @@ public sealed partial class ChuanBiSeed
             .Select(x => x!.Value)
             .ToHashSet();
 
+        var coThemChan = false;
         for (var i = 0; i < taiKhoanDaDangKy.Count && biChanDaCo.Count < YeuCauDuLieuSeed.SoQuanHeChinhMucTieu; i++)
         {
             var nguoiBiChan = taiKhoanDaDangKy[i];
@@ -199,12 +206,13 @@ public sealed partial class ChuanBiSeed
             if (await TaoQuanHeChanAsync(nguoiChan, nguoiBiChan, daCo))
             {
                 biChanDaCo.Add(nguoiBiChan.TaiKhoanIdServer);
+                coThemChan = true;
             }
         }
 
-        if (daDonBlockRaiRac || biChanDaCo.Count > 0)
+        if (daDonBlockRaiRac || coThemChan)
         {
-            await _nguCanh.CapNhatDB.LuuAsync();
+            await _nguCanh.CapNhatDB.LuuAsync(BangDuLieuSeed.Chan);
         }
     }
 

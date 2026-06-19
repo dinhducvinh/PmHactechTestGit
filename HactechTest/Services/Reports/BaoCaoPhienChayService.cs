@@ -1,4 +1,6 @@
 using System.Net;
+using System.IO.Compression;
+using System.Globalization;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -24,12 +26,27 @@ namespace HactechTest.Services.Reports
             var tenFile = Path.GetFileNameWithoutExtension(duongDanNguoiDungChon);
             var duongDanHtml = Path.Combine(folder, tenFile + ".html");
             var duongDanJson = Path.Combine(folder, tenFile + ".json");
+            var duongDanExcel = Path.Combine(folder, tenFile + ".xlsx");
             var duLieuBaoCao = TaoDuLieuBaoCao(thongTin, ketQua);
+
+            LuuBaoCao(duongDanNguoiDungChon, duLieuBaoCao);
+
+            return new KetQuaLuuBaoCao(duongDanHtml, duongDanJson, duongDanExcel);
+        }
+
+        public KetQuaLuuBaoCao LuuBaoCao(string duongDanNguoiDungChon, DuLieuBaoCaoPhienChay duLieuBaoCao)
+        {
+            var folder = Path.GetDirectoryName(duongDanNguoiDungChon) ?? Environment.CurrentDirectory;
+            var tenFile = Path.GetFileNameWithoutExtension(duongDanNguoiDungChon);
+            var duongDanHtml = Path.Combine(folder, tenFile + ".html");
+            var duongDanJson = Path.Combine(folder, tenFile + ".json");
+            var duongDanExcel = Path.Combine(folder, tenFile + ".xlsx");
 
             File.WriteAllText(duongDanJson, JsonSerializer.Serialize(duLieuBaoCao, JsonOptionsBaoCao), Encoding.UTF8);
             File.WriteAllText(duongDanHtml, TaoHtmlBaoCao(duLieuBaoCao), Encoding.UTF8);
+            LuuExcelBaoCao(duongDanExcel, duLieuBaoCao);
 
-            return new KetQuaLuuBaoCao(duongDanHtml, duongDanJson);
+            return new KetQuaLuuBaoCao(duongDanHtml, duongDanJson, duongDanExcel);
         }
 
         public DuLieuBaoCaoPhienChay TaoDuLieuBaoCao(
@@ -70,6 +87,31 @@ namespace HactechTest.Services.Reports
                     ResponseRutGon = x.ResponseRutGon,
                     TrangThaiGoc = x.TrangThai
                 }).ToList()
+            };
+        }
+
+        public DuLieuBaoCaoPhienChay TaoDuLieuBaoCaoTuDongKetQua(
+            ThongTinBaoCaoPhienChay thongTin,
+            IReadOnlyList<DongBaoCaoTestCase> ketQua)
+        {
+            var tong = ketQua.Count;
+            var dat = ketQua.Count(x => x.TrangThaiGoc == TrangThaiKetQua.Dat);
+
+            return new DuLieuBaoCaoPhienChay
+            {
+                ThoiDiemChay = thongTin.ThoiDiemChay?.ToString("yyyy-MM-dd HH:mm:ss"),
+                ThoiDiemKetThuc = thongTin.ThoiDiemKetThuc?.ToString("yyyy-MM-dd HH:mm:ss"),
+                NguoiThucHien = thongTin.NguoiThucHien,
+                MayChay = thongTin.MayChay,
+                HeDieuHanh = thongTin.HeDieuHanh,
+                BaseUrl = thongTin.BaseUrl,
+                CheDoChay = thongTin.CheDoChay,
+                CheDoLoi = thongTin.CheDoLoi,
+                Tong = tong,
+                Dat = dat,
+                KhongDat = tong - dat,
+                TyLeDat = tong == 0 ? 0 : Math.Round(100m * dat / tong, 2),
+                KetQua = ketQua.ToList()
             };
         }
 
@@ -133,6 +175,213 @@ namespace HactechTest.Services.Reports
             return sb.ToString();
         }
 
+        public void LuuExcelBaoCao(string duongDanExcel, DuLieuBaoCaoPhienChay baoCao)
+        {
+            if (File.Exists(duongDanExcel))
+            {
+                File.Delete(duongDanExcel);
+            }
+
+            using var archive = ZipFile.Open(duongDanExcel, ZipArchiveMode.Create);
+            ThemZipEntry(archive, "[Content_Types].xml", TaoContentTypesXml());
+            ThemZipEntry(archive, "_rels/.rels", TaoRootRelsXml());
+            ThemZipEntry(archive, "xl/workbook.xml", TaoWorkbookXml());
+            ThemZipEntry(archive, "xl/_rels/workbook.xml.rels", TaoWorkbookRelsXml());
+            ThemZipEntry(archive, "xl/styles.xml", TaoStylesXml());
+            ThemZipEntry(archive, "xl/worksheets/sheet1.xml", TaoWorksheetXml(baoCao));
+        }
+
+        private static void ThemZipEntry(ZipArchive archive, string tenEntry, string noiDung)
+        {
+            var entry = archive.CreateEntry(tenEntry);
+            using var stream = entry.Open();
+            using var writer = new StreamWriter(stream, new UTF8Encoding(false));
+            writer.Write(noiDung.TrimStart());
+        }
+
+        private static string TaoContentTypesXml()
+        {
+            return """
+                <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+                  <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+                  <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+                </Types>
+                """;
+        }
+
+        private static string TaoRootRelsXml()
+        {
+            return """
+                <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+                </Relationships>
+                """;
+        }
+
+        private static string TaoWorkbookXml()
+        {
+            return """
+                <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <sheets>
+                    <sheet name="Báo cáo" sheetId="1" r:id="rId1"/>
+                  </sheets>
+                </workbook>
+                """;
+        }
+
+        private static string TaoWorkbookRelsXml()
+        {
+            return """
+                <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+                  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+                </Relationships>
+                """;
+        }
+
+        private static string TaoStylesXml()
+        {
+            return """
+                <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+                  <fonts count="2">
+                    <font><sz val="11"/><name val="Calibri"/></font>
+                    <font><b/><sz val="11"/><name val="Calibri"/></font>
+                  </fonts>
+                  <fills count="2">
+                    <fill><patternFill patternType="none"/></fill>
+                    <fill><patternFill patternType="gray125"/></fill>
+                  </fills>
+                  <borders count="1"><border/></borders>
+                  <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+                  <cellXfs count="2">
+                    <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+                    <xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>
+                  </cellXfs>
+                  <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+                </styleSheet>
+                """;
+        }
+
+        private static string TaoWorksheetXml(DuLieuBaoCaoPhienChay baoCao)
+        {
+            var rows = new List<(IReadOnlyList<string?> Values, int Style)>
+            {
+                (new[] { "Báo cáo kiểm thử API Shop" }, 1),
+                (new[] { "Thời điểm chạy", baoCao.ThoiDiemChay }, 0),
+                (new[] { "Thời điểm kết thúc", baoCao.ThoiDiemKetThuc }, 0),
+                (new[] { "Người thực hiện", baoCao.NguoiThucHien }, 0),
+                (new[] { "Máy chạy", baoCao.MayChay }, 0),
+                (new[] { "Hệ điều hành", baoCao.HeDieuHanh }, 0),
+                (new[] { "Base URL", baoCao.BaseUrl }, 0),
+                (new[] { "Chế độ chạy", baoCao.CheDoChay }, 0),
+                (new[] { "Chế độ lỗi", baoCao.CheDoLoi }, 0),
+                (new[] { "Tổng", baoCao.Tong.ToString(CultureInfo.InvariantCulture), "Đạt", baoCao.Dat.ToString(CultureInfo.InvariantCulture), "Không đạt", baoCao.KhongDat.ToString(CultureInfo.InvariantCulture), "Tỷ lệ", baoCao.TyLeDat.ToString(CultureInfo.InvariantCulture) + "%" }, 0),
+                (Array.Empty<string?>(), 0),
+                (new[]
+                {
+                    "STT", "Mã", "Nhóm", "Tên", "Kết quả", "Mong đợi", "Thực tế", "HTTP",
+                    "ms", "Endpoint", "Thông điệp", "Request body", "Response"
+                }, 1)
+            };
+
+            rows.AddRange(baoCao.KetQua.Select(item => ((IReadOnlyList<string?>)new[]
+            {
+                item.Stt.ToString(CultureInfo.InvariantCulture),
+                item.Ma,
+                item.Nhom,
+                item.TenHienThi,
+                DinhDangKetQuaKiemThu.TrangThaiHienThi(item.TrangThaiGoc),
+                item.MaMongDoi,
+                item.MaThucTe,
+                item.HttpStatus?.ToString(CultureInfo.InvariantCulture),
+                item.ThoiGianMs.ToString(CultureInfo.InvariantCulture),
+                item.Endpoint,
+                item.ThongDiep,
+                item.RequestBodyJson,
+                item.ResponseRutGon
+            }, 0)));
+
+            var sb = new StringBuilder();
+            sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>");
+            sb.AppendLine("<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">");
+            sb.AppendLine("<cols>");
+            var widths = new[] { 8, 24, 16, 44, 14, 24, 24, 10, 10, 48, 64, 64, 64 };
+            for (var i = 0; i < widths.Length; i++)
+            {
+                sb.AppendLine($"<col min=\"{i + 1}\" max=\"{i + 1}\" width=\"{widths[i]}\" customWidth=\"1\"/>");
+            }
+
+            sb.AppendLine("</cols><sheetData>");
+            for (var rowIndex = 0; rowIndex < rows.Count; rowIndex++)
+            {
+                var rowNumber = rowIndex + 1;
+                var row = rows[rowIndex];
+                sb.AppendLine($"<row r=\"{rowNumber}\">");
+                for (var colIndex = 0; colIndex < row.Values.Count; colIndex++)
+                {
+                    sb.AppendLine(TaoCellXml(rowNumber, colIndex, row.Values[colIndex], row.Style));
+                }
+
+                sb.AppendLine("</row>");
+            }
+
+            if (baoCao.KetQua.Count > 0)
+            {
+                sb.AppendLine($"<autoFilter ref=\"A12:M{rows.Count}\"/>");
+            }
+
+            sb.AppendLine("</sheetData></worksheet>");
+            return sb.ToString();
+        }
+
+        private static string TaoCellXml(int rowNumber, int colIndex, string? value, int style)
+        {
+            var styleAttr = style > 0 ? $" s=\"{style}\"" : "";
+            var cellRef = TenCotExcel(colIndex) + rowNumber.ToString(CultureInfo.InvariantCulture);
+            return $"<c r=\"{cellRef}\" t=\"inlineStr\"{styleAttr}><is><t>{Xml(value)}</t></is></c>";
+        }
+
+        private static string TenCotExcel(int colIndex)
+        {
+            var dividend = colIndex + 1;
+            var columnName = "";
+            while (dividend > 0)
+            {
+                var modulo = (dividend - 1) % 26;
+                columnName = Convert.ToChar('A' + modulo) + columnName;
+                dividend = (dividend - modulo) / 26;
+            }
+
+            return columnName;
+        }
+
+        private static string Xml(string? value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return "";
+            }
+
+            var hopLe = new StringBuilder(value.Length);
+            foreach (var ch in value)
+            {
+                if (ch is '\t' or '\n' or '\r' || ch >= ' ')
+                {
+                    hopLe.Append(ch);
+                }
+            }
+
+            return System.Security.SecurityElement.Escape(hopLe.ToString()) ?? "";
+        }
+
     }
 
     public sealed record ThongTinBaoCaoPhienChay(
@@ -145,7 +394,7 @@ namespace HactechTest.Services.Reports
         string CheDoChay,
         string CheDoLoi);
 
-    public sealed record KetQuaLuuBaoCao(string DuongDanHtml, string DuongDanJson);
+    public sealed record KetQuaLuuBaoCao(string DuongDanHtml, string DuongDanJson, string DuongDanExcel);
 
     public sealed class DuLieuBaoCaoPhienChay
     {

@@ -22,7 +22,49 @@ namespace HactechTest
         {
             Shown -= FormMain_Shown;
             await MoTongQuanAsync();
-            await tongQuan1.NapDuLieuAsync();
+        }
+
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if ((keyData & Keys.Control) != Keys.Control)
+            {
+                return base.ProcessCmdKey(ref msg, keyData);
+            }
+
+            var keyCode = keyData & Keys.KeyCode;
+            Func<Task>? moManHinh = keyCode switch
+            {
+                Keys.D1 or Keys.NumPad1 => MoTongQuanAsync,
+                Keys.D2 or Keys.NumPad2 => MoChayTestAsync,
+                Keys.D3 or Keys.NumPad3 => MoBoSuuTapAsync,
+                Keys.D4 or Keys.NumPad4 => MoLichSuAsync,
+                Keys.D5 or Keys.NumPad5 => MoQuanLyNhanSuAsync,
+                _ => null
+            };
+
+            if (moManHinh is null)
+            {
+                return base.ProcessCmdKey(ref msg, keyData);
+            }
+
+            _ = MoManHinhBangPhimTatAsync(moManHinh);
+            return true;
+        }
+
+        private async Task MoManHinhBangPhimTatAsync(Func<Task> moManHinh)
+        {
+            try
+            {
+                await moManHinh();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    "Không chuyển được màn hình:\n" + ex.Message,
+                    "HACTECH TEST",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
         }
 
         private void KhoiTaoDieuHuong()
@@ -37,14 +79,14 @@ namespace HactechTest
 
             boSuuTap1.OpenRunTestRequested += async (_, _) =>
             {
-                await chayTest1.DatLaiBoLocAsync();
-                await MoManHinhAsync(chayTest1, btnChayTest, "Chay test");
+                await chayTest1.DatLaiBoLocAsync(batBuocNapLai: true);
+                await MoManHinhAsync(chayTest1, btnChayTest, "Chạy test");
             };
         }
 
         private Task MoTongQuanAsync()
         {
-            return MoManHinhAsync(tongQuan1, btnTongQuan, "Tong quan", tongQuan1.NapDuLieuAsync);
+            return MoManHinhAsync(tongQuan1, btnTongQuan, "Tổng quan", tongQuan1.NapDuLieuAsync);
         }
 
         private Task MoChayTestAsync()
@@ -52,18 +94,18 @@ namespace HactechTest
             return MoManHinhAsync(
                 chayTest1,
                 btnChayTest,
-                "Chay test",
-                chayTest1.DatLaiBoLocAsync);
+                "Chạy test",
+                () => chayTest1.DatLaiBoLocAsync());
         }
 
         private Task MoBoSuuTapAsync()
         {
-            return MoManHinhAsync(boSuuTap1, btnBoSuuTap, "Bo suu tap", boSuuTap1.NapCayAsync);
+            return MoManHinhAsync(boSuuTap1, btnBoSuuTap, "Bộ sưu tập", boSuuTap1.NapCayAsync);
         }
 
         private Task MoLichSuAsync()
         {
-            return MoManHinhAsync(lichSu1, btnLichSu, "Lich su", lichSu1.NapDanhSachAsync);
+            return MoManHinhAsync(lichSu1, btnLichSu, "Lịch sử", () => lichSu1.NapDanhSachAsync());
         }
 
         private Task MoQuanLyNhanSuAsync()
@@ -81,18 +123,13 @@ namespace HactechTest
             return MoManHinhAsync(
                 quanLyNhanSu1,
                 btnQuanLyNhanSu,
-                "Quan ly nhan su",
+                "Quản lý nhân sự",
                 quanLyNhanSu1.NapDanhSachAsync);
         }
 
         private async Task MoManHinhAsync(System.Windows.Forms.Control manHinh, Button nutDangChon, string tieuDe,
             Func<Task>? taiDuLieu = null)
         {
-            if (taiDuLieu != null)
-            {
-                await taiDuLieu();
-            }
-
             manHinh.Visible = true;
             manHinh.BringToFront();
 
@@ -108,6 +145,11 @@ namespace HactechTest
             pnlVienActive.BringToFront();
 
             Text = $"HACTECH TEST - {tieuDe}";
+
+            if (taiDuLieu != null)
+            {
+                await taiDuLieu();
+            }
         }
 
         private void CapNhatThongTinDangNhap()
@@ -180,10 +222,6 @@ namespace HactechTest
             return FormXacNhanThoat.XacNhan(this, cauHoiKhiCoKetQua, tenNutTiepTuc);
         }
 
-        private void btnBoSuuTap_Click(object sender, EventArgs e)
-        {
-
-        }
     }
 }
 

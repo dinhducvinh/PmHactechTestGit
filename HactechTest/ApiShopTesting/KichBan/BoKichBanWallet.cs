@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.Json.Nodes;
 using HactechTest.ApiShopTesting.Core;
 using static HactechTest.ApiShopTesting.Core.HelperTC;
@@ -99,7 +98,7 @@ public static partial class BoKichBanApi
 
             foreach (var truong in new[] { "balance", "available_balance", "pending_balance" })
             {
-                if (DocDecimal(data[truong]) is null)
+                if (DocDecimalTuNode(data[truong]) is null)
                 {
                     return Task.FromResult(new KetQuaKiemTraThem(false, $"data.{truong} thiếu hoặc không phải số."));
                 }
@@ -109,14 +108,4 @@ public static partial class BoKichBanApi
         };
     }
 
-    private static decimal? DocDecimal(JsonNode? node)
-    {
-        return decimal.TryParse(
-            node?.ToString(),
-            NumberStyles.Any,
-            CultureInfo.InvariantCulture,
-            out var giaTri)
-            ? giaTri
-            : null;
-    }
 }

@@ -25,7 +25,8 @@
                                Provinces_seed, Wards_seed,
                                diachi_tk_seed, danhmuc_seed,
                                thuonghieu_seed, sanpham_seed,
-                               tk_thich_sanpham_seed, tinnhan_seed,
+                               giohang_seed, donhang_seed, donhang_sanpham_seed,
+                               tk_thich_sanpham_seed, report_seed, tinnhan_seed,
                                thongbao_seed
     D. Test case động        : test_case_dong
     E. View báo cáo          : v_tong_quan
@@ -386,6 +387,74 @@ CREATE INDEX IX_sanpham_seed_tk_trang_thai
     ON dbo.sanpham_seed(tk_id_server, trang_thai);
 GO
 
+CREATE TABLE dbo.giohang_seed
+(
+    cart_item_id_server INT NOT NULL CONSTRAINT PK_giohang_seed PRIMARY KEY,
+    buyer_tk_id_server INT NOT NULL,
+    sp_id_server INT NOT NULL,
+    so_luong INT NOT NULL CONSTRAINT DF_giohang_seed_so_luong DEFAULT 1,
+    trang_thai NVARCHAR(30) NOT NULL CONSTRAINT DF_giohang_seed_trang_thai DEFAULT N'dang_trong_gio',
+    tao_luc DATETIME2(0) NULL,
+    cap_nhat_luc DATETIME2(0) NULL,
+    ghi_chu NVARCHAR(500) NULL,
+    CONSTRAINT FK_giohang_seed_buyer FOREIGN KEY (buyer_tk_id_server)
+        REFERENCES dbo.taikhoan_signupthanhcong(tk_id_server),
+    CONSTRAINT FK_giohang_seed_sanpham FOREIGN KEY (sp_id_server)
+        REFERENCES dbo.sanpham_seed(sp_id_server),
+    CONSTRAINT CK_giohang_seed_so_luong CHECK (so_luong > 0)
+);
+CREATE UNIQUE INDEX UX_giohang_seed_buyer_sp
+    ON dbo.giohang_seed(buyer_tk_id_server, sp_id_server);
+CREATE INDEX IX_giohang_seed_buyer_trang_thai
+    ON dbo.giohang_seed(buyer_tk_id_server, trang_thai);
+GO
+
+CREATE TABLE dbo.donhang_seed
+(
+    donhang_id_server INT NOT NULL CONSTRAINT PK_donhang_seed PRIMARY KEY,
+    buyer_tk_id_server INT NOT NULL,
+    seller_tk_id_server INT NOT NULL,
+    diachi_id_server INT NULL,
+    trang_thai NVARCHAR(30) NOT NULL CONSTRAINT DF_donhang_seed_trang_thai DEFAULT N'pending',
+    order_source INT NOT NULL CONSTRAINT DF_donhang_seed_order_source DEFAULT 1,
+    total_price DECIMAL(18,2) NULL,
+    shipping_fee DECIMAL(18,2) NULL,
+    final_price DECIMAL(18,2) NULL,
+    loai_seed NVARCHAR(50) NULL,
+    tao_luc DATETIME2(0) NULL,
+    cap_nhat_luc DATETIME2(0) NULL,
+    ghi_chu NVARCHAR(500) NULL,
+    CONSTRAINT FK_donhang_seed_buyer FOREIGN KEY (buyer_tk_id_server)
+        REFERENCES dbo.taikhoan_signupthanhcong(tk_id_server),
+    CONSTRAINT FK_donhang_seed_seller FOREIGN KEY (seller_tk_id_server)
+        REFERENCES dbo.taikhoan_signupthanhcong(tk_id_server),
+    CONSTRAINT CK_donhang_seed_order_source CHECK (order_source IN (0, 1))
+);
+CREATE INDEX IX_donhang_seed_buyer_trang_thai
+    ON dbo.donhang_seed(buyer_tk_id_server, trang_thai);
+CREATE INDEX IX_donhang_seed_seller_trang_thai
+    ON dbo.donhang_seed(seller_tk_id_server, trang_thai);
+GO
+
+CREATE TABLE dbo.donhang_sanpham_seed
+(
+    donhang_id_server INT NOT NULL,
+    sp_id_server INT NOT NULL,
+    so_luong INT NOT NULL CONSTRAINT DF_donhang_sanpham_seed_so_luong DEFAULT 1,
+    don_gia DECIMAL(18,2) NULL,
+    thanh_tien DECIMAL(18,2) NULL,
+    CONSTRAINT PK_donhang_sanpham_seed PRIMARY KEY (donhang_id_server, sp_id_server),
+    CONSTRAINT FK_donhang_sanpham_seed_donhang FOREIGN KEY (donhang_id_server)
+        REFERENCES dbo.donhang_seed(donhang_id_server)
+        ON DELETE CASCADE,
+    CONSTRAINT FK_donhang_sanpham_seed_sanpham FOREIGN KEY (sp_id_server)
+        REFERENCES dbo.sanpham_seed(sp_id_server),
+    CONSTRAINT CK_donhang_sanpham_seed_so_luong CHECK (so_luong > 0)
+);
+CREATE INDEX IX_donhang_sanpham_seed_sp
+    ON dbo.donhang_sanpham_seed(sp_id_server);
+GO
+
 CREATE TABLE dbo.tk_thich_sanpham_seed
 (
     thich_seed_id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_tk_thich_sanpham_seed PRIMARY KEY,
@@ -400,6 +469,18 @@ CREATE TABLE dbo.tk_thich_sanpham_seed
 );
 CREATE UNIQUE INDEX UX_tk_thich_sanpham_seed_cap
     ON dbo.tk_thich_sanpham_seed(tk_id_server, sp_id_server);
+GO
+
+CREATE TABLE dbo.report_seed
+(
+    tk_id_server INT NOT NULL,
+    sp_id_server INT NOT NULL,
+    CONSTRAINT PK_report_seed PRIMARY KEY (tk_id_server, sp_id_server),
+    CONSTRAINT FK_report_seed_taikhoan_signupthanhcong FOREIGN KEY (tk_id_server)
+        REFERENCES dbo.taikhoan_signupthanhcong(tk_id_server),
+    CONSTRAINT FK_report_seed_sanpham FOREIGN KEY (sp_id_server)
+        REFERENCES dbo.sanpham_seed(sp_id_server)
+);
 GO
 
 CREATE TABLE dbo.tinnhan_seed
@@ -438,24 +519,23 @@ CREATE TABLE dbo.thongbao_seed
 (
     tb_seed_id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_thongbao_seed PRIMARY KEY,
     notification_id_server INT NULL,
-    tk_id_server INT NOT NULL,
+    tknhan_id_server INT NOT NULL,
+    tkgui_id_server INT NULL,
     title NVARCHAR(300) NULL,
-    content NVARCHAR(MAX) NULL,
     object_id_server INT NULL,
     notification_type NVARCHAR(100) NULL,
-    da_doc BIT NULL,
     trang_thai NVARCHAR(30) NOT NULL CONSTRAINT DF_thongbao_seed_trang_thai DEFAULT N'dang_luu',
-    lay_luc DATETIME2(0) NULL,
-    doc_luc DATETIME2(0) NULL,
     ghi_chu NVARCHAR(500) NULL,
-    CONSTRAINT FK_thongbao_seed_taikhoan_signupthanhcong FOREIGN KEY (tk_id_server)
+    CONSTRAINT FK_thongbao_seed_tknhan FOREIGN KEY (tknhan_id_server)
+        REFERENCES dbo.taikhoan_signupthanhcong(tk_id_server),
+    CONSTRAINT FK_thongbao_seed_tkgui FOREIGN KEY (tkgui_id_server)
         REFERENCES dbo.taikhoan_signupthanhcong(tk_id_server)
 );
 CREATE UNIQUE INDEX UX_thongbao_seed_notification
     ON dbo.thongbao_seed(notification_id_server)
     WHERE notification_id_server IS NOT NULL;
-CREATE INDEX IX_thongbao_seed_tk_trang_thai
-    ON dbo.thongbao_seed(tk_id_server, trang_thai);
+CREATE INDEX IX_thongbao_seed_tknhan_trang_thai
+    ON dbo.thongbao_seed(tknhan_id_server, trang_thai);
 GO
 
 
@@ -521,4 +601,56 @@ PRINT N'Đã tạo xong CSDL HactechTestDb.';
 GO
 
 
+USE HactechTestDb;
+GO
 
+SET NOCOUNT ON;
+
+DECLARE @i INT = 1;
+DECLARE @ma VARCHAR(6);
+DECLARE @sdt NVARCHAR(20);
+DECLARE @matKhau NVARCHAR(255);
+DECLARE @uuid NVARCHAR(255);
+
+WHILE @i <= 300
+BEGIN
+    SET @ma = RIGHT(REPLICATE('0', 6) + CONVERT(VARCHAR(6), @i), 6);
+    SET @sdt = N'0909' + @ma;
+    SET @matKhau = N'Test' + @ma;
+    SET @uuid = N'thiet-bi-test-' + @ma;
+
+    IF EXISTS (SELECT 1 FROM dbo.taikhoan_signupthanhcong WHERE sdt = @sdt)
+    BEGIN
+        SET @i += 1;
+        CONTINUE;
+    END
+
+    IF EXISTS (SELECT 1 FROM dbo.taikhoan_seed WHERE sdt = @sdt)
+    BEGIN
+        UPDATE dbo.taikhoan_seed
+        SET
+            mat_khau_hien_tai = @matKhau,
+            uuid = @uuid,
+            trang_thai = N'san_sang',
+            ghi_chu = N'Insert từ HactechTest/Database/InsertTaiKhoanSeed.sql',
+            cap_nhat_luc = SYSDATETIME()
+        WHERE sdt = @sdt;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO dbo.taikhoan_seed
+            (sdt, mat_khau_hien_tai, uuid, trang_thai, ghi_chu)
+        VALUES
+            (@sdt, @matKhau, @uuid, N'san_sang',
+             N'Insert từ HactechTest/Database/InsertTaiKhoanSeed.sql');
+    END
+
+    SET @i += 1;
+END
+
+GO
+
+SELECT
+    (SELECT COUNT(*) FROM dbo.taikhoan_seed) AS tai_khoan_chua_dang_ky,
+    (SELECT COUNT(*) FROM dbo.taikhoan_signupthanhcong) AS tai_khoan_signup_thanh_cong;
+GO

@@ -1,4 +1,5 @@
-﻿using HactechTest.ApiShopTesting.Core;
+using HactechTest.ApiShopTesting.Core;
+using static HactechTest.ApiShopTesting.Core.HelperTC;
 
 namespace HactechTest.ApiShopTesting.Seed;
 
@@ -20,6 +21,7 @@ public sealed partial class ChuanBiSeed
             return;
         }
 
+        var coThayDoi = false;
         for (var i = 0; i < taiKhoanDaDangKy.Count && diaChiSanSang.Count < YeuCauDuLieuSeed.SoDiaChiTaiKhoanMucTieu; i++)
         {
             var taiKhoan = taiKhoanDaDangKy[i];
@@ -85,11 +87,15 @@ public sealed partial class ChuanBiSeed
                 TrangThai = "san_sang",
                 TaoLuc = DateTimeOffset.Now,
                 XacMinhLuc = DateTimeOffset.Now,
-                GhiChu = "Tao bang API /order/add_order_address"
+                GhiChu = "Tạo bằng API /order/add_order_address"
             });
             diaChiSanSang.Add(taiKhoan.TaiKhoanIdServer);
+            coThayDoi = true;
         }
 
-        await _nguCanh.CapNhatDB.LuuAsync();
+        if (coThayDoi)
+        {
+            await _nguCanh.CapNhatDB.LuuAsync(BangDuLieuSeed.DiaChiTaiKhoan);
+        }
     }
 }

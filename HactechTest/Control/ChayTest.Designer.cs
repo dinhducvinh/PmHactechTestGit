@@ -84,6 +84,7 @@ namespace HactechTest.Control
             tblCauHinhShopLayout = new TableLayoutPanel();
             lblNhanBaseUrl = new Label();
             txtBaseUrl = new TextBox();
+            btnSuaUrl = new Button();
             btnLuuUrl = new Button();
             lblNhanTimeout = new Label();
             numTimeout = new NumericUpDown();
@@ -815,19 +816,21 @@ namespace HactechTest.Control
             // 
             // tblCauHinhShopLayout
             // 
-            tblCauHinhShopLayout.ColumnCount = 6;
+            tblCauHinhShopLayout.ColumnCount = 7;
             tblCauHinhShopLayout.ColumnStyles.Add(new ColumnStyle());
             tblCauHinhShopLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            tblCauHinhShopLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 96F));
             tblCauHinhShopLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 120F));
             tblCauHinhShopLayout.ColumnStyles.Add(new ColumnStyle());
             tblCauHinhShopLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 90F));
             tblCauHinhShopLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 160F));
             tblCauHinhShopLayout.Controls.Add(lblNhanBaseUrl, 0, 0);
             tblCauHinhShopLayout.Controls.Add(txtBaseUrl, 1, 0);
-            tblCauHinhShopLayout.Controls.Add(btnLuuUrl, 2, 0);
-            tblCauHinhShopLayout.Controls.Add(lblNhanTimeout, 3, 0);
-            tblCauHinhShopLayout.Controls.Add(numTimeout, 4, 0);
-            tblCauHinhShopLayout.Controls.Add(btnKiemTraSeed, 5, 0);
+            tblCauHinhShopLayout.Controls.Add(btnSuaUrl, 2, 0);
+            tblCauHinhShopLayout.Controls.Add(btnLuuUrl, 3, 0);
+            tblCauHinhShopLayout.Controls.Add(lblNhanTimeout, 4, 0);
+            tblCauHinhShopLayout.Controls.Add(numTimeout, 5, 0);
+            tblCauHinhShopLayout.Controls.Add(btnKiemTraSeed, 6, 0);
             tblCauHinhShopLayout.Dock = DockStyle.Fill;
             tblCauHinhShopLayout.Location = new Point(0, 0);
             tblCauHinhShopLayout.Margin = new Padding(0);
@@ -857,8 +860,27 @@ namespace HactechTest.Control
             txtBaseUrl.Margin = new Padding(0, 2, 16, 2);
             txtBaseUrl.Name = "txtBaseUrl";
             txtBaseUrl.PlaceholderText = "VD: http://localhost:8000";
-            txtBaseUrl.Size = new Size(1000, 29);
+            txtBaseUrl.ReadOnly = true;
+            txtBaseUrl.Size = new Size(904, 29);
             txtBaseUrl.TabIndex = 1;
+            // 
+            // btnSuaUrl
+            // 
+            btnSuaUrl.Anchor = AnchorStyles.Left | AnchorStyles.Right;
+            btnSuaUrl.BackColor = Color.FromArgb(108, 117, 125);
+            btnSuaUrl.Cursor = Cursors.Hand;
+            btnSuaUrl.FlatAppearance.BorderSize = 0;
+            btnSuaUrl.FlatAppearance.MouseDownBackColor = Color.FromArgb(86, 94, 100);
+            btnSuaUrl.FlatAppearance.MouseOverBackColor = Color.FromArgb(126, 135, 142);
+            btnSuaUrl.FlatStyle = FlatStyle.Flat;
+            btnSuaUrl.ForeColor = Color.White;
+            btnSuaUrl.Location = new Point(1061, 16);
+            btnSuaUrl.Margin = new Padding(0, 0, 8, 0);
+            btnSuaUrl.Name = "btnSuaUrl";
+            btnSuaUrl.Size = new Size(88, 30);
+            btnSuaUrl.TabIndex = 2;
+            btnSuaUrl.Text = "Sửa";
+            btnSuaUrl.UseVisualStyleBackColor = false;
             // 
             // btnLuuUrl
             // 
@@ -874,7 +896,7 @@ namespace HactechTest.Control
             btnLuuUrl.Margin = new Padding(0, 0, 16, 0);
             btnLuuUrl.Name = "btnLuuUrl";
             btnLuuUrl.Size = new Size(104, 30);
-            btnLuuUrl.TabIndex = 2;
+            btnLuuUrl.TabIndex = 3;
             btnLuuUrl.Text = "Lưu URL";
             btnLuuUrl.UseVisualStyleBackColor = false;
             // 
@@ -886,7 +908,7 @@ namespace HactechTest.Control
             lblNhanTimeout.Margin = new Padding(0, 4, 12, 0);
             lblNhanTimeout.Name = "lblNhanTimeout";
             lblNhanTimeout.Size = new Size(67, 20);
-            lblNhanTimeout.TabIndex = 3;
+            lblNhanTimeout.TabIndex = 4;
             lblNhanTimeout.Text = "Timeout:";
             // 
             // numTimeout
@@ -898,7 +920,7 @@ namespace HactechTest.Control
             numTimeout.Minimum = new decimal(new int[] { 3, 0, 0, 0 });
             numTimeout.Name = "numTimeout";
             numTimeout.Size = new Size(74, 27);
-            numTimeout.TabIndex = 4;
+            numTimeout.TabIndex = 5;
             numTimeout.Value = new decimal(new int[] { 60, 0, 0, 0 });
             // 
             // btnKiemTraSeed
@@ -915,7 +937,7 @@ namespace HactechTest.Control
             btnKiemTraSeed.Margin = new Padding(0);
             btnKiemTraSeed.Name = "btnKiemTraSeed";
             btnKiemTraSeed.Size = new Size(160, 30);
-            btnKiemTraSeed.TabIndex = 5;
+            btnKiemTraSeed.TabIndex = 6;
             btnKiemTraSeed.Text = "Kiểm tra seed";
             btnKiemTraSeed.UseVisualStyleBackColor = false;
             // 
@@ -990,6 +1012,7 @@ namespace HactechTest.Control
         private TableLayoutPanel tblCauHinhShopLayout;
         private Label lblNhanBaseUrl;
         private TextBox txtBaseUrl;
+        private Button btnSuaUrl;
         private Button btnLuuUrl;
         private Label lblNhanTimeout;
         private NumericUpDown numTimeout;

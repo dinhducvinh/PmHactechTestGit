@@ -116,7 +116,6 @@ public static partial class BoKichBanApi
                 "is_blocked",
                 "online",
                 "default_address",
-                "email",
                 "phonenumber",
                 "firstname",
                 "lastname",

@@ -58,7 +58,6 @@ namespace HactechTest.Control
             lblNhanNguoiChay = new Label();
             cboNguoiChay = new ComboBox();
             btnApDungLoc = new Button();
-            btnDatLaiLoc = new Button();
             pnlDauTrang = new Panel();
             lblTieuDeTrang = new Label();
             pnlTongQuang.SuspendLayout();
@@ -351,20 +350,18 @@ namespace HactechTest.Control
             // 
             // tblBoLoc
             // 
-            tblBoLoc.ColumnCount = 7;
+            tblBoLoc.ColumnCount = 6;
             tblBoLoc.ColumnStyles.Add(new ColumnStyle());
             tblBoLoc.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 190F));
             tblBoLoc.ColumnStyles.Add(new ColumnStyle());
             tblBoLoc.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 220F));
             tblBoLoc.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             tblBoLoc.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 108F));
-            tblBoLoc.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 108F));
             tblBoLoc.Controls.Add(lblNhanNgayLoc, 0, 0);
             tblBoLoc.Controls.Add(dtpNgayLoc, 1, 0);
             tblBoLoc.Controls.Add(lblNhanNguoiChay, 2, 0);
             tblBoLoc.Controls.Add(cboNguoiChay, 3, 0);
             tblBoLoc.Controls.Add(btnApDungLoc, 5, 0);
-            tblBoLoc.Controls.Add(btnDatLaiLoc, 6, 0);
             tblBoLoc.Dock = DockStyle.Fill;
             tblBoLoc.Location = new Point(0, 0);
             tblBoLoc.Name = "tblBoLoc";
@@ -434,20 +431,6 @@ namespace HactechTest.Control
             btnApDungLoc.TabIndex = 4;
             btnApDungLoc.Text = "🔍  Lọc";
             btnApDungLoc.UseVisualStyleBackColor = false;
-            // 
-            // btnDatLaiLoc
-            // 
-            btnDatLaiLoc.Anchor = AnchorStyles.Left;
-            btnDatLaiLoc.Cursor = Cursors.Hand;
-            btnDatLaiLoc.FlatStyle = FlatStyle.Flat;
-            btnDatLaiLoc.Location = new Point(1506, 17);
-            btnDatLaiLoc.Margin = new Padding(8, 0, 0, 0);
-            btnDatLaiLoc.Name = "btnDatLaiLoc";
-            btnDatLaiLoc.Size = new Size(96, 32);
-            btnDatLaiLoc.TabIndex = 5;
-            btnDatLaiLoc.Text = "↺  Đặt lại";
-            btnDatLaiLoc.UseVisualStyleBackColor = true;
-            // 
             // pnlDauTrang
             // 
             pnlDauTrang.Controls.Add(lblTieuDeTrang);
@@ -524,7 +507,6 @@ namespace HactechTest.Control
         private Label lblNhanTongTest;
         private Panel pnlBoLoc;
         private TableLayoutPanel tblBoLoc;
-        private Button btnDatLaiLoc;
         private Button btnApDungLoc;
         private ComboBox cboNguoiChay;
         private Label lblNhanNguoiChay;

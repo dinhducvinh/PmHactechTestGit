@@ -135,7 +135,6 @@ namespace HactechTest
             btnBoSuuTap.Text = "Bộ sưu tập";
             btnBoSuuTap.TextAlign = ContentAlignment.MiddleLeft;
             btnBoSuuTap.UseVisualStyleBackColor = false;
-            btnBoSuuTap.Click += btnBoSuuTap_Click;
             // 
             // btnChayTest
             // 

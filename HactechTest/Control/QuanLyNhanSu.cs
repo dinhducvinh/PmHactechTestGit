@@ -14,7 +14,6 @@ namespace HactechTest.Control
 
             if (!DesignMode)
             {
-                Load += QuanLyNhanSu_Load;
                 btnTaiLai.Click += async (_, _) => await NapDanhSachAsync();
                 btnTaoTaiKhoan.Click += async (_, _) => await TaoTaiKhoanAsync();
                 btnCapNhat.Click += async (_, _) => await CapNhatTaiKhoanAsync();
@@ -28,11 +27,6 @@ namespace HactechTest.Control
                 txtTimKiem.KeyDown += TxtTimKiem_KeyDown;
                 dgvNhanSu.SelectionChanged += DgvNhanSu_SelectionChanged;
             }
-        }
-
-        private async void QuanLyNhanSu_Load(object? sender, EventArgs e)
-        {
-            await NapDanhSachAsync();
         }
 
         public async Task NapDanhSachAsync()

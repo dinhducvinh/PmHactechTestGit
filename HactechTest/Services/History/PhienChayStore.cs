@@ -107,6 +107,9 @@ namespace HactechTest.Services.History
                         ISNULL(nguoi_chay, N''),
                         ISNULL(ten_may, N''),
                         ISNULL(ten_he_dieu_hanh, N''),
+                        ISNULL(base_url, N''),
+                        ISNULL(che_do_chay, N''),
+                        ISNULL(che_do_loi, N''),
                         tong_so_test,
                         so_dat,
                         so_khong_dat,
@@ -133,11 +136,14 @@ namespace HactechTest.Services.History
                         reader.GetString(2),
                         reader.GetString(3),
                         reader.GetString(4),
-                        reader.GetInt32(5),
-                        reader.GetInt32(6),
-                        reader.GetInt32(7),
-                        reader.GetDecimal(8),
-                        reader.GetInt32(9)));
+                        reader.GetString(5),
+                        reader.GetString(6),
+                        reader.GetString(7),
+                        reader.GetInt32(8),
+                        reader.GetInt32(9),
+                        reader.GetInt32(10),
+                        reader.GetDecimal(11),
+                        reader.GetInt32(12)));
                 }
             }
 
@@ -150,43 +156,43 @@ namespace HactechTest.Services.History
                     item.NguoiChay,
                     item.Machine,
                     item.OperatingSystem,
+                    item.BaseUrl,
+                    item.CheDoChay,
+                    item.CheDoLoi,
                     item.TotalTests,
                     item.PassedTests,
                     item.FailedTests,
                     item.PassRate,
                     item.AverageDurationMs,
-                    await LayChiTietAsync(conn, item.Id, ct)));
+                    []));
             }
 
             return ketQua;
         }
 
-        public async Task XoaTatCaAsync(CancellationToken ct = default)
+        public async Task<List<ChiTietPhienChayDaLuu>> LayChiTietAsync(int phienChayId, CancellationToken ct = default)
         {
-            await using var conn = await CauHinhUngDung.OpenConnectionAsync(_connectionString, ct);
-            await using var cmd = conn.CreateCommand();
-            cmd.CommandText = """
-                DELETE FROM dbo.chi_tiet_phien_chay;
-                DELETE FROM dbo.phien_chay;
-                """;
-            await cmd.ExecuteNonQueryAsync(ct);
-        }
+            if (phienChayId <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(phienChayId), "ID phiên chạy không hợp lệ.");
+            }
 
-        private static async Task<List<ChiTietPhienChayDaLuu>> LayChiTietAsync(
-            SqlConnection conn,
-            int phienChayId,
-            CancellationToken ct)
-        {
             var details = new List<ChiTietPhienChayDaLuu>();
+            await using var conn = await CauHinhUngDung.OpenConnectionAsync(_connectionString, ct);
             await using var cmd = conn.CreateCommand();
             cmd.CommandText = """
                 SELECT
                     so_thu_tu,
                     ISNULL(ten_test_case, N''),
+                    ISNULL(http_method, N''),
+                    ISNULL(url, N''),
+                    ISNULL(ma_trang_thai_mong_doi, N''),
                     ket_qua,
                     ISNULL(ma_trang_thai_thuc_te, N''),
                     thoi_gian_ms,
-                    ISNULL(ly_do, N'')
+                    ISNULL(ly_do, N''),
+                    ISNULL(request_body, N''),
+                    ISNULL(response_body, N'')
                 FROM dbo.chi_tiet_phien_chay
                 WHERE ID_phien_chay = @id
                 ORDER BY so_thu_tu;
@@ -199,13 +205,45 @@ namespace HactechTest.Services.History
                 details.Add(new ChiTietPhienChayDaLuu(
                     reader.GetInt32(0),
                     reader.GetString(1),
+                    reader.GetString(5),
+                    reader.GetString(6),
+                    reader.GetInt32(7),
+                    reader.GetString(8),
                     reader.GetString(2),
                     reader.GetString(3),
-                    reader.GetInt32(4),
-                    reader.GetString(5)));
+                    reader.GetString(4),
+                    reader.GetString(9),
+                    reader.GetString(10)));
             }
 
             return details;
+        }
+
+        public async Task XoaPhienAsync(int phienChayId, CancellationToken ct = default)
+        {
+            if (phienChayId <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(phienChayId), "ID phiên chạy không hợp lệ.");
+            }
+
+            await using var conn = await CauHinhUngDung.OpenConnectionAsync(_connectionString, ct);
+            await using var tran = (SqlTransaction)await conn.BeginTransactionAsync(ct);
+
+            await using (var cmd = conn.CreateCommand())
+            {
+                cmd.Transaction = tran;
+                cmd.CommandText = """
+                    DELETE FROM dbo.chi_tiet_phien_chay
+                    WHERE ID_phien_chay = @id;
+
+                    DELETE FROM dbo.phien_chay
+                    WHERE ID = @id;
+                    """;
+                cmd.Parameters.AddWithValue("@id", phienChayId);
+                await cmd.ExecuteNonQueryAsync(ct);
+            }
+
+            await tran.CommitAsync(ct);
         }
 
         private static object LayMaThucTe(ChiTietKetQuaTestCase r)
@@ -234,6 +272,9 @@ namespace HactechTest.Services.History
             string NguoiChay,
             string Machine,
             string OperatingSystem,
+            string BaseUrl,
+            string CheDoChay,
+            string CheDoLoi,
             int TotalTests,
             int PassedTests,
             int FailedTests,
@@ -247,6 +288,9 @@ namespace HactechTest.Services.History
         string NguoiChay,
         string Machine,
         string OperatingSystem,
+        string BaseUrl,
+        string CheDoChay,
+        string CheDoLoi,
         int TotalTests,
         int PassedTests,
         int FailedTests,
@@ -260,5 +304,10 @@ namespace HactechTest.Services.History
         string Result,
         string ActualStatus,
         int DurationMs,
-        string Reason);
+        string Reason,
+        string HttpMethod = "",
+        string Url = "",
+        string ExpectedStatus = "",
+        string RequestBody = "",
+        string ResponseBody = "");
 }

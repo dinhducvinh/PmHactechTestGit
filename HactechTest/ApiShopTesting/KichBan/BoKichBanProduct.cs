@@ -339,7 +339,7 @@ public static partial class BoKichBanApi
         Them(ds, "PRODUCT-COMMENT-SET-03", "Product", "Tạo bình luận sản phẩm không tồn tại",
             "product_id = 999999999.",
             async ctx => new YeuCauApi(HttpMethod.Post, "/api/set_comments_product",
-                Obj(("product_id", 999999999), ("content", "Product khong ton tai"), ("index", 0), ("count", 10)),
+                Obj(("product_id", 999999999), ("content", "Product không tồn tại"), ("index", 0), ("count", 10)),
                 await YeuCauTokenHopLeAsync(ctx)),
             ProductKhongTonTai);
 
@@ -351,12 +351,12 @@ public static partial class BoKichBanApi
         Them(ds, "PRODUCT-COMMENT-SET-05", "Product", "Tạo bình luận sai kiểu",
             "product_id = abc, index/count sai kiểu.",
             async ctx => new YeuCauApi(HttpMethod.Post, "/api/set_comments_product",
-                Obj(("product_id", "abc"), ("content", "Sai kieu"), ("index", "abc"), ("count", "xyz")),
+                Obj(("product_id", "abc"), ("content", "Sai kiểu"), ("index", "abc"), ("count", "xyz")),
                 await YeuCauTokenHopLeAsync(ctx)),
             SaiGiaTri);
 
         Them(ds, "PRODUCT-COMMENT-SET-06", "Product", "Tạo bình luận khi có quan hệ block",
-            "Current user và seller có quan hệ block theo tk_chan_seed. Server hiện chưa chặn API này.",
+            "Current user và seller có quan hệ block theo tk_chan_seed.",
             async ctx =>
             {
                 var (user, sp) = ChonCapTaiKhoanBiChanVoiSanPham(ctx);
@@ -364,8 +364,7 @@ public static partial class BoKichBanApi
                     Obj(("product_id", IdBatBuoc(sp.SanPhamIdServer, "sanpham_seed.sp_id_server")), ("content", $"Block comment {DateTimeOffset.Now:HHmmss}"), ("index", 0), ("count", 10)),
                     await LayTokenCuaTaiKhoanAsync(ctx, user));
             },
-            Ok,
-            DataLaMang());
+            KhongCoQuyen);
     }
 
     private static void ThemLikeProduct(List<KichBanApi> ds)
@@ -447,20 +446,41 @@ public static partial class BoKichBanApi
             "product_id = 999999999.",
             async ctx => new YeuCauApi(HttpMethod.Post, "/api/like_product", Obj(("product_id", 999999999)), await YeuCauTokenHopLeAsync(ctx)),
             ProductKhongTonTai);
+
+        Them(ds, "PRODUCT-LIKE-08", "Product", "Like sản phẩm khi có quan hệ block",
+            "Current user và seller có quan hệ block theo tk_chan_seed.",
+            async ctx =>
+            {
+                var (user, sp) = ChonCapTaiKhoanBiChanVoiSanPham(ctx);
+                return new YeuCauApi(HttpMethod.Post, "/api/like_product",
+                    Obj(("product_id", IdBatBuoc(sp.SanPhamIdServer, "sanpham_seed.sp_id_server"))),
+                    await LayTokenCuaTaiKhoanAsync(ctx, user));
+            },
+            KhongCoQuyen);
     }
 
     private static void ThemReportProduct(List<KichBanApi> ds)
     {
         Them(ds, "PRODUCT-REPORT-01", "Product", "Báo cáo sản phẩm hợp lệ",
-            "Token hợp lệ, product tồn tại, user không block seller.",
+            "Token hợp lệ, product tồn tại, user không block seller và cặp user/product chưa có trong report_seed.",
             async ctx =>
             {
-                var (user, sp) = ChonCapTaiKhoanXemSanPhamKhongBiChan(ctx);
-                return new YeuCauApi(HttpMethod.Post, "/api/report_product",
-                    Obj(("product_id", IdBatBuoc(sp.SanPhamIdServer, "sanpham_seed.sp_id_server")), ("subject", "Noi dung can kiem tra"), ("details", "Bao cao tu testcase tu dong.")),
+                var (user, sp) = ChonCapTaiKhoanSanPhamChuaReport(ctx);
+                var req = new YeuCauApi(HttpMethod.Post, "/api/report_product",
+                    Obj(("product_id", IdBatBuoc(sp.SanPhamIdServer, "sanpham_seed.sp_id_server")), ("subject", "Nội dung cần kiểm tra"), ("details", "Báo cáo từ testcase tự động.")),
                     await LayTokenCuaTaiKhoanAsync(ctx, user));
+                req.Tam["taiKhoan"] = user;
+                req.Tam["sanPham"] = sp;
+                return req;
             },
-            Ok);
+            Ok,
+            null,
+            async (_, request, ctx) =>
+            {
+                var taiKhoan = (TaiKhoanSignupThanhCongSeed)request.Tam["taiKhoan"]!;
+                var sanPham = (SanPhamSeed)request.Tam["sanPham"]!;
+                await ctx.CapNhatDB.ThemReportSanPhamAsync(taiKhoan, sanPham);
+            });
 
         Them(ds, "PRODUCT-REPORT-02", "Product", "Báo cáo sản phẩm không token",
             "Không kèm Authorization.",
@@ -475,7 +495,7 @@ public static partial class BoKichBanApi
         Them(ds, "PRODUCT-REPORT-03", "Product", "Báo cáo sản phẩm không tồn tại",
             "product_id = 999999999.",
             async ctx => new YeuCauApi(HttpMethod.Post, "/api/report_product",
-                Obj(("product_id", 999999999), ("subject", "Khong ton tai"), ("details", "Khong ton tai")),
+                Obj(("product_id", 999999999), ("subject", "Không tồn tại"), ("details", "Không tồn tại")),
                 await YeuCauTokenHopLeAsync(ctx)),
             ProductKhongTonTai);
 
@@ -487,7 +507,7 @@ public static partial class BoKichBanApi
         Them(ds, "PRODUCT-REPORT-05", "Product", "Báo cáo sản phẩm sai kiểu",
             "product_id = abc.",
             async ctx => new YeuCauApi(HttpMethod.Post, "/api/report_product",
-                Obj(("product_id", "abc"), ("subject", "Sai kieu"), ("details", "Sai kieu")),
+                Obj(("product_id", "abc"), ("subject", "Sai kiểu"), ("details", "Sai kiểu")),
                 await YeuCauTokenHopLeAsync(ctx)),
             SaiGiaTri);
 
@@ -497,10 +517,26 @@ public static partial class BoKichBanApi
             {
                 var (user, sp) = ChonCapTaiKhoanBiChanVoiSanPham(ctx);
                 return new YeuCauApi(HttpMethod.Post, "/api/report_product",
-                    Obj(("product_id", IdBatBuoc(sp.SanPhamIdServer, "sanpham_seed.sp_id_server")), ("subject", "Blocked report"), ("details", "Bao cao khi co quan he block.")),
+                    Obj(("product_id", IdBatBuoc(sp.SanPhamIdServer, "sanpham_seed.sp_id_server")), ("subject", "Blocked report"), ("details", "Báo cáo khi có quan hệ block.")),
                     await LayTokenCuaTaiKhoanAsync(ctx, user));
             },
             KhongCoQuyen);
+
+        Them(ds, "PRODUCT-REPORT-07", "Product", "Báo cáo lại sản phẩm đã report",
+            "Lấy cặp user/product trong report_seed để kiểm tra mã 1010.",
+            async ctx =>
+            {
+                var cap = LayReportSanPhamDangLuu(ctx);
+                var user = cap.TaiKhoan;
+                var sp = cap.SanPham;
+                var token = await LayTokenCuaTaiKhoanAsync(ctx, user);
+                var body = Obj(
+                    ("product_id", IdBatBuoc(sp.SanPhamIdServer, "sanpham_seed.sp_id_server")),
+                    ("subject", "Duplicate report"),
+                    ("details", "Báo cáo lặp lại từ testcase tự động."));
+                return new YeuCauApi(HttpMethod.Post, "/api/report_product", body, token);
+            },
+            DaThucHienTruocDo);
     }
 
     private static void ThemAddProduct(List<KichBanApi> ds)
@@ -554,14 +590,14 @@ public static partial class BoKichBanApi
         Them(ds, "PRODUCT-ADD-04", "Product", "Thêm sản phẩm sai kiểu",
             "price/category_id/ship_from_id sai kiểu.",
             async ctx => new YeuCauApi(HttpMethod.Post, "/api/add_product",
-                Obj(("title", "Sai kieu"), ("price", "abc"), ("description", "Sai kieu"), ("category_id", "abc"), ("ship_from_id", "abc"), ("variants", new[] { Obj(("size", "M"), ("stock", "abc"), ("color", "Do"), ("weight", "abc")) })),
+                Obj(("title", "Sai kiểu"), ("price", "abc"), ("description", "Sai kiểu"), ("category_id", "abc"), ("ship_from_id", "abc"), ("variants", new[] { Obj(("size", "M"), ("stock", "abc"), ("color", "Đỏ"), ("weight", "abc")) })),
                 await LayTokenCuaTaiKhoanAsync(ctx, LaySellerCoDiaChi(ctx))),
             SaiKieu);
 
         Them(ds, "PRODUCT-ADD-05", "Product", "Thêm sản phẩm giá trị không hợp lệ",
             "price < 0, ship_from_id/category_id không tồn tại.",
             async ctx => new YeuCauApi(HttpMethod.Post, "/api/add_product",
-                Obj(("title", "Gia tri sai"), ("price", -1), ("description", "Gia tri sai"), ("category_id", 999999999), ("ship_from_id", 999999999), ("variants", new[] { Obj(("size", "M"), ("stock", -1), ("color", "Do"), ("weight", -1)) })),
+                Obj(("title", "Giá trị sai"), ("price", -1), ("description", "Giá trị sai"), ("category_id", 999999999), ("ship_from_id", 999999999), ("variants", new[] { Obj(("size", "M"), ("stock", -1), ("color", "Đỏ"), ("weight", -1)) })),
                 await LayTokenCuaTaiKhoanAsync(ctx, LaySellerCoDiaChi(ctx))),
             SaiGiaTri);
 
@@ -584,10 +620,10 @@ public static partial class BoKichBanApi
             async ctx =>
             {
                 var (sp, seller) = LaySanPhamKemSeller(ctx);
-                var tenMoi = $"Cap nhat seed {DateTimeOffset.Now:yyyyMMddHHmmss}";
+                var tenMoi = $"Cập nhật seed {DateTimeOffset.Now:yyyyMMddHHmmss}";
                 var giaMoi = Math.Max(sp.Gia + 1000m, 1000m);
                 var req = new YeuCauApi(HttpMethod.Patch, $"/api/update/{sp.SanPhamIdServer}",
-                    Obj(("title", tenMoi), ("price", giaMoi), ("description", "Cap nhat tu testcase tu dong.")),
+                    Obj(("title", tenMoi), ("price", giaMoi), ("description", "Cập nhật từ testcase tự động.")),
                     await LayTokenCuaTaiKhoanAsync(ctx, seller));
                 req.Tam["sanPham"] = sp;
                 req.Tam["tenMoi"] = tenMoi;
@@ -616,7 +652,7 @@ public static partial class BoKichBanApi
 
         Them(ds, "PRODUCT-UPDATE-03", "Product", "Cập nhật sản phẩm không tồn tại",
             "id = 999999999.",
-            async ctx => new YeuCauApi(HttpMethod.Patch, "/api/update/999999999", Obj(("title", "Khong ton tai")), await YeuCauTokenHopLeAsync(ctx)),
+            async ctx => new YeuCauApi(HttpMethod.Patch, "/api/update/999999999", Obj(("title", "Không tồn tại")), await YeuCauTokenHopLeAsync(ctx)),
             ProductKhongTonTai);
 
         Them(ds, "PRODUCT-UPDATE-04", "Product", "Cập nhật thiếu dữ liệu con",
@@ -634,7 +670,7 @@ public static partial class BoKichBanApi
             {
                 var (sp, seller) = LaySanPhamKemSeller(ctx);
                 return new YeuCauApi(HttpMethod.Patch, $"/api/update/{sp.SanPhamIdServer}",
-                    Obj(("price", "abc"), ("category_id", "abc"), ("ship_from_id", "abc"), ("variants", new[] { Obj(("size", "M"), ("stock", "abc"), ("color", "Do"), ("weight", "abc")) })),
+                    Obj(("price", "abc"), ("category_id", "abc"), ("ship_from_id", "abc"), ("variants", new[] { Obj(("size", "M"), ("stock", "abc"), ("color", "Đỏ"), ("weight", "abc")) })),
                     await LayTokenCuaTaiKhoanAsync(ctx, seller));
             },
             SaiKieu);
@@ -666,7 +702,7 @@ public static partial class BoKichBanApi
             async ctx =>
             {
                 var (user, sp) = ChonCapTaiKhoanXemSanPhamKhongBiChan(ctx);
-                return new YeuCauApi(HttpMethod.Patch, $"/api/update/{sp.SanPhamIdServer}", Obj(("title", "Khong co quyen")), await LayTokenCuaTaiKhoanAsync(ctx, user));
+                return new YeuCauApi(HttpMethod.Patch, $"/api/update/{sp.SanPhamIdServer}", Obj(("title", "Không có quyền")), await LayTokenCuaTaiKhoanAsync(ctx, user));
             },
             KhongCoQuyen);
     }
@@ -712,6 +748,18 @@ public static partial class BoKichBanApi
         Them(ds, "PRODUCT-LISTING-05", "Product", "Lấy listing user_id không tồn tại",
             "user_id = 999999999.",
             async ctx => new YeuCauApi(HttpMethod.Post, "/api/get_user_listings", Obj(("index", 0), ("count", 10), ("user_id", 999999999)), await YeuCauTokenHopLeAsync(ctx)),
+            SaiGiaTri);
+
+        Them(ds, "PRODUCT-LISTING-06", "Product", "Lấy listing thiếu index/count",
+            "Body rỗng, thiếu index/count bắt buộc.",
+            async ctx => new YeuCauApi(HttpMethod.Post, "/api/get_user_listings", Obj(), await YeuCauTokenHopLeAsync(ctx)),
+            SaiGiaTri);
+
+        Them(ds, "PRODUCT-LISTING-07", "Product", "Lấy listing filter sai kiểu",
+            "user_id/category_id sai kiểu dữ liệu.",
+            async ctx => new YeuCauApi(HttpMethod.Post, "/api/get_user_listings",
+                Obj(("index", 0), ("count", 10), ("user_id", "abc"), ("category_id", "abc")),
+                await YeuCauTokenHopLeAsync(ctx)),
             SaiGiaTri);
     }
 
@@ -780,7 +828,7 @@ public static partial class BoKichBanApi
             "Cần seed đơn hàng có liên kết tới sản phẩm để kiểm tra nghiệp vụ này.",
             _ => Req(HttpMethod.Delete, "/api/delete/0"),
             Ok,
-            lyDoBoQua: "Chưa có donhang_seed/donhang_sanpham_seed để tự động chọn sản phẩm đã phát sinh đơn hàng.");
+            lyDoBoQua: "Đã có donhang_seed/donhang_sanpham_seed nhưng server hiện chưa có mã nghiệp vụ ổn định cho xóa sản phẩm đã phát sinh order_items.");
     }
 
     private static Func<PhanHoiApi, YeuCauApi, NguCanhKiemThu, Task<KetQuaKiemTraThem>> KiemTraSoLuongMangToiDa(int toiDa)
@@ -812,7 +860,7 @@ public static partial class BoKichBanApi
                 return Task.FromResult(KetQuaKiemTraThem.ThanhCong);
             }
 
-            var canEdit = response.Data?["can_edit"]?.GetValue<bool>();
+            var canEdit = DocBoolTuNode(response.Data?["can_edit"]);
             if (canEdit is null)
             {
                 return Task.FromResult(KetQuaKiemTraThem.ThanhCong);
@@ -833,7 +881,7 @@ public static partial class BoKichBanApi
                 return Task.FromResult(KetQuaKiemTraThem.ThanhCong);
             }
 
-            var daLike = response.Data?["is_liked"]?.GetValue<bool>();
+            var daLike = DocBoolTuNode(response.Data?["is_liked"]);
             if (daLike is null)
             {
                 return Task.FromResult(KetQuaKiemTraThem.ThanhCong);

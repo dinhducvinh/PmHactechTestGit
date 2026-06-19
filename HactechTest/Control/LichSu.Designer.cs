@@ -28,9 +28,17 @@ namespace HactechTest.Control
         /// </summary>
         private void InitializeComponent()
         {
+            DataGridViewCellStyle dataGridViewCellStyle1 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle2 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle3 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle4 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle5 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle6 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle7 = new DataGridViewCellStyle();
             lblPageTitle = new Label();
             pnlHeader = new Panel();
             btnClearHistory = new Button();
+            btnExportReport = new Button();
             txtSearch = new TextBox();
             lblSearch = new Label();
             pnlToolbar = new Panel();
@@ -73,7 +81,7 @@ namespace HactechTest.Control
             lblPageTitle.Font = new Font("Segoe UI", 18F, FontStyle.Bold);
             lblPageTitle.Location = new Point(16, 12);
             lblPageTitle.Name = "lblPageTitle";
-            lblPageTitle.Size = new Size(180, 41);
+            lblPageTitle.Size = new Size(173, 41);
             lblPageTitle.TabIndex = 0;
             lblPageTitle.Text = "🕓  Lịch sử";
             // 
@@ -90,19 +98,37 @@ namespace HactechTest.Control
             // 
             btnClearHistory.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             btnClearHistory.BackColor = Color.FromArgb(220, 53, 69);
+            btnClearHistory.Cursor = Cursors.Hand;
             btnClearHistory.FlatAppearance.BorderSize = 0;
             btnClearHistory.FlatAppearance.MouseDownBackColor = Color.FromArgb(184, 36, 49);
             btnClearHistory.FlatAppearance.MouseOverBackColor = Color.FromArgb(230, 72, 87);
             btnClearHistory.FlatStyle = FlatStyle.Flat;
-            btnClearHistory.Cursor = Cursors.Hand;
             btnClearHistory.ForeColor = Color.White;
             btnClearHistory.Location = new Point(1446, 16);
-            btnClearHistory.Margin = new Padding(16, 0, 0, 0);
+            btnClearHistory.Margin = new Padding(8, 0, 0, 0);
             btnClearHistory.Name = "btnClearHistory";
             btnClearHistory.Size = new Size(160, 32);
-            btnClearHistory.TabIndex = 2;
+            btnClearHistory.TabIndex = 3;
             btnClearHistory.Text = "🗑 Xoá lịch sử";
             btnClearHistory.UseVisualStyleBackColor = false;
+            // 
+            // btnExportReport
+            // 
+            btnExportReport.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnExportReport.BackColor = Color.FromArgb(13, 110, 253);
+            btnExportReport.Cursor = Cursors.Hand;
+            btnExportReport.FlatAppearance.BorderSize = 0;
+            btnExportReport.FlatAppearance.MouseDownBackColor = Color.FromArgb(10, 88, 202);
+            btnExportReport.FlatAppearance.MouseOverBackColor = Color.FromArgb(36, 124, 255);
+            btnExportReport.FlatStyle = FlatStyle.Flat;
+            btnExportReport.ForeColor = Color.White;
+            btnExportReport.Location = new Point(1278, 16);
+            btnExportReport.Margin = new Padding(16, 0, 0, 0);
+            btnExportReport.Name = "btnExportReport";
+            btnExportReport.Size = new Size(160, 32);
+            btnExportReport.TabIndex = 2;
+            btnExportReport.Text = "Xuất báo cáo";
+            btnExportReport.UseVisualStyleBackColor = false;
             // 
             // txtSearch
             // 
@@ -111,7 +137,7 @@ namespace HactechTest.Control
             txtSearch.Margin = new Padding(0);
             txtSearch.Name = "txtSearch";
             txtSearch.PlaceholderText = "Tìm theo người chạy / tên máy...";
-            txtSearch.Size = new Size(1329, 27);
+            txtSearch.Size = new Size(1161, 27);
             txtSearch.TabIndex = 1;
             // 
             // lblSearch
@@ -138,13 +164,15 @@ namespace HactechTest.Control
             // 
             // tblToolbarLayout
             // 
-            tblToolbarLayout.ColumnCount = 3;
+            tblToolbarLayout.ColumnCount = 4;
             tblToolbarLayout.ColumnStyles.Add(new ColumnStyle());
             tblToolbarLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             tblToolbarLayout.ColumnStyles.Add(new ColumnStyle());
+            tblToolbarLayout.ColumnStyles.Add(new ColumnStyle());
             tblToolbarLayout.Controls.Add(lblSearch, 0, 0);
             tblToolbarLayout.Controls.Add(txtSearch, 1, 0);
-            tblToolbarLayout.Controls.Add(btnClearHistory, 2, 0);
+            tblToolbarLayout.Controls.Add(btnExportReport, 2, 0);
+            tblToolbarLayout.Controls.Add(btnClearHistory, 3, 0);
             tblToolbarLayout.Dock = DockStyle.Fill;
             tblToolbarLayout.Location = new Point(0, 0);
             tblToolbarLayout.Margin = new Padding(0);
@@ -243,19 +271,26 @@ namespace HactechTest.Control
             // 
             gridSessions.AllowUserToAddRows = false;
             gridSessions.AllowUserToDeleteRows = false;
-            gridSessions.AutoGenerateColumns = false;
             gridSessions.BackgroundColor = Color.White;
-            gridSessions.BorderStyle = BorderStyle.FixedSingle;
             gridSessions.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
-            gridSessions.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(235, 240, 247);
-            gridSessions.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            gridSessions.ColumnHeadersDefaultCellStyle.ForeColor = Color.FromArgb(30, 39, 50);
+            dataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle1.BackColor = Color.FromArgb(235, 240, 247);
+            dataGridViewCellStyle1.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            dataGridViewCellStyle1.ForeColor = Color.FromArgb(30, 39, 50);
+            dataGridViewCellStyle1.SelectionBackColor = SystemColors.Highlight;
+            dataGridViewCellStyle1.SelectionForeColor = SystemColors.HighlightText;
+            dataGridViewCellStyle1.WrapMode = DataGridViewTriState.True;
+            gridSessions.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle1;
             gridSessions.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             gridSessions.Columns.AddRange(new DataGridViewColumn[] { colSessAt, colSessUser, colSessMachine, colSessOs, colSessTotal, colSessPass, colSessFail, colSessRate, colSessAvg });
-            gridSessions.DefaultCellStyle.BackColor = Color.White;
-            gridSessions.DefaultCellStyle.ForeColor = Color.FromArgb(24, 30, 37);
-            gridSessions.DefaultCellStyle.SelectionBackColor = Color.FromArgb(214, 228, 255);
-            gridSessions.DefaultCellStyle.SelectionForeColor = Color.FromArgb(20, 32, 45);
+            dataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle2.BackColor = Color.White;
+            dataGridViewCellStyle2.Font = new Font("Segoe UI", 9F);
+            dataGridViewCellStyle2.ForeColor = Color.FromArgb(24, 30, 37);
+            dataGridViewCellStyle2.SelectionBackColor = Color.FromArgb(214, 228, 255);
+            dataGridViewCellStyle2.SelectionForeColor = Color.FromArgb(20, 32, 45);
+            dataGridViewCellStyle2.WrapMode = DataGridViewTriState.False;
+            gridSessions.DefaultCellStyle = dataGridViewCellStyle2;
             gridSessions.Dock = DockStyle.Fill;
             gridSessions.EnableHeadersVisualStyles = false;
             gridSessions.GridColor = Color.FromArgb(216, 222, 230);
@@ -293,13 +328,16 @@ namespace HactechTest.Control
             // 
             gridSessionDetail.AllowUserToAddRows = false;
             gridSessionDetail.AllowUserToDeleteRows = false;
-            gridSessionDetail.AutoGenerateColumns = false;
             gridSessionDetail.BackgroundColor = Color.White;
-            gridSessionDetail.BorderStyle = BorderStyle.FixedSingle;
             gridSessionDetail.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
-            gridSessionDetail.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(235, 240, 247);
-            gridSessionDetail.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            gridSessionDetail.ColumnHeadersDefaultCellStyle.ForeColor = Color.FromArgb(30, 39, 50);
+            dataGridViewCellStyle3.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle3.BackColor = Color.FromArgb(235, 240, 247);
+            dataGridViewCellStyle3.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            dataGridViewCellStyle3.ForeColor = Color.FromArgb(30, 39, 50);
+            dataGridViewCellStyle3.SelectionBackColor = SystemColors.Highlight;
+            dataGridViewCellStyle3.SelectionForeColor = SystemColors.HighlightText;
+            dataGridViewCellStyle3.WrapMode = DataGridViewTriState.True;
+            gridSessionDetail.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle3;
             gridSessionDetail.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             gridSessionDetail.Columns.AddRange(new DataGridViewColumn[] { colDetailNo, colDetailName, colDetailResult, colDetailStatus, colDetailTime, colDetailReason });
             gridSessionDetail.Dock = DockStyle.Fill;
@@ -318,7 +356,8 @@ namespace HactechTest.Control
             // 
             // colDetailNo
             // 
-            colDetailNo.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            dataGridViewCellStyle4.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            colDetailNo.DefaultCellStyle = dataGridViewCellStyle4;
             colDetailNo.HeaderText = "STT";
             colDetailNo.MinimumWidth = 6;
             colDetailNo.Name = "colDetailNo";
@@ -336,8 +375,9 @@ namespace HactechTest.Control
             // 
             // colDetailResult
             // 
-            colDetailResult.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
-            colDetailResult.DefaultCellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            dataGridViewCellStyle5.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            dataGridViewCellStyle5.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            colDetailResult.DefaultCellStyle = dataGridViewCellStyle5;
             colDetailResult.HeaderText = "Kết quả";
             colDetailResult.MinimumWidth = 6;
             colDetailResult.Name = "colDetailResult";
@@ -346,7 +386,8 @@ namespace HactechTest.Control
             // 
             // colDetailStatus
             // 
-            colDetailStatus.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            dataGridViewCellStyle6.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            colDetailStatus.DefaultCellStyle = dataGridViewCellStyle6;
             colDetailStatus.HeaderText = "Mã TT";
             colDetailStatus.MinimumWidth = 6;
             colDetailStatus.Name = "colDetailStatus";
@@ -355,7 +396,8 @@ namespace HactechTest.Control
             // 
             // colDetailTime
             // 
-            colDetailTime.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            dataGridViewCellStyle7.Alignment = DataGridViewContentAlignment.MiddleRight;
+            colDetailTime.DefaultCellStyle = dataGridViewCellStyle7;
             colDetailTime.HeaderText = "TG (ms)";
             colDetailTime.MinimumWidth = 6;
             colDetailTime.Name = "colDetailTime";
@@ -411,6 +453,7 @@ namespace HactechTest.Control
         private Label lblPageTitle;
         private Panel pnlHeader;
         private Button btnClearHistory;
+        private Button btnExportReport;
         private TextBox txtSearch;
         private Label lblSearch;
         private Panel pnlToolbar;

@@ -4,6 +4,8 @@ namespace HactechTest.ApiShopTesting.KichBan;
 
 public static partial class BoKichBanApi
 {
+    private static readonly Lazy<IReadOnlyList<KichBanApi>> TatCaKichBan = new(TaoTatCaKichBanNoiBo);
+
     private static readonly IReadOnlySet<string> Ok = Tap("1000");
     private static readonly IReadOnlySet<string> ThieuThamSo = Tap("1002");
     private static readonly IReadOnlySet<string> SaiKieu = Tap("1003");
@@ -20,6 +22,11 @@ public static partial class BoKichBanApi
 
     public static IReadOnlyList<KichBanApi> TaoTatCaKichBan()
     {
+        return TatCaKichBan.Value;
+    }
+
+    private static IReadOnlyList<KichBanApi> TaoTatCaKichBanNoiBo()
+    {
         var ds = new List<KichBanApi>();
         ThemKichBanAuth(ds);
         ThemKichBanUser(ds);
@@ -32,7 +39,7 @@ public static partial class BoKichBanApi
         ThemKichBanNotification(ds);
         ThemKichBanDevTokenPush(ds);
         ThemKichBanTai(ds);
-        return ds;
+        return ds.AsReadOnly();
     }
 
     private static IReadOnlySet<string> Tap(params string[] ma)

@@ -33,8 +33,6 @@ namespace HactechTest.Control
             pnlThanhCongCu = new Panel();
             tblToolbarLayout = new TableLayoutPanel();
             flpToolbarActions = new FlowLayoutPanel();
-            btnTaoProject = new Button();
-            btnThemModule = new Button();
             btnThemApi = new Button();
             btnSuaTestCase = new Button();
             btnXoaNode = new Button();
@@ -110,8 +108,6 @@ namespace HactechTest.Control
             // 
             flpToolbarActions.AutoSize = true;
             flpToolbarActions.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-            flpToolbarActions.Controls.Add(btnTaoProject);
-            flpToolbarActions.Controls.Add(btnThemModule);
             flpToolbarActions.Controls.Add(btnThemApi);
             flpToolbarActions.Controls.Add(btnSuaTestCase);
             flpToolbarActions.Controls.Add(btnXoaNode);
@@ -124,44 +120,15 @@ namespace HactechTest.Control
             flpToolbarActions.TabIndex = 0;
             flpToolbarActions.WrapContents = true;
             // 
-            // btnTaoProject
-            // 
-            btnTaoProject.BackColor = Color.FromArgb(63, 81, 181);
-            btnTaoProject.Cursor = Cursors.Hand;
-            btnTaoProject.FlatAppearance.BorderSize = 0;
-            btnTaoProject.FlatAppearance.MouseDownBackColor = Color.FromArgb(49, 63, 160);
-            btnTaoProject.FlatAppearance.MouseOverBackColor = Color.FromArgb(79, 99, 215);
-            btnTaoProject.FlatStyle = FlatStyle.Flat;
-            btnTaoProject.ForeColor = Color.White;
-            btnTaoProject.Location = new Point(0, 0);
-            btnTaoProject.Margin = new Padding(0, 0, 8, 8);
-            btnTaoProject.Name = "btnTaoProject";
-            btnTaoProject.Size = new Size(168, 32);
-            btnTaoProject.TabIndex = 0;
-            btnTaoProject.Text = "+ Tạo Dự án";
-            btnTaoProject.UseVisualStyleBackColor = false;
-            // 
-            // btnThemModule
-            // 
-            btnThemModule.Cursor = Cursors.Hand;
-            btnThemModule.FlatStyle = FlatStyle.Flat;
-            btnThemModule.Location = new Point(176, 0);
-            btnThemModule.Margin = new Padding(0, 0, 8, 8);
-            btnThemModule.Name = "btnThemModule";
-            btnThemModule.Size = new Size(116, 32);
-            btnThemModule.TabIndex = 1;
-            btnThemModule.Text = "+ Thêm Module";
-            btnThemModule.UseVisualStyleBackColor = true;
-            // 
             // btnThemApi
             // 
             btnThemApi.Cursor = Cursors.Hand;
             btnThemApi.FlatStyle = FlatStyle.Flat;
-            btnThemApi.Location = new Point(300, 0);
+            btnThemApi.Location = new Point(0, 0);
             btnThemApi.Margin = new Padding(0, 0, 8, 8);
             btnThemApi.Name = "btnThemApi";
             btnThemApi.Size = new Size(116, 32);
-            btnThemApi.TabIndex = 2;
+            btnThemApi.TabIndex = 0;
             btnThemApi.Text = "+ Thêm API";
             btnThemApi.UseVisualStyleBackColor = true;
             btnThemApi.Click += BtnThemApi_Click;
@@ -175,11 +142,11 @@ namespace HactechTest.Control
             btnSuaTestCase.FlatAppearance.MouseOverBackColor = Color.FromArgb(126, 136, 146);
             btnSuaTestCase.FlatStyle = FlatStyle.Flat;
             btnSuaTestCase.ForeColor = Color.White;
-            btnSuaTestCase.Location = new Point(424, 0);
+            btnSuaTestCase.Location = new Point(124, 0);
             btnSuaTestCase.Margin = new Padding(0, 0, 8, 8);
             btnSuaTestCase.Name = "btnSuaTestCase";
             btnSuaTestCase.Size = new Size(132, 32);
-            btnSuaTestCase.TabIndex = 3;
+            btnSuaTestCase.TabIndex = 1;
             btnSuaTestCase.Text = "⚙ Sửa Test Case";
             btnSuaTestCase.UseVisualStyleBackColor = false;
             btnSuaTestCase.Click += BtnSuaTestCase_Click;
@@ -193,11 +160,11 @@ namespace HactechTest.Control
             btnXoaNode.FlatAppearance.MouseOverBackColor = Color.FromArgb(230, 72, 87);
             btnXoaNode.FlatStyle = FlatStyle.Flat;
             btnXoaNode.ForeColor = Color.White;
-            btnXoaNode.Location = new Point(564, 0);
+            btnXoaNode.Location = new Point(264, 0);
             btnXoaNode.Margin = new Padding(0, 0, 8, 8);
             btnXoaNode.Name = "btnXoaNode";
             btnXoaNode.Size = new Size(120, 32);
-            btnXoaNode.TabIndex = 4;
+            btnXoaNode.TabIndex = 2;
             btnXoaNode.Text = "✕ Xoá node";
             btnXoaNode.UseVisualStyleBackColor = false;
             // 
@@ -210,11 +177,11 @@ namespace HactechTest.Control
             btnMoChayTest.FlatAppearance.MouseOverBackColor = Color.FromArgb(48, 185, 81);
             btnMoChayTest.FlatStyle = FlatStyle.Flat;
             btnMoChayTest.ForeColor = Color.White;
-            btnMoChayTest.Location = new Point(692, 0);
+            btnMoChayTest.Location = new Point(392, 0);
             btnMoChayTest.Margin = new Padding(0, 0, 8, 8);
             btnMoChayTest.Name = "btnMoChayTest";
             btnMoChayTest.Size = new Size(160, 32);
-            btnMoChayTest.TabIndex = 5;
+            btnMoChayTest.TabIndex = 3;
             btnMoChayTest.Text = "▶ Mở Chạy Test";
             btnMoChayTest.UseVisualStyleBackColor = false;
             btnMoChayTest.Click += BtnMoChayTest_Click;
@@ -276,8 +243,6 @@ namespace HactechTest.Control
         private Panel pnlThanhCongCu;
         private TableLayoutPanel tblToolbarLayout;
         private FlowLayoutPanel flpToolbarActions;
-        private Button btnTaoProject;
-        private Button btnThemModule;
         private Button btnThemApi;
         private Button btnSuaTestCase;
         private Button btnXoaNode;

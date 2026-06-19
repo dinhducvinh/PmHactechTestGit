@@ -18,16 +18,8 @@ namespace HactechTest.Control
             InitializeComponent();
             if (!DesignMode)
             {
-                Load += BoSuuTap_Load;
-                btnTaoProject.Click += BtnTaoProject_Click;
-                btnThemModule.Click += BtnThemModule_Click;
                 btnXoaNode.Click += BtnXoaNode_Click;
             }
-        }
-
-        private void BoSuuTap_Load(object? sender, EventArgs e)
-        {
-            _ = NapCayAsync();
         }
 
         public async Task NapCayAsync()
@@ -95,23 +87,6 @@ namespace HactechTest.Control
             {
                 treCayBoSuuTap.EndUpdate();
             }
-        }
-
-        private void BtnTaoProject_Click(object? sender, EventArgs e)
-        {
-            MessageBox.Show(
-                "Hiện tại phần mềm tập trung vào bộ sưu tập 'API Shop'. " +
-                "Test case cơ bản có thể thêm bằng nút '+ Thêm API'. " +
-                "Test case phức tạp vẫn viết trong ApiShopTesting/KichBan.",
-                "Thông báo");
-        }
-
-        private void BtnThemModule_Click(object? sender, EventArgs e)
-        {
-            MessageBox.Show(
-                "Module được sinh theo trường 'Module/Nhóm' của test case. " +
-                "Hãy nhập module mới khi thêm test case cơ bản.",
-                "Thông báo");
         }
 
         private async void BtnXoaNode_Click(object? sender, EventArgs e)

@@ -4,7 +4,7 @@
 
   Mục đích:
     - Xóa dữ liệu mồi phụ thuộc: ví, saved search, follow, block, địa chỉ,
-      danh mục, thương hiệu, sản phẩm, like sản phẩm, tin nhắn, thông báo,
+      danh mục, thương hiệu, sản phẩm, giỏ hàng, đơn hàng, like/report sản phẩm, tin nhắn, thông báo,
       tỉnh/thành phố, phường/xã.
     - Xóa tài khoản seed để chạy lại các file insert dữ liệu tĩnh từ đầu.
     - Reset identity của toàn bộ bảng seed.
@@ -23,7 +23,11 @@ GO
 
 DELETE FROM dbo.thongbao_seed;
 DELETE FROM dbo.tinnhan_seed;
+DELETE FROM dbo.report_seed;
 DELETE FROM dbo.tk_thich_sanpham_seed;
+DELETE FROM dbo.donhang_sanpham_seed;
+DELETE FROM dbo.donhang_seed;
+DELETE FROM dbo.giohang_seed;
 DELETE FROM dbo.sanpham_seed;
 DELETE FROM dbo.diachi_tk_seed;
 DELETE FROM dbo.tk_chan_seed;
@@ -51,5 +55,9 @@ GO
 SELECT
     (SELECT COUNT(*) FROM dbo.taikhoan_seed) AS tai_khoan_chua_dang_ky,
     (SELECT COUNT(*) FROM dbo.taikhoan_signupthanhcong) AS tai_khoan_signup_thanh_cong,
-    (SELECT COUNT(*) FROM dbo.wallet_seed) AS wallet_seed;
+    (SELECT COUNT(*) FROM dbo.wallet_seed) AS wallet_seed,
+    (SELECT COUNT(*) FROM dbo.giohang_seed) AS giohang_seed,
+    (SELECT COUNT(*) FROM dbo.donhang_seed) AS donhang_seed,
+    (SELECT COUNT(*) FROM dbo.donhang_sanpham_seed) AS donhang_sanpham_seed,
+    (SELECT COUNT(*) FROM dbo.report_seed) AS report_seed;
 GO

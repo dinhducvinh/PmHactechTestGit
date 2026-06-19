@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Data;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using HactechTest.Services.App;
@@ -19,17 +20,11 @@ namespace HactechTest.Control
             InitializeComponent();
             if (!DesignMode)
             {
-                Load += TongQuan_Load;
                 btnApDungLoc.Click += async (_, _) => await NapDuLieuAsync();
-                btnDatLaiLoc.Click += BtnDatLaiLoc_Click;
                 pnlVeDonut.Paint += PnlVeDonut_Paint;
                 pnlVeDonut.Resize += (_, _) => pnlVeDonut.Invalidate();
+                pnlBieuDoDonut.Resize += (_, _) => CapNhatViTriChuThich();
             }
-        }
-
-        private async void TongQuan_Load(object? sender, EventArgs e)
-        {
-            await NapDuLieuAsync();
         }
 
         public async Task NapDuLieuAsync()
@@ -48,20 +43,24 @@ namespace HactechTest.Control
                 await using var cmd = conn.CreateCommand();
                 cmd.CommandText = """
                     SELECT
-                        ISNULL(SUM(tong_test), 0),
-                        ISNULL(SUM(tong_dat), 0),
-                        ISNULL(SUM(tong_khong_dat), 0)
-                    FROM dbo.v_tong_quan
-                    WHERE (@ngay IS NULL OR ngay_chay = @ngay)
+                        ISNULL(SUM(tong_so_test), 0),
+                        ISNULL(SUM(so_dat), 0),
+                        ISNULL(SUM(so_khong_dat), 0)
+                    FROM dbo.phien_chay
+                    WHERE thoi_diem_chay >= @tu_ngay
+                      AND thoi_diem_chay < @den_ngay
                       AND (@nguoi_chay IS NULL OR nguoi_chay = @nguoi_chay);
                     """;
 
+                var ngayLoc = dtpNgayLoc.Value.Date;
                 var nguoiChay = cboNguoiChay.SelectedItem?.ToString();
                 var locNguoiChay = !string.IsNullOrWhiteSpace(nguoiChay) &&
                     !string.Equals(nguoiChay, "(tat ca)", StringComparison.OrdinalIgnoreCase);
 
-                cmd.Parameters.AddWithValue("@ngay", dtpNgayLoc.Checked ? (object)dtpNgayLoc.Value.Date : DBNull.Value);
-                cmd.Parameters.AddWithValue("@nguoi_chay", locNguoiChay ? (object)nguoiChay! : DBNull.Value);
+                cmd.Parameters.Add("@tu_ngay", SqlDbType.DateTime2).Value = ngayLoc;
+                cmd.Parameters.Add("@den_ngay", SqlDbType.DateTime2).Value = ngayLoc.AddDays(1);
+                cmd.Parameters.Add("@nguoi_chay", SqlDbType.NVarChar, 200).Value =
+                    locNguoiChay ? nguoiChay! : DBNull.Value;
 
                 await using var reader = await cmd.ExecuteReaderAsync();
                 if (await reader.ReadAsync())
@@ -93,6 +92,9 @@ namespace HactechTest.Control
             lblSoKhongDat.Text = _tongKhongDat.ToString();
             lblSoTyLe.Text = _tyLeDat + "%";
             lblTyLeGiua.Text = _tyLeDat + "%";
+            lblChuThichDat.Text = $"Đạt: {_tongDat:N0}";
+            lblChuThichKhongDat.Text = $"Không đạt: {_tongKhongDat:N0}";
+            CapNhatViTriChuThich();
             pnlVeDonut.Invalidate();
         }
 
@@ -114,7 +116,7 @@ namespace HactechTest.Control
                     await using var cmd = conn.CreateCommand();
                     cmd.CommandText = """
                         SELECT DISTINCT nguoi_chay
-                        FROM dbo.v_tong_quan
+                        FROM dbo.phien_chay
                         WHERE nguoi_chay IS NOT NULL AND LTRIM(RTRIM(nguoi_chay)) <> N''
                         ORDER BY nguoi_chay;
                         """;
@@ -134,15 +136,15 @@ namespace HactechTest.Control
             _daKhoiTaoNguoiChay = true;
         }
 
-        private async void BtnDatLaiLoc_Click(object? sender, EventArgs e)
+        private void CapNhatViTriChuThich()
         {
-            dtpNgayLoc.Checked = false;
-            if (cboNguoiChay.Items.Count > 0)
-            {
-                cboNguoiChay.SelectedIndex = 0;
-            }
+            const int khoangCach = 28;
+            var tongRong = lblChuThichDat.Width + khoangCach + lblChuThichKhongDat.Width;
+            var x = Math.Max(16, (pnlBieuDoDonut.ClientSize.Width - tongRong) / 2);
+            var y = Math.Max(0, pnlBieuDoDonut.ClientSize.Height - 88);
 
-            await NapDuLieuAsync();
+            lblChuThichDat.Location = new Point(x, y);
+            lblChuThichKhongDat.Location = new Point(x + lblChuThichDat.Width + khoangCach, y);
         }
 
         private void PnlVeDonut_Paint(object? sender, PaintEventArgs e)

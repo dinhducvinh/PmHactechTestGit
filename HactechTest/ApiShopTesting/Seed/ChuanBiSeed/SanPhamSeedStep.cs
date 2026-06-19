@@ -1,4 +1,5 @@
-﻿using HactechTest.ApiShopTesting.Core;
+using HactechTest.ApiShopTesting.Core;
+using static HactechTest.ApiShopTesting.Core.HelperTC;
 
 namespace HactechTest.ApiShopTesting.Seed;
 
@@ -32,6 +33,7 @@ public sealed partial class ChuanBiSeed
         var thuongHieu = _nguCanh.CapNhatDB.DuLieu.ThuongHieuSeed.FirstOrDefault(x =>
             x.TrangThai == "san_sang" &&
             x.ThuongHieuIdServer is > 0);
+        var coThayDoi = false;
         foreach (var seller in sellerCoDiaChi)
         {
             var soSanPhamCuaSeller = _nguCanh.CapNhatDB.DuLieu.SanPhamSeed.Count(x =>
@@ -105,13 +107,17 @@ public sealed partial class ChuanBiSeed
                     TaoBoiTest = true,
                     TaoLuc = DateTimeOffset.Now,
                     XacMinhLuc = DateTimeOffset.Now,
-                    GhiChu = "Tao bang API /api/add_product"
+                    GhiChu = "Tạo bằng API /api/add_product"
                 });
                 soSanPhamCuaSeller++;
+                coThayDoi = true;
             }
         }
 
-        await _nguCanh.CapNhatDB.LuuAsync();
+        if (coThayDoi)
+        {
+            await _nguCanh.CapNhatDB.LuuAsync(BangDuLieuSeed.SanPham);
+        }
     }
 
     private async Task TaoLikeSanPhamSeedAsync()
@@ -131,6 +137,7 @@ public sealed partial class ChuanBiSeed
             .Select(x => (TaiKhoanIdServer: x.TaiKhoanIdServer!.Value, SanPhamIdServer: x.SanPhamIdServer!.Value))
             .ToHashSet();
 
+        var coThayDoi = false;
         foreach (var sp in sanPham)
         {
             if (_nguCanh.CapNhatDB.DuLieu.TaiKhoanThichSanPhamSeed.Count(x =>
@@ -165,7 +172,7 @@ public sealed partial class ChuanBiSeed
                 token,
                 $"tạo like sản phẩm seed cho tài khoản {nguoiThich.SoThuTu}");
 
-            var daLikeTheoResponse = response.Data?["is_liked"]?.GetValue<bool>();
+            var daLikeTheoResponse = DocBoolTuNode(response.Data?["is_liked"]);
             if (daLikeTheoResponse == false)
             {
                 continue;
@@ -177,11 +184,15 @@ public sealed partial class ChuanBiSeed
                 TaiKhoanIdServer = nguoiThich.TaiKhoanIdServer,
                 SanPhamIdServer = sp.SanPhamIdServer,
                 ThichLuc = DateTimeOffset.Now,
-                GhiChu = "Tao bang API /api/like_product"
+                GhiChu = "Tạo bằng API /api/like_product"
             });
             daThich.Add((nguoiThich.TaiKhoanIdServer, sp.SanPhamIdServer!.Value));
+            coThayDoi = true;
         }
 
-        await _nguCanh.CapNhatDB.LuuAsync();
+        if (coThayDoi)
+        {
+            await _nguCanh.CapNhatDB.LuuAsync(BangDuLieuSeed.ThichSanPham);
+        }
     }
 }

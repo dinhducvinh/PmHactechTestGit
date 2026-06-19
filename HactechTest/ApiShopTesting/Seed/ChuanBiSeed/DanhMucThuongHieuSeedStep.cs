@@ -1,5 +1,7 @@
 ﻿using HactechTest.ApiShopTesting.Core;
 
+using static HactechTest.ApiShopTesting.Core.HelperTC;
+
 namespace HactechTest.ApiShopTesting.Seed;
 
 public sealed partial class ChuanBiSeed
@@ -8,7 +10,7 @@ public sealed partial class ChuanBiSeed
     {
         await DongBoDanhMucAsync();
         await DongBoThuongHieuAsync();
-        await _nguCanh.CapNhatDB.LuuAsync();
+        await _nguCanh.CapNhatDB.LuuAsync(BangDuLieuSeed.DanhMuc, BangDuLieuSeed.ThuongHieu);
     }
 
     private async Task DongBoDanhMucAsync()
@@ -21,7 +23,7 @@ public sealed partial class ChuanBiSeed
 
         foreach (var item in LayObjectDeQuy(response.Data))
         {
-            var id = item["id"]?.GetValue<int>();
+            var id = DocIdSau(item, "id");
             if (id is not > 0)
             {
                 continue;
@@ -35,11 +37,11 @@ public sealed partial class ChuanBiSeed
                 {
                     DanhMucIdServer = id.Value,
                     TenDanhMuc = ten,
-                    DanhMucChaIdServer = item["parent_id"]?.GetValue<int>(),
-                    CoDanhMucCon = item["has_child"]?.GetValue<bool>(),
-                    CoThuongHieu = item["has_brand"]?.GetValue<bool>(),
-                    CoKichCo = item["has_size"]?.GetValue<bool>(),
-                    YeuCauCanNang = item["require_weight"]?.GetValue<bool>(),
+                    DanhMucChaIdServer = DocIdSau(item, "parent_id"),
+                    CoDanhMucCon = DocBoolTuNode(item["has_child"]),
+                    CoThuongHieu = DocBoolTuNode(item["has_brand"]),
+                    CoKichCo = DocBoolTuNode(item["has_size"]),
+                    YeuCauCanNang = DocBoolTuNode(item["require_weight"]),
                     TrangThai = "san_sang",
                     DongBoLuc = DateTimeOffset.Now
                 });
@@ -47,11 +49,11 @@ public sealed partial class ChuanBiSeed
             else
             {
                 hienCo.TenDanhMuc = ten;
-                hienCo.DanhMucChaIdServer = item["parent_id"]?.GetValue<int>();
-                hienCo.CoDanhMucCon = item["has_child"]?.GetValue<bool>();
-                hienCo.CoThuongHieu = item["has_brand"]?.GetValue<bool>();
-                hienCo.CoKichCo = item["has_size"]?.GetValue<bool>();
-                hienCo.YeuCauCanNang = item["require_weight"]?.GetValue<bool>();
+                hienCo.DanhMucChaIdServer = DocIdSau(item, "parent_id");
+                hienCo.CoDanhMucCon = DocBoolTuNode(item["has_child"]);
+                hienCo.CoThuongHieu = DocBoolTuNode(item["has_brand"]);
+                hienCo.CoKichCo = DocBoolTuNode(item["has_size"]);
+                hienCo.YeuCauCanNang = DocBoolTuNode(item["require_weight"]);
                 hienCo.TrangThai = "san_sang";
                 hienCo.DongBoLuc = DateTimeOffset.Now;
             }
@@ -69,7 +71,7 @@ public sealed partial class ChuanBiSeed
 
         foreach (var item in LayObjectTuNode(response.Data))
         {
-            var id = item["id"]?.GetValue<int>();
+            var id = DocIdSau(item, "id");
             if (id is not > 0)
             {
                 continue;
@@ -83,7 +85,7 @@ public sealed partial class ChuanBiSeed
                 {
                     ThuongHieuIdServer = id.Value,
                     TenThuongHieu = ten,
-                    DanhMucIdServer = item["category_id"]?.GetValue<int>(),
+                    DanhMucIdServer = DocIdSau(item, "category_id"),
                     TrangThai = "san_sang",
                     DongBoLuc = DateTimeOffset.Now
                 });
@@ -91,7 +93,7 @@ public sealed partial class ChuanBiSeed
             else
             {
                 hienCo.TenThuongHieu = ten;
-                hienCo.DanhMucIdServer = item["category_id"]?.GetValue<int>();
+                hienCo.DanhMucIdServer = DocIdSau(item, "category_id");
                 hienCo.TrangThai = "san_sang";
                 hienCo.DongBoLuc = DateTimeOffset.Now;
             }

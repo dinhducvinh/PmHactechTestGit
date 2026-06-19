@@ -1,4 +1,5 @@
-﻿using HactechTest.ApiShopTesting.Core;
+using HactechTest.ApiShopTesting.Core;
+using static HactechTest.ApiShopTesting.Core.HelperTC;
 
 namespace HactechTest.ApiShopTesting.Seed;
 
@@ -13,6 +14,7 @@ public sealed partial class ChuanBiSeed
         }
 
         var tokenCache = new Dictionary<int, string>();
+        var coThayDoi = false;
         for (var i = 0; i < taiKhoan.Count && _nguCanh.CapNhatDB.DuLieu.TinNhanSeed.Count(x => x.TrangThai == "da_gui") < YeuCauDuLieuSeed.SoTinNhanMucTieu; i++)
         {
             var sender = taiKhoan[i];
@@ -31,7 +33,7 @@ public sealed partial class ChuanBiSeed
                 tokenCache[sender.SoThuTu] = token;
             }
 
-            var noiDung = $"Tin nhan seed {DateTimeOffset.Now:yyyyMMddHHmmssfff}";
+            var noiDung = $"Tin nhắn seed {DateTimeOffset.Now:yyyyMMddHHmmssfff}";
             var body = new Dictionary<string, object?>
             {
                 ["to_id"] = IdChoBody(receiver.TaiKhoanIdServer),
@@ -65,10 +67,14 @@ public sealed partial class ChuanBiSeed
                 TrangThai = "da_gui",
                 TaoBoiTest = true,
                 GuiLuc = DateTimeOffset.Now,
-                GhiChu = "Tao bang API /conversation/send_message"
+                GhiChu = "Tạo bằng API /conversation/send_message"
             });
+            coThayDoi = true;
         }
 
-        await _nguCanh.CapNhatDB.LuuAsync();
+        if (coThayDoi)
+        {
+            await _nguCanh.CapNhatDB.LuuAsync(BangDuLieuSeed.TinNhan);
+        }
     }
 }

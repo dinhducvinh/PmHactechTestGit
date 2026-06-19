@@ -33,11 +33,30 @@ public sealed partial class ChuanBiSeed
             return;
         }
 
-        var mucTieu = 2;
-        var daCo = _nguCanh.CapNhatDB.DuLieu.TaiKhoanTimKiemSeed.Count(x => x.TrangThai == "dang_luu");
-        for (var i = 0; i < taiKhoanDaDangKy.Count && daCo < mucTieu; i++)
+        var mucTieu = YeuCauDuLieuSeed.SoSavedSearchToiThieu;
+        var daCo = _nguCanh.CapNhatDB.DuLieu.TaiKhoanTimKiemSeed.Count(x =>
+            x.TrangThai == "dang_luu" &&
+            x.SavedSearchIdServer is > 0);
+        var taiKhoanDaCoTimKiem = _nguCanh.CapNhatDB.DuLieu.TaiKhoanTimKiemSeed
+            .Where(x => x.TrangThai == "dang_luu" && x.TaiKhoanIdServer is > 0 && x.SavedSearchIdServer is > 0)
+            .Select(x => x.TaiKhoanIdServer!.Value)
+            .ToHashSet();
+        var taiKhoanUuTien = taiKhoanDaDangKy
+            .OrderBy(x => taiKhoanDaCoTimKiem.Contains(x.TaiKhoanIdServer) ? 1 : 0)
+            .ThenBy(x => x.SoThuTu)
+            .ThenBy(x => x.TaiKhoanIdServer)
+            .ToList();
+
+        var coThayDoi = false;
+        for (var i = 0; i < taiKhoanUuTien.Count && daCo < mucTieu; i++)
         {
-            var taiKhoan = taiKhoanDaDangKy[i];
+            var taiKhoan = taiKhoanUuTien[i];
+            if (taiKhoanDaCoTimKiem.Contains(taiKhoan.TaiKhoanIdServer) &&
+                taiKhoanDaCoTimKiem.Count < taiKhoanDaDangKy.Count)
+            {
+                continue;
+            }
+
             var token = await LayTokenSeedAsync(taiKhoan, $"tạo saved search seed cho tài khoản {taiKhoan.SoThuTu}");
 
             var keyword = $"search_seed_{taiKhoan.SoThuTu}_{DateTimeOffset.Now:yyyyMMddHHmmss}";
@@ -49,20 +68,34 @@ public sealed partial class ChuanBiSeed
                 token,
                 $"tạo saved search seed cho tài khoản {taiKhoan.SoThuTu}");
 
+            var savedSearchIdServer =
+                HelperTC.DocIdSau(response.Data, "id") ??
+                HelperTC.DocIdSau(response.Data, "saved_search_id");
+            if (savedSearchIdServer is not > 0)
+            {
+                throw new LoiChuanBiKiemThuException(
+                    $"API /api/save_search trả thành công nhưng không có id saved search cho tài khoản seed {taiKhoan.SoThuTu}. Response: {HelperTC.RutGon(response.NoiDungRaw)}");
+            }
+
             _nguCanh.CapNhatDB.DuLieu.TaiKhoanTimKiemSeed.Add(new TaiKhoanTimKiemSeed
             {
                 TaiKhoanTimKiemSeedId = IdTiepTheo(_nguCanh.CapNhatDB.DuLieu.TaiKhoanTimKiemSeed, x => x.TaiKhoanTimKiemSeedId),
                 TaiKhoanIdServer = taiKhoan.TaiKhoanIdServer,
-                SavedSearchIdServer = response.Data?["id"]?.GetValue<int>(),
+                SavedSearchIdServer = savedSearchIdServer,
                 Keyword = response.Data?["keyword"]?.ToString() ?? keyword,
                 TrangThai = "dang_luu",
                 TaoBoiTest = true,
                 TaoLuc = DateTimeOffset.Now
             });
             daCo++;
+            taiKhoanDaCoTimKiem.Add(taiKhoan.TaiKhoanIdServer);
+            coThayDoi = true;
         }
 
-        await _nguCanh.CapNhatDB.LuuAsync();
+        if (coThayDoi)
+        {
+            await _nguCanh.CapNhatDB.LuuAsync(BangDuLieuSeed.TimKiem);
+        }
     }
 }
 

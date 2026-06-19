@@ -1,5 +1,6 @@
-﻿using System.Text.Json.Nodes;
+using System.Text.Json.Nodes;
 using HactechTest.ApiShopTesting.Core;
+using static HactechTest.ApiShopTesting.Core.HelperTC;
 
 namespace HactechTest.ApiShopTesting.Seed;
 
@@ -40,16 +41,43 @@ public sealed partial class ChuanBiSeed
         }
 
         ct.ThrowIfCancellationRequested();
+        var daDongBoTinhThanhPhuongXa = false;
+        if (kiemTraTruoc.ThongKe.SoTaiKhoanDaDangKy > 0)
+        {
+            baoTrangThai?.Invoke("Đang đồng bộ tỉnh/thành phố và phường/xã từ API...");
+            try
+            {
+                kiemTraTruoc = await DongBoTinhThanhPhuongXaVaKiemTraLaiAsync(
+                    cauHinh,
+                    seedCheck,
+                    kiemTraTruoc,
+                    ct);
+                daDongBoTinhThanhPhuongXa = true;
+            }
+            catch (Exception ex)
+            {
+                return KetQuaChuanBiDuLieuSeed.ThatBai(
+                    cauHinh.BaseUrl,
+                    "Không thể đồng bộ tỉnh/thành phố và phường/xã từ API.",
+                    ex.Message,
+                    kiemTraTruoc.DuLieuConThieu,
+                    kiemTraTruoc.ThongKe);
+            }
+        }
+
+        ct.ThrowIfCancellationRequested();
         if (kiemTraTruoc.DaDuDuLieu)
         {
             return new KetQuaChuanBiDuLieuSeed
             {
                 BaseUrl = cauHinh.BaseUrl,
                 DaDuTruocKhiChuanBi = true,
-                DaThuBoSung = false,
+                DaThuBoSung = daDongBoTinhThanhPhuongXa,
                 DaDuSauKhiChuanBi = true,
                 ThongKe = kiemTraTruoc.ThongKe,
-                ThongDiep = "Dữ liệu mồi trong database seed đã đủ."
+                ThongDiep = daDongBoTinhThanhPhuongXa
+                    ? "Dữ liệu mồi trong database seed đã đủ sau khi đồng bộ tỉnh/thành phố và phường/xã từ API."
+                    : "Dữ liệu mồi trong database seed đã đủ."
             };
         }
 
@@ -165,14 +193,16 @@ public sealed partial class ChuanBiSeed
         if (ketQua.DaDuTruocKhiChuanBi)
         {
             dong.Add("");
-            dong.Add("Không cần gọi API để bổ sung dữ liệu mồi.");
+            dong.Add(ketQua.DaThuBoSung
+                ? "Đã đồng bộ dữ liệu tỉnh/thành phố và phường/xã từ API; không cần gọi thêm API để bổ sung dữ liệu mồi."
+                : "Không cần gọi API để bổ sung dữ liệu mồi.");
             return string.Join(Environment.NewLine, dong);
         }
 
         if (ketQua.DaThuBoSung && ketQua.DaDuSauKhiChuanBi)
         {
             dong.Add("");
-            dong.Add("App đã gọi API để tạo dữ liệu thật trên server và cập nhật trạng thái seed trong SQL Server.");
+            dong.Add("App đã gọi API để tạo/đồng bộ dữ liệu thật trên server và cập nhật trạng thái seed trong SQL Server.");
             return string.Join(Environment.NewLine, dong);
         }
 
@@ -193,7 +223,7 @@ public sealed partial class ChuanBiSeed
         }
 
         dong.Add("");
-        dong.Add("Kiểm tra lại SQL Server, Base URL và các API signup/login, wallet, địa chỉ, danh mục/thương hiệu, sản phẩm, saved search, follow/block, tin nhắn.");
+        dong.Add("Kiểm tra lại SQL Server, Base URL và các API signup/login, wallet, địa chỉ, danh mục/thương hiệu, sản phẩm, giỏ hàng, đơn hàng, saved search, follow/block, tin nhắn.");
         return string.Join(Environment.NewLine, dong);
     }
 
@@ -211,9 +241,11 @@ public sealed partial class ChuanBiSeed
         dong.Add($"- Danh mục seed san_sang: {thongKe.SoDanhMucSanSang}/{thongKe.SoDanhMucCanCo}.");
         dong.Add($"- Thương hiệu seed san_sang: {thongKe.SoThuongHieuSanSang}.");
         dong.Add($"- Sản phẩm seed san_sang: {thongKe.SoSanPhamSanSang}/{thongKe.SoSanPhamCanCo}.");
+        dong.Add($"- Giỏ hàng seed dang_trong_gio: {thongKe.SoGioHangDangTrongGio}/{thongKe.SoGioHangCanCo}.");
+        dong.Add($"- Đơn hàng seed: {thongKe.SoDonHangDangLuu}/{thongKe.SoDonHangCanCo}.");
         dong.Add($"- Like sản phẩm seed đang lưu: {thongKe.SoLikeSanPhamDangLuu}/{thongKe.SoLikeSanPhamCanCo}.");
         dong.Add($"- Tin nhắn seed da_gui: {thongKe.SoTinNhanDaGui}/{thongKe.SoTinNhanCanCo}.");
-        dong.Add($"- Thông báo seed dang_luu: {thongKe.SoThongBaoDangLuu}.");
+        dong.Add($"- Thông báo seed dang_luu: {thongKe.SoThongBaoDangLuu}/{thongKe.SoThongBaoCanCo}.");
     }
 
     public async Task ChuanBiAsync()
@@ -229,6 +261,8 @@ public sealed partial class ChuanBiSeed
             {
                 await DangKyTaiKhoanChuaDangKyAsync();
             }
+
+            await DongBoTinhThanhPhuongXaAsync();
 
             if (_keHoach.CanChuanBi(HangMucChuanBiDuLieuSeed.DanhMucVaThuongHieu))
             {
@@ -260,6 +294,16 @@ public sealed partial class ChuanBiSeed
                 await TaoSanPhamSeedAsync();
             }
 
+            if (_keHoach.CanChuanBi(HangMucChuanBiDuLieuSeed.GioHang))
+            {
+                await TaoGioHangSeedAsync();
+            }
+
+            if (_keHoach.CanChuanBi(HangMucChuanBiDuLieuSeed.DonHang))
+            {
+                await TaoDonHangSeedAsync();
+            }
+
             if (_keHoach.CanChuanBi(HangMucChuanBiDuLieuSeed.LikeSanPham))
             {
                 await TaoLikeSanPhamSeedAsync();
@@ -289,6 +333,22 @@ public sealed partial class ChuanBiSeed
             throw new LoiChuanBiKiemThuException(
                 $"API seed bị timeout sau {_nguCanh.CauHinh.TimeoutGiay} giây. Chi tiết: {ex.Message}");
         }
+    }
+
+    private static async Task<KetQuaKiemTraDuLieuSeed> DongBoTinhThanhPhuongXaVaKiemTraLaiAsync(
+        CauHinhChay cauHinh,
+        SeedLoadCheck seedCheck,
+        KetQuaKiemTraDuLieuSeed kiemTraHienTai,
+        CancellationToken ct)
+    {
+        using var api = new MayKhachApi(cauHinh);
+        var capNhatDB = new CapNhatDB(cauHinh.ChuoiKetNoiSqlServer, kiemTraHienTai.DuLieu);
+        var nguCanh = new NguCanhKiemThu(cauHinh, api, capNhatDB);
+        await new ChuanBiSeed(nguCanh, new KeHoachChuanBiDuLieuSeed([]))
+            .DongBoTinhThanhPhuongXaAsync();
+
+        ct.ThrowIfCancellationRequested();
+        return await seedCheck.KiemTraAsync(cauHinh.ChuoiKetNoiSqlServer, ct);
     }
 
     private async Task<string> LayTokenSeedAsync(TaiKhoanSignupThanhCongSeed taiKhoan, string mucDich)
@@ -404,21 +464,9 @@ public sealed partial class ChuanBiSeed
         }
     }
 
-    private static int? DocIdSau(JsonNode? node, string tenTruong)
-    {
-        return node?[tenTruong]?.GetValue<int>();
-    }
 
-    private static string RutGon(string? raw, int max = 500)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-        {
-            return "";
-        }
 
-        var motDong = raw.Replace(Environment.NewLine, " ");
-        return motDong.Length <= max ? motDong : motDong[..max] + "...";
-    }
+
 
     private static int? IdChoBody(int? id)
     {
