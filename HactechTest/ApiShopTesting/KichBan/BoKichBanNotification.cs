@@ -19,21 +19,21 @@ public static partial class BoKichBanApi
 
     private static void ThemAddNotification(List<KichBanApi> ds)
     {
-        Them(ds, "NOTIFICATION-ADD-01", "Notification", "Tao thong bao voi token khong hop le",
-            "Goi POST /notification/add_notification bang token het han/sai dinh dang, body hop le.",
+        Them(ds, "NOTIFICATION-ADD-01", "Notification", "Tạo thông báo với token không hợp lệ",
+            "Gọi POST /notification/add_notification bằng token hết hạn/sai định dạng, body hợp lệ.",
             async ctx =>
             {
                 var taiKhoan = await YeuCauTaiKhoanDaDangKyAsync(ctx);
                 return new YeuCauApi(
                     HttpMethod.Post,
                     "/notification/add_notification",
-                    TaoBodyNotification("order", LayObjectIdNotification(ctx), "Thong bao test invalid token", IdBatBuoc(taiKhoan.TaiKhoanIdServer, "receiver tk_id_server")),
+                    TaoBodyNotification("order", LayObjectIdNotification(ctx), "Thông báo test invalid token", IdBatBuoc(taiKhoan.TaiKhoanIdServer, "receiver tk_id_server")),
                     ctx.TokenSaiDinhDang);
             },
             NotificationSaiToken);
 
-        Them(ds, "NOTIFICATION-ADD-02", "Notification", "Tao thong bao thanh cong cho user ton tai",
-            "Token hop le, body hop le va user_id ton tai.",
+        Them(ds, "NOTIFICATION-ADD-02", "Notification", "Tạo thông báo thành công cho user tồn tại",
+            "Token hợp lệ, body hợp lệ và user_id tồn tại.",
             async ctx =>
             {
                 var taiKhoan = await YeuCauTaiKhoanDaDangKyAsync(ctx);
@@ -43,19 +43,19 @@ public static partial class BoKichBanApi
             KiemTraResponseAddNotification(),
             async (response, request, ctx) => await ctx.CapNhatDB.LuuThongBaoSauAddNotificationAsync(response, request));
 
-        Them(ds, "NOTIFICATION-ADD-03", "Notification", "Tao thong bao cho user khac current user",
-            "Token hop le cua user A, user_id trong body la user B va hai user khong bi chan.",
+        Them(ds, "NOTIFICATION-ADD-03", "Notification", "Tạo thông báo cho user khác current user",
+            "Token hợp lệ của user A, user_id trong body là user B và hai user không bị chặn.",
             async ctx =>
             {
-                var cap = ChonCapTaiKhoanKhongCoQuanHeChan(ctx, "Khong tim duoc cap tai khoan khong bi chan de tao notification.");
+                var cap = ChonCapTaiKhoanKhongCoQuanHeChan(ctx, "Không tìm được cặp tài khoản không bị chặn để tạo notification.");
                 return await TaoRequestAddNotificationAsync(ctx, cap.TaiKhoanThuNhat, cap.TaiKhoanThuHai, "NOTIFICATION-ADD-03");
             },
             Ok,
             KiemTraResponseAddNotification(),
             async (response, request, ctx) => await ctx.CapNhatDB.LuuThongBaoSauAddNotificationAsync(response, request));
 
-        Them(ds, "NOTIFICATION-ADD-04", "Notification", "Tao thong bao thieu field hoac sai kieu",
-            "Token hop le nhung body thieu object_id/user_id hoac sai kieu du lieu.",
+        Them(ds, "NOTIFICATION-ADD-04", "Notification", "Tạo thông báo thiếu field hoặc sai kiểu",
+            "Token hợp lệ nhưng body thiếu object_id/user_id hoặc sai kiểu dữ liệu.",
             async ctx =>
             {
                 var taiKhoan = await YeuCauTaiKhoanDaDangKyAsync(ctx);
@@ -64,34 +64,34 @@ public static partial class BoKichBanApi
                     "/notification/add_notification",
                     Obj(
                         ("type", "order"),
-                        ("title", "Thong bao test thieu object_id"),
+                        ("title", "Thông báo test thiếu object_id"),
                         ("user_id", IdBatBuoc(taiKhoan.TaiKhoanIdServer, "receiver tk_id_server"))),
                     await LayTokenCuaTaiKhoanAsync(ctx, taiKhoan));
             },
             SaiKieu);
 
-        Them(ds, "NOTIFICATION-ADD-05", "Notification", "Tao thong bao voi type hoac title rong",
-            "Token hop le nhung type/title la chuoi rong.",
+        Them(ds, "NOTIFICATION-ADD-05", "Notification", "Tạo thông báo với type hoặc title rỗng",
+            "Token hợp lệ nhưng type/title là chuỗi rỗng.",
             async ctx =>
             {
                 var taiKhoan = await YeuCauTaiKhoanDaDangKyAsync(ctx);
                 return new YeuCauApi(
                     HttpMethod.Post,
                     "/notification/add_notification",
-                    TaoBodyNotification("", LayObjectIdNotification(ctx), "Thong bao test", IdBatBuoc(taiKhoan.TaiKhoanIdServer, "receiver tk_id_server")),
+                    TaoBodyNotification("", LayObjectIdNotification(ctx), "Thông báo test", IdBatBuoc(taiKhoan.TaiKhoanIdServer, "receiver tk_id_server")),
                     await LayTokenCuaTaiKhoanAsync(ctx, taiKhoan));
             },
             SaiGiaTri);
 
-        Them(ds, "NOTIFICATION-ADD-06", "Notification", "Tao thong bao cho user_id khong ton tai",
-            "Token hop le, body hop le nhung user_id khong ton tai tren server.",
+        Them(ds, "NOTIFICATION-ADD-06", "Notification", "Tạo thông báo cho user_id không tồn tại",
+            "Token hợp lệ, body hợp lệ nhưng user_id không tồn tại trên server.",
             async ctx =>
             {
                 var taiKhoan = await YeuCauTaiKhoanDaDangKyAsync(ctx);
                 return new YeuCauApi(
                     HttpMethod.Post,
                     "/notification/add_notification",
-                    TaoBodyNotification("order", LayObjectIdNotification(ctx), "Thong bao test user khong ton tai", 999999999),
+                    TaoBodyNotification("order", LayObjectIdNotification(ctx), "Thông báo test user không tồn tại", 999999999),
                     await LayTokenCuaTaiKhoanAsync(ctx, taiKhoan));
             },
             NotificationUserKhongTonTai);
@@ -99,8 +99,8 @@ public static partial class BoKichBanApi
 
     private static void ThemGetNotificationTheoTaiLieu(List<KichBanApi> ds)
     {
-        Them(ds, "NOTIFICATION-GET-01", "Notification", "Lay thong bao voi token khong hop le",
-            "Goi POST /notification/get_notification bang token het han/sai dinh dang, body co index/count hop le.",
+        Them(ds, "NOTIFICATION-GET-01", "Notification", "Lấy thông báo với token không hợp lệ",
+            "Gọi POST /notification/get_notification bằng token hết hạn/sai định dạng, body có index/count hợp lệ.",
             ctx => Req(
                 HttpMethod.Post,
                 "/notification/get_notification",
@@ -108,8 +108,8 @@ public static partial class BoKichBanApi
                 ctx.TokenSaiDinhDang),
             NotificationSaiToken);
 
-        Them(ds, "NOTIFICATION-GET-02", "Notification", "Lay danh sach thong bao",
-            "Token hop le, index/count hop le. Neu response co data thi dong bo notification vao thongbao_seed.",
+        Them(ds, "NOTIFICATION-GET-02", "Notification", "Lấy danh sách thông báo",
+            "Token hợp lệ, index/count hợp lệ. Nếu response có data thì đồng bộ notification vào thongbao_seed.",
             async ctx =>
             {
                 var taiKhoan = LayTaiKhoanUuTienCoThongBao(ctx) ?? await YeuCauTaiKhoanDaDangKyAsync(ctx);
@@ -129,8 +129,8 @@ public static partial class BoKichBanApi
 
     private static void ThemSetReadNotificationTheoTaiLieu(List<KichBanApi> ds)
     {
-        Them(ds, "NOTIFICATION-READ-01", "Notification", "Danh dau da doc voi token khong hop le",
-            "Goi POST /notification/set_read_notification bang token het han/sai dinh dang.",
+        Them(ds, "NOTIFICATION-READ-01", "Notification", "Đánh dấu đã đọc với token không hợp lệ",
+            "Gọi POST /notification/set_read_notification bằng token hết hạn/sai định dạng.",
             ctx =>
             {
                 var notificationId = LayNotificationIdDangCoHoacMacDinh(ctx);
@@ -142,13 +142,13 @@ public static partial class BoKichBanApi
             },
             NotificationSaiToken);
 
-        Them(ds, "NOTIFICATION-READ-02", "Notification", "Danh dau thong bao da doc",
-            "Token hop le, notification_id_server ton tai trong thongbao_seed cua tai khoan nhan. Sau khi thanh cong cap nhat seed sang da_doc.",
+        Them(ds, "NOTIFICATION-READ-02", "Notification", "Đánh dấu thông báo đã đọc",
+            "Token hợp lệ, notification_id_server tồn tại trong thongbao_seed của tài khoản nhận. Sau khi thành công cập nhật seed sang da_doc.",
             async ctx =>
             {
                 var thongBao = LayThongBaoChuaDoc(ctx);
                 var taiKhoan = LayTaiKhoanTheoServerId(ctx, thongBao.TaiKhoanNhanIdServer)
-                    ?? throw new BoQuaKiemThuException("Thieu tai khoan nhan thong bao trong taikhoan_signupthanhcong.");
+                    ?? throw new BoQuaKiemThuException("Thiếu tài khoản nhận thông báo trong taikhoan_signupthanhcong.");
 
                 var request = new YeuCauApi(
                     HttpMethod.Post,
@@ -167,8 +167,8 @@ public static partial class BoKichBanApi
                 await ctx.CapNhatDB.DanhDauThongBaoDaDocAsync(thongBao);
             });
 
-        Them(ds, "NOTIFICATION-READ-03", "Notification", "Danh dau da doc thong bao khong ton tai",
-            "Token hop le, notification_id khong ton tai tren server.",
+        Them(ds, "NOTIFICATION-READ-03", "Notification", "Đánh dấu đã đọc thông báo không tồn tại",
+            "Token hợp lệ, notification_id không tồn tại trên server.",
             async ctx => new YeuCauApi(
                 HttpMethod.Post,
                 "/notification/set_read_notification",
@@ -247,18 +247,18 @@ public static partial class BoKichBanApi
 
             if (response.Data is not JsonObject data)
             {
-                return Task.FromResult(new KetQuaKiemTraThem(false, "data cua add_notification khong phai object Notification."));
+                return Task.FromResult(new KetQuaKiemTraThem(false, "data của add_notification không phải object Notification."));
             }
 
             if (DocNotificationIdServer(data) is not > 0)
             {
-                return Task.FromResult(new KetQuaKiemTraThem(false, "Response add_notification thieu data.id."));
+                return Task.FromResult(new KetQuaKiemTraThem(false, "Response add_notification thiếu data.id."));
             }
 
             var daDoc = DocBoolTuObject(data, "read", "is_read", "da_doc");
             if (daDoc == true)
             {
-                return Task.FromResult(new KetQuaKiemTraThem(false, "Notification moi tao khong duoc o trang thai read=true."));
+                return Task.FromResult(new KetQuaKiemTraThem(false, "Notification mới tạo không được ở trạng thái read=true."));
             }
 
             var titleMongDoi = request.Tam.TryGetValue("title", out var titleRaw) ? titleRaw as string : null;
@@ -267,145 +267,11 @@ public static partial class BoKichBanApi
                 !string.IsNullOrWhiteSpace(titleThucTe) &&
                 !string.Equals(titleMongDoi, titleThucTe, StringComparison.Ordinal))
             {
-                return Task.FromResult(new KetQuaKiemTraThem(false, "Response add_notification tra title khac request."));
+                return Task.FromResult(new KetQuaKiemTraThem(false, "Response add_notification trả title khác request."));
             }
 
             return Task.FromResult(KetQuaKiemTraThem.ThanhCong);
         };
-    }
-
-    private static void ThemGetNotification(List<KichBanApi> ds)
-    {
-        Them(ds, "NOTIFICATION-GET-01", "Notification", "Lấy thông báo với token không hợp lệ",
-            "Gọi POST /notification/get_notification bằng token hết hạn/sai định dạng, body có index/count hợp lệ.",
-            ctx => Req(
-                HttpMethod.Post,
-                "/notification/get_notification",
-                Obj(("index", 0), ("count", 20)),
-                ctx.TokenSaiDinhDang),
-            SaiToken);
-
-        Them(ds, "NOTIFICATION-GET-02", "Notification", "Lấy danh sách thông báo",
-            "Token hợp lệ, index/count hợp lệ. Nếu response có data thì đồng bộ notification vào thongbao_seed.",
-            async ctx =>
-            {
-                var taiKhoan = LayTaiKhoanUuTienCoThongBao(ctx) ?? await YeuCauTaiKhoanDaDangKyAsync(ctx);
-                var request = new YeuCauApi(
-                    HttpMethod.Post,
-                    "/notification/get_notification",
-                    Obj(("index", 0), ("count", 20)),
-                    await LayTokenCuaTaiKhoanAsync(ctx, taiKhoan));
-
-                request.Tam["taiKhoan"] = taiKhoan;
-                return request;
-            },
-            Ok,
-            KiemTraResponseGetNotification(),
-            async (response, request, ctx) => await ctx.CapNhatDB.DongBoThongBaoTuResponseAsync(response, request));
-
-        Them(ds, "NOTIFICATION-GET-03", "Notification", "Lấy thông báo thiếu index",
-            "Token hợp lệ nhưng body thiếu index bắt buộc.",
-            async ctx => new YeuCauApi(
-                HttpMethod.Post,
-                "/notification/get_notification",
-                Obj(("count", 20)),
-                await YeuCauTokenHopLeAsync(ctx)),
-            ThieuThamSo);
-
-        Them(ds, "NOTIFICATION-GET-04", "Notification", "Lấy thông báo thiếu count",
-            "Token hợp lệ nhưng body thiếu count bắt buộc.",
-            async ctx => new YeuCauApi(
-                HttpMethod.Post,
-                "/notification/get_notification",
-                Obj(("index", 0)),
-                await YeuCauTokenHopLeAsync(ctx)),
-            ThieuThamSo);
-
-        Them(ds, "NOTIFICATION-GET-05", "Notification", "Lấy thông báo sai kiểu tham số",
-            "Token hợp lệ nhưng index/count không phải số nguyên.",
-            async ctx => new YeuCauApi(
-                HttpMethod.Post,
-                "/notification/get_notification",
-                Obj(("index", "abc"), ("count", "xyz")),
-                await YeuCauTokenHopLeAsync(ctx)),
-            SaiKieu);
-
-        Them(ds, "NOTIFICATION-GET-06", "Notification", "Lấy thông báo sai giá trị tham số",
-            "Token hợp lệ nhưng index < 0 hoặc count < 1.",
-            async ctx => new YeuCauApi(
-                HttpMethod.Post,
-                "/notification/get_notification",
-                Obj(("index", -1), ("count", 0)),
-                await YeuCauTokenHopLeAsync(ctx)),
-            SaiGiaTri);
-    }
-
-    private static void ThemSetReadNotification(List<KichBanApi> ds)
-    {
-        Them(ds, "NOTIFICATION-READ-01", "Notification", "Đánh dấu đã đọc với token không hợp lệ",
-            "Gọi POST /notification/set_read_notification bằng token hết hạn/sai định dạng.",
-            ctx =>
-            {
-                var notificationId = LayNotificationIdDangCoHoacMacDinh(ctx);
-                return Req(
-                    HttpMethod.Post,
-                    "/notification/set_read_notification",
-                    Obj(("notification_id", notificationId)),
-                    ctx.TokenSaiDinhDang);
-            },
-            SaiToken);
-
-        Them(ds, "NOTIFICATION-READ-02", "Notification", "Đánh dấu thông báo đã đọc",
-            "Token hợp lệ, notification_id_server tồn tại trong thongbao_seed. Sau khi thành công cập nhật seed sang da_doc.",
-            async ctx =>
-            {
-                var thongBao = LayThongBaoChuaDoc(ctx);
-                var taiKhoan = LayTaiKhoanTheoServerId(ctx, thongBao.TaiKhoanIdServer)
-                    ?? throw new BoQuaKiemThuException("Thiếu tài khoản nhận thông báo trong taikhoan_signupthanhcong.");
-
-                var request = new YeuCauApi(
-                    HttpMethod.Post,
-                    "/notification/set_read_notification",
-                    Obj(("notification_id", IdBatBuoc(thongBao.NotificationIdServer, "thongbao_seed.notification_id_server"))),
-                    await LayTokenCuaTaiKhoanAsync(ctx, taiKhoan));
-
-                request.Tam["thongBao"] = thongBao;
-                return request;
-            },
-            Ok,
-            null,
-            async (_, request, ctx) =>
-            {
-                var thongBao = (ThongBaoSeed)request.Tam["thongBao"]!;
-                await ctx.CapNhatDB.DanhDauThongBaoDaDocAsync(thongBao);
-            });
-
-        Them(ds, "NOTIFICATION-READ-03", "Notification", "Đánh dấu đã đọc thông báo không tồn tại",
-            "Token hợp lệ, notification_id không tồn tại trên server.",
-            async ctx => new YeuCauApi(
-                HttpMethod.Post,
-                "/notification/set_read_notification",
-                Obj(("notification_id", 999999999)),
-                await YeuCauTokenHopLeAsync(ctx)),
-            SaiGiaTri);
-
-        Them(ds, "NOTIFICATION-READ-04", "Notification", "Đánh dấu đã đọc thiếu notification_id",
-            "Token hợp lệ nhưng body thiếu notification_id bắt buộc.",
-            async ctx => new YeuCauApi(
-                HttpMethod.Post,
-                "/notification/set_read_notification",
-                Obj(),
-                await YeuCauTokenHopLeAsync(ctx)),
-            ThieuThamSo);
-
-        Them(ds, "NOTIFICATION-READ-05", "Notification", "Đánh dấu đã đọc sai kiểu notification_id",
-            "Token hợp lệ nhưng notification_id không phải số nguyên.",
-            async ctx => new YeuCauApi(
-                HttpMethod.Post,
-                "/notification/set_read_notification",
-                Obj(("notification_id", "abc")),
-                await YeuCauTokenHopLeAsync(ctx)),
-            SaiKieu);
     }
 
     private static Func<PhanHoiApi, YeuCauApi, NguCanhKiemThu, Task<KetQuaKiemTraThem>> KiemTraResponseGetNotification()

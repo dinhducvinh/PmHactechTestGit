@@ -259,6 +259,37 @@ internal static class HelperTC
             x.TaiKhoanIdServer == taiKhoanIdServer.Value);
     }
 
+    internal static WalletSeed? LayWalletCuaTaiKhoan(NguCanhKiemThu ctx, TaiKhoanSignupThanhCongSeed taiKhoan)
+    {
+        return ctx.CapNhatDB.DuLieu.WalletSeed.FirstOrDefault(x =>
+            x.TaiKhoanIdServer == taiKhoan.TaiKhoanIdServer &&
+            !string.IsNullOrWhiteSpace(x.WalletIdServer));
+    }
+
+    internal static TaiKhoanSignupThanhCongSeed? LayTaiKhoanCoWallet(NguCanhKiemThu ctx)
+    {
+        return LayDanhSachTaiKhoanSanSang(ctx)
+            .FirstOrDefault(taiKhoan => LayWalletCuaTaiKhoan(ctx, taiKhoan) is not null);
+    }
+
+    internal static async Task<TaiKhoanSignupThanhCongSeed> YeuCauTaiKhoanCoWalletAsync(NguCanhKiemThu ctx)
+    {
+        var taiKhoanCoWallet = LayTaiKhoanCoWallet(ctx);
+        if (taiKhoanCoWallet is not null)
+        {
+            return taiKhoanCoWallet;
+        }
+
+        var taiKhoanChuaDangKy = LayTaiKhoanChuaDangKy(ctx);
+        if (taiKhoanChuaDangKy is not null)
+        {
+            return await DangKyTaiKhoanMoiAsync(ctx);
+        }
+
+        return LayTaiKhoanDaDangKy(ctx)
+            ?? throw new BoQuaKiemThuException("Thiếu tài khoản đã đăng ký để chạy testcase Rewards.");
+    }
+
     internal static Dictionary<string, object?> TaoBodyDangKy(TaiKhoanChuaDangKySeed taiKhoan)
     {
         return Obj(
@@ -390,7 +421,7 @@ internal static class HelperTC
         }
     }
 
-    // Kiem tra response dung chung
+    // Kiểm tra response dùng chung
 
     internal static Func<PhanHoiApi, YeuCauApi, NguCanhKiemThu, Task<KetQuaKiemTraThem>> DataCoTruong(params string[] truong)
     {
@@ -462,7 +493,7 @@ internal static class HelperTC
         };
     }
 
-    // Kieu du lieu tra ve
+    // Kiểu dữ liệu trả về
 
     internal sealed record CapHaiTaiKhoan(
         TaiKhoanSignupThanhCongSeed TaiKhoanThuNhat,
@@ -506,13 +537,6 @@ internal static class HelperTC
         TaiKhoanSignupThanhCongSeed Buyer,
         TaiKhoanSignupThanhCongSeed Seller);
 
-    internal sealed record CapDonHangSanPham(
-        DonHangSeed DonHang,
-        DonHangSanPhamSeed DongSanPham,
-        TaiKhoanSignupThanhCongSeed Buyer,
-        TaiKhoanSignupThanhCongSeed Seller,
-        SanPhamSeed SanPham);
-
     internal sealed record CapTaoDonHang(
         TaiKhoanSignupThanhCongSeed Buyer,
         TaiKhoanSignupThanhCongSeed Seller,
@@ -521,6 +545,10 @@ internal static class HelperTC
 
     internal sealed record CapDiaChiTaiKhoan(
         DiaChiTaiKhoanSeed DiaChi,
+        TaiKhoanSignupThanhCongSeed TaiKhoan);
+
+    internal sealed record CapRewardProof(
+        RewardProofSeed RewardProof,
         TaiKhoanSignupThanhCongSeed TaiKhoan);
 
     internal sealed record DuLieuBodySanPham(
@@ -544,6 +572,72 @@ internal static class HelperTC
         bool LaMacDinh);
 
     // Thông báo
+
+    // Rewards
+
+    internal static CapRewardProof LayRewardProofBatKy(NguCanhKiemThu ctx)
+    {
+        return LayRewardProofTheoDieuKien(
+            ctx,
+            _ => true,
+            "Thiếu reward_proof_seed. Hãy chạy REWARD-ADD-02 trước để tạo dữ liệu proof.");
+    }
+
+    internal static CapRewardProof LayRewardProofDeAppeal(NguCanhKiemThu ctx)
+    {
+        return LayRewardProofTheoDieuKien(
+            ctx,
+            reward => reward.AiScore != 1 &&
+                      !string.Equals(reward.TrangThai, "da_khieu_nai", StringComparison.OrdinalIgnoreCase),
+            "Thiếu reward_proof_seed có ai_score != 1 và chưa tạo appeal.");
+    }
+
+    internal static CapRewardProof LayRewardProofTheoDieuKien(
+        NguCanhKiemThu ctx,
+        Func<RewardProofSeed, bool> dieuKien,
+        string thongBaoKhiThieu)
+    {
+        foreach (var rewardProof in ctx.CapNhatDB.DuLieu.RewardProofSeed
+                     .Where(x => x.RewardIdServer is > 0 &&
+                                 x.TaiKhoanIdServer is > 0 &&
+                                 !string.Equals(x.TrangThai, "khong_con_ton_tai", StringComparison.OrdinalIgnoreCase))
+                     .Where(dieuKien)
+                     .OrderByDescending(x => x.CapNhatLuc ?? x.TaoLuc ?? DateTimeOffset.MinValue)
+                     .ThenByDescending(x => x.RewardIdServer))
+        {
+            var taiKhoan = LayTaiKhoanTheoServerId(ctx, rewardProof.TaiKhoanIdServer);
+            if (taiKhoan is not null)
+            {
+                return new CapRewardProof(rewardProof, taiKhoan);
+            }
+        }
+
+        throw new BoQuaKiemThuException(thongBaoKhiThieu);
+    }
+
+    internal static TaiKhoanSignupThanhCongSeed LayTaiKhoanKhacRewardProof(NguCanhKiemThu ctx, RewardProofSeed rewardProof)
+    {
+        return LayDanhSachTaiKhoanSanSang(ctx)
+            .FirstOrDefault(x => x.TaiKhoanIdServer != rewardProof.TaiKhoanIdServer)
+            ?? throw new BoQuaKiemThuException("Thiếu tài khoản khác user tạo reward proof để kiểm tra quyền.");
+    }
+
+    internal static int LayRewardIdDangCoHoacMacDinh(NguCanhKiemThu ctx)
+    {
+        return ctx.CapNhatDB.DuLieu.RewardProofSeed
+            .Where(x => x.RewardIdServer is > 0)
+            .OrderByDescending(x => x.RewardIdServer)
+            .Select(x => x.RewardIdServer!.Value)
+            .FirstOrDefault(1);
+    }
+
+    internal static int LayRewardIdKhongTonTai(NguCanhKiemThu ctx)
+    {
+        return ctx.CapNhatDB.DuLieu.RewardProofSeed
+            .Select(x => x.RewardIdServer ?? 0)
+            .DefaultIfEmpty(0)
+            .Max() + 999999999;
+    }
 
     internal static TaiKhoanSignupThanhCongSeed? LayTaiKhoanUuTienCoThongBao(NguCanhKiemThu ctx)
     {
@@ -875,23 +969,6 @@ internal static class HelperTC
              (x.SenderTaiKhoanIdServer == taiKhoanIdServerB.Value && x.ReceiverTaiKhoanIdServer == taiKhoanIdServerA.Value)));
     }
 
-    internal static CapHaiTaiKhoan ChonCapTaiKhoanChanChuaCoConversation(NguCanhKiemThu ctx)
-    {
-        foreach (var quanHe in LayDanhSachQuanHeChanDangHoatDong(ctx))
-        {
-            var blocker = LayTaiKhoanTheoServerId(ctx, quanHe.BlockerTaiKhoanIdServer);
-            var blocked = LayTaiKhoanTheoServerId(ctx, quanHe.BlockedTaiKhoanIdServer);
-            if (blocker is not null &&
-                blocked is not null &&
-                !CoConversationTrongSeed(ctx, blocker.TaiKhoanIdServer, blocked.TaiKhoanIdServer))
-            {
-                return new CapHaiTaiKhoan(blocker, blocked);
-            }
-        }
-
-        throw new BoQuaKiemThuException("Không tìm được cặp tài khoản có quan hệ block nhưng chưa có conversation trong tinnhan_seed.");
-    }
-
     internal static CapHaiTaiKhoan ChonCapTaiKhoanChuaCoConversation(NguCanhKiemThu ctx)
     {
         var taiKhoan = LayDanhSachTaiKhoanSanSang(ctx);
@@ -993,15 +1070,15 @@ internal static class HelperTC
             ?? throw new BoQuaKiemThuException("Thiếu địa chỉ seed của seller để thêm sản phẩm.");
 
         var soThuTu = ctx.CapNhatDB.DuLieu.SanPhamSeed.Count + 1;
-        var ten = $"San pham testcase {soThuTu} {DateTimeOffset.Now:HHmmss}";
+        var ten = $"Sản phẩm testcase {soThuTu} {DateTimeOffset.Now:HHmmss}";
         var gia = 150000m + soThuTu * 1000m;
         var body = Obj(
             ("title", ten),
             ("price", gia),
-            ("description", "San pham tao tu testcase Product."),
+            ("description", "Sản phẩm tạo từ testcase Product."),
             ("category_id", IdBatBuoc(danhMuc.DanhMucIdServer, "danhmuc_seed.dm_id_server")),
             ("ship_from_id", IdBatBuoc(diaChi.DiaChiIdServer, "diachi_tk_seed.diachi_id_server")),
-            ("variants", new[] { Obj(("size", "M"), ("stock", 20), ("color", "Do"), ("weight", 500)) }));
+            ("variants", new[] { Obj(("size", "M"), ("stock", 20), ("color", "Đỏ"), ("weight", 500)) }));
 
         if (thuongHieu?.ThuongHieuIdServer is > 0)
         {
@@ -1259,7 +1336,7 @@ internal static class HelperTC
             }
         }
 
-        throw new BoQuaKiemThuException("Thieu donhang_seed dang luu. Hay bam Kiem tra seed de tao du lieu don hang.");
+        throw new BoQuaKiemThuException("Thiếu donhang_seed đang lưu. Hãy bấm Kiểm tra seed để tạo dữ liệu đơn hàng.");
     }
 
     internal static CapDonHang LayDonHangCoTheSua(NguCanhKiemThu ctx)
@@ -1280,28 +1357,55 @@ internal static class HelperTC
             }
         }
 
-        throw new BoQuaKiemThuException("Thieu donhang_seed trang thai pending/confirmed de sua don hang.");
+        throw new BoQuaKiemThuException("Thiếu donhang_seed trạng thái pending/confirmed để sửa đơn hàng.");
     }
 
-    internal static CapDonHangSanPham LayDonHangSanPhamDangLuu(NguCanhKiemThu ctx)
+    internal static CapDonHang LayDonHangTheoTrangThai(NguCanhKiemThu ctx, string trangThai)
     {
-        foreach (var dong in ctx.CapNhatDB.DuLieu.DonHangSanPhamSeed
-                     .Where(x => x.DonHangIdServer is > 0 && x.SanPhamIdServer is > 0)
-                     .OrderByDescending(x => x.DonHangIdServer))
+        return LayDonHangTheoDieuKien(
+            ctx,
+            donHang => string.Equals(donHang.TrangThai, trangThai, StringComparison.OrdinalIgnoreCase),
+            $"Thiếu donhang_seed trạng thái {trangThai}.");
+    }
+
+    internal static CapDonHang LayDonHangKhacTrangThai(NguCanhKiemThu ctx, string trangThai)
+    {
+        return LayDonHangTheoDieuKien(
+            ctx,
+            donHang => !string.Equals(donHang.TrangThai, trangThai, StringComparison.OrdinalIgnoreCase),
+            $"Thiếu donhang_seed có trạng thái khác {trangThai}.");
+    }
+
+    internal static CapDonHang LayDonHangKhongTheSua(NguCanhKiemThu ctx)
+    {
+        return LayDonHangTheoDieuKien(
+            ctx,
+            donHang =>
+                !string.Equals(donHang.TrangThai, "pending", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(donHang.TrangThai, "confirmed", StringComparison.OrdinalIgnoreCase),
+            "Thiếu donhang_seed trạng thái không cho sửa đơn.");
+    }
+
+    private static CapDonHang LayDonHangTheoDieuKien(
+        NguCanhKiemThu ctx,
+        Func<DonHangSeed, bool> dieuKien,
+        string thongBaoKhiThieu)
+    {
+        foreach (var donHang in ctx.CapNhatDB.DuLieu.DonHangSeed
+                     .Where(DonHangDangLuu)
+                     .Where(dieuKien)
+                     .OrderByDescending(x => x.CapNhatLuc ?? x.TaoLuc ?? DateTimeOffset.MinValue)
+                     .ThenByDescending(x => x.DonHangIdServer))
         {
-            var donHang = ctx.CapNhatDB.DuLieu.DonHangSeed.FirstOrDefault(x =>
-                x.DonHangIdServer == dong.DonHangIdServer &&
-                DonHangDangLuu(x));
-            var buyer = LayTaiKhoanTheoServerId(ctx, donHang?.BuyerTaiKhoanIdServer);
-            var seller = LayTaiKhoanTheoServerId(ctx, donHang?.SellerTaiKhoanIdServer);
-            var sanPham = LaySanPhamTheoServerId(ctx, dong.SanPhamIdServer);
-            if (donHang is not null && buyer is not null && seller is not null && sanPham is not null)
+            var buyer = LayTaiKhoanTheoServerId(ctx, donHang.BuyerTaiKhoanIdServer);
+            var seller = LayTaiKhoanTheoServerId(ctx, donHang.SellerTaiKhoanIdServer);
+            if (buyer is not null && seller is not null)
             {
-                return new CapDonHangSanPham(donHang, dong, buyer, seller, sanPham);
+                return new CapDonHang(donHang, buyer, seller);
             }
         }
 
-        throw new BoQuaKiemThuException("Thieu donhang_sanpham_seed lien ket san pham.");
+        throw new BoQuaKiemThuException(thongBaoKhiThieu);
     }
 
     internal static CapTaoDonHang ChonCapTaoDonHangTrucTiep(NguCanhKiemThu ctx)
@@ -1318,7 +1422,7 @@ internal static class HelperTC
             .Where(x => x.DiaChi is not null)
             .OrderBy(x => x.TaiKhoan.SoThuTu)
             .ToList();
-        var sanPhamDaCoDon = ctx.CapNhatDB.DuLieu.DonHangSanPhamSeed
+        var sanPhamDaCoDon = ctx.CapNhatDB.DuLieu.DonHangSeed
             .Where(x => x.SanPhamIdServer is > 0)
             .Select(x => x.SanPhamIdServer!.Value)
             .ToHashSet();
@@ -1345,10 +1449,10 @@ internal static class HelperTC
             }
         }
 
-        throw new BoQuaKiemThuException("Khong tim duoc cap buyer/seller/san pham/dia chi hop le de tao don hang.");
+        throw new BoQuaKiemThuException("Không tìm được cặp buyer/seller/sản phẩm/địa chỉ hợp lệ để tạo đơn hàng.");
     }
 
-    // Dia chi don hang
+    // Địa chỉ đơn hàng
 
     internal static bool DiaChiTaiKhoanSanSang(DiaChiTaiKhoanSeed diaChi)
     {
@@ -1383,7 +1487,26 @@ internal static class HelperTC
         return LayDiaChiTaiKhoanBatBuoc(
             ctx,
             _ => true,
-            "Thieu diachi_tk_seed san_sang de goi API dia chi.");
+            "Thiếu diachi_tk_seed san_sang để gọi API địa chỉ.");
+    }
+
+    internal static CapDiaChiTaiKhoan LayDiaChiCuaTaiKhoan(
+        NguCanhKiemThu ctx,
+        TaiKhoanSignupThanhCongSeed taiKhoan)
+    {
+        return LayDiaChiTaiKhoanBatBuoc(
+            ctx,
+            diaChi => diaChi.TaiKhoanIdServer == taiKhoan.TaiKhoanIdServer,
+            $"Thiếu diachi_tk_seed san_sang cho tài khoản seed {taiKhoan.SoThuTu}.");
+    }
+
+    internal static PhuongXaSeed LayPhuongXaBatKy(NguCanhKiemThu ctx)
+    {
+        return ctx.CapNhatDB.DuLieu.PhuongXaSeed
+            .Where(x => x.PhuongXaId > 0 && x.TinhThanhId > 0)
+            .OrderBy(x => x.PhuongXaId)
+            .FirstOrDefault()
+            ?? throw new BoQuaKiemThuException("Thiếu Wards_seed để chạy testcase vận chuyển.");
     }
 
     internal static CapDiaChiTaiKhoan LayDiaChiKhongMacDinhCoTheXoa(NguCanhKiemThu ctx)
@@ -1391,7 +1514,7 @@ internal static class HelperTC
         return LayDiaChiTaiKhoanBatBuoc(
             ctx,
             diaChi => !diaChi.LaMacDinh && !DiaChiDangDuocThamChieu(ctx, diaChi),
-            "Thieu diachi_tk_seed san_sang, is_default = false va chua duoc tham chieu de xoa.");
+            "Thiếu diachi_tk_seed san_sang, is_default = false và chưa được tham chiếu để xóa.");
     }
 
     internal static CapDiaChiTaiKhoan LayDiaChiMacDinh(NguCanhKiemThu ctx)
@@ -1399,7 +1522,7 @@ internal static class HelperTC
         return LayDiaChiTaiKhoanBatBuoc(
             ctx,
             diaChi => diaChi.LaMacDinh,
-            "Thieu diachi_tk_seed san_sang, is_default = true de kiem tra khong duoc xoa dia chi mac dinh.");
+            "Thiếu diachi_tk_seed san_sang, is_default = true để kiểm tra không được xóa địa chỉ mặc định.");
     }
 
     private static bool DiaChiDangDuocThamChieu(NguCanhKiemThu ctx, DiaChiTaiKhoanSeed diaChi)
@@ -1450,5 +1573,56 @@ internal static class HelperTC
             ("address_detail", addressDetail));
 
         return new DuLieuThemDiaChi(ward, province, body, address, addressDetail, lat, lng, receiverName, phone, laMacDinh);
+    }
+
+    internal static Dictionary<string, object?> TaoBodyAddressModule(NguCanhKiemThu ctx, string maTestCase)
+    {
+        var phuongXa = LayPhuongXaBatKy(ctx);
+        var seed = Math.Max(phuongXa.PhuongXaId, 1);
+        var diaChiChiTiet = $"So {seed}, duong Address {maTestCase} {DateTimeOffset.Now:HHmmssfff}";
+        return Obj(
+            ("receiver_name", $"Receiver {maTestCase}"),
+            ("phone", "0909000001"),
+            ("full_address", diaChiChiTiet),
+            ("is_default", false),
+            ("ward_id", phuongXa.PhuongXaId),
+            ("lat", 21.0m + seed / 10000m),
+            ("lng", 105.8m + seed / 10000m),
+            ("address_name", diaChiChiTiet),
+            ("address_detail", diaChiChiTiet));
+    }
+
+    internal static async Task CapNhatDiaChiSeedSauUpdateAsync(YeuCauApi request, NguCanhKiemThu ctx)
+    {
+        if (request.Tam["diaChi"] is not DiaChiTaiKhoanSeed diaChi ||
+            request.Tam["duLieuDiaChi"] is not DuLieuThemDiaChi duLieu)
+        {
+            return;
+        }
+
+        if (duLieu.LaMacDinh)
+        {
+            foreach (var diaChiCu in ctx.CapNhatDB.DuLieu.DiaChiTaiKhoanSeed.Where(x =>
+                         x.TaiKhoanIdServer == diaChi.TaiKhoanIdServer &&
+                         x.DiaChiIdServer != diaChi.DiaChiIdServer))
+            {
+                diaChiCu.LaMacDinh = false;
+            }
+        }
+
+        diaChi.PhuongXaId = duLieu.PhuongXa.PhuongXaId;
+        diaChi.TinhThanhId = duLieu.TinhThanh.TinhThanhId;
+        diaChi.DiaChi = duLieu.DiaChi;
+        diaChi.DiaChiDayDu = duLieu.DiaChi;
+        diaChi.DiaChiChiTiet = duLieu.DiaChiChiTiet;
+        diaChi.ViDo = duLieu.ViDo;
+        diaChi.KinhDo = duLieu.KinhDo;
+        diaChi.TenNguoiNhan = duLieu.TenNguoiNhan;
+        diaChi.SoDienThoaiNguoiNhan = duLieu.SoDienThoaiNguoiNhan;
+        diaChi.LaMacDinh = duLieu.LaMacDinh;
+        diaChi.XacMinhLuc = DateTimeOffset.Now;
+        diaChi.GhiChu = "Cập nhật bởi testcase ORDER-ADDR-UPDATE-02";
+
+        await ctx.CapNhatDB.LuuAsync(BangDuLieuSeed.DiaChiTaiKhoan);
     }
 }

@@ -116,12 +116,17 @@ public static partial class BoKichBanApi
                 "is_blocked",
                 "online",
                 "default_address",
-                "phonenumber",
                 "firstname",
                 "lastname",
                 "address",
                 "city");
 
+            if (!ketQua.Dat)
+            {
+                return Task.FromResult(ketQua);
+            }
+
+            ketQua = KiemTraCoMotTrongCacTruong(response, "phonenumber", "phone_number", "phoneNumber");
             return Task.FromResult(ketQua);
         };
     }
@@ -150,7 +155,7 @@ public static partial class BoKichBanApi
                 return Task.FromResult(ketQua);
             }
 
-            foreach (var truongRiengTu in new[] { "email", "phonenumber", "firstname", "lastname", "address", "city" })
+            foreach (var truongRiengTu in new[] { "email", "phonenumber", "phone_number", "phoneNumber", "firstname", "lastname", "address", "city" })
             {
                 if (response.Data is JsonObject data && data.ContainsKey(truongRiengTu))
                 {
@@ -173,11 +178,35 @@ public static partial class BoKichBanApi
         {
             if (!data.ContainsKey(truong))
             {
-                return new KetQuaKiemTraThem(false, $"data thiếu trường `{truong}`.");
+                return new KetQuaKiemTraThem(false, $"data thiếu trường `{truong}`. Field thực tế: {LietKeField(data)}.");
             }
         }
 
         return KetQuaKiemTraThem.ThanhCong;
+    }
+
+    private static KetQuaKiemTraThem KiemTraCoMotTrongCacTruong(PhanHoiApi response, params string[] cacTenTruong)
+    {
+        if (response.Data is not JsonObject data)
+        {
+            return new KetQuaKiemTraThem(false, "Response thiếu data object.");
+        }
+
+        if (cacTenTruong.Any(data.ContainsKey))
+        {
+            return KetQuaKiemTraThem.ThanhCong;
+        }
+
+        return new KetQuaKiemTraThem(
+            false,
+            $"data thiếu một trong các trường `{string.Join("`, `", cacTenTruong)}`. Field thực tế: {LietKeField(data)}.");
+    }
+
+    private static string LietKeField(JsonObject data)
+    {
+        return data.Count == 0
+            ? "(rỗng)"
+            : string.Join(", ", data.Select(x => x.Key));
     }
 }
 

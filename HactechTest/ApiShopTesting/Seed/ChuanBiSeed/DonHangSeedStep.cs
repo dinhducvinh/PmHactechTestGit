@@ -28,7 +28,7 @@ public sealed partial class ChuanBiSeed
             return;
         }
 
-        var sanPhamDaCoDon = _nguCanh.CapNhatDB.DuLieu.DonHangSanPhamSeed
+        var sanPhamDaCoDon = _nguCanh.CapNhatDB.DuLieu.DonHangSeed
             .Where(x => x.DonHangIdServer is > 0 && x.SanPhamIdServer is > 0)
             .Select(x => x.SanPhamIdServer!.Value)
             .ToHashSet();
@@ -79,35 +79,29 @@ public sealed partial class ChuanBiSeed
                 ["address_id"] = diaChiIdServer,
                 ["order_source"] = orderSource
             };
-            var itemsSeed = new[]
-            {
-                new DonHangSanPhamSeed
-                {
-                    SanPhamIdServer = sanPham.SanPhamIdServer,
-                    SoLuong = soLuong,
-                    DonGia = sanPham.Gia,
-                    ThanhTien = sanPham.Gia * soLuong
-                }
-            };
+            var thanhTien = sanPham.Gia * soLuong;
 
             var token = await LayTokenSeedAsync(
                 buyerVaDiaChi.TaiKhoan,
-                $"tao don hang seed cho buyer {buyerVaDiaChi.TaiKhoan.SoThuTu}");
+                $"tạo đơn hàng seed cho buyer {buyerVaDiaChi.TaiKhoan.SoThuTu}");
             var response = await GuiApiSeedAsync(
                 HttpMethod.Post,
                 "/order/create_order",
                 body,
                 token,
-                $"tao don hang seed cho buyer {buyerVaDiaChi.TaiKhoan.SoThuTu}");
+                $"tạo đơn hàng seed cho buyer {buyerVaDiaChi.TaiKhoan.SoThuTu}");
 
             var requestLuu = new YeuCauApi(HttpMethod.Post, "/order/create_order", body, token);
             requestLuu.Tam["buyer"] = buyerVaDiaChi.TaiKhoan;
             requestLuu.Tam["seller"] = seller;
             requestLuu.Tam["diaChi"] = buyerVaDiaChi.DiaChi;
-            requestLuu.Tam["itemsSeed"] = itemsSeed;
+            requestLuu.Tam["sanPhamIdServer"] = sanPhamIdServer.Value;
+            requestLuu.Tam["soLuong"] = soLuong;
+            requestLuu.Tam["donGia"] = sanPham.Gia;
+            requestLuu.Tam["thanhTien"] = thanhTien;
             requestLuu.Tam["orderSource"] = orderSource;
-            var donHang = await _nguCanh.CapNhatDB.LuuDonHangSauCreateOrderAsync(response, requestLuu);
-            donHang.LoaiSeed ??= "order_seed";
+            requestLuu.Tam["loaiSeed"] = "order_seed";
+            await _nguCanh.CapNhatDB.LuuDonHangSauCreateOrderAsync(response, requestLuu);
             sanPhamDaCoDon.Add(sanPhamIdServer.Value);
         }
     }

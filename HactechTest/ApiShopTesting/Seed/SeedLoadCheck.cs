@@ -15,6 +15,7 @@ namespace HactechTest.ApiShopTesting.Seed
             await TaiPhuongXaAsync(connection);
             await TaiTaiKhoanAsync(connection);
             await TaiWalletAsync(connection);
+            await TaiRewardProofAsync(connection);
             await TaiTimKiemAsync(connection);
             await TaiTheoDoiAsync(connection);
             await TaiChanAsync(connection);
@@ -153,6 +154,47 @@ namespace HactechTest.ApiShopTesting.Seed
                     TrangThai = DocChuoiNull(reader, "trang_thai"),
                     TaoLuc = DocNgayNull(reader, "tao_luc"),
                     XacMinhLuc = DocNgayNull(reader, "xac_minh_luc"),
+                    GhiChu = DocChuoiNull(reader, "ghi_chu")
+                });
+            }
+        }
+
+        private async Task TaiRewardProofAsync(SqlConnection connection)
+        {
+            const string sql = """
+            IF OBJECT_ID(N'dbo.reward_proof_seed', N'U') IS NULL
+            BEGIN
+                SELECT CAST(NULL AS INT) AS reward_id_server,
+                       CAST(NULL AS INT) AS tk_id_server,
+                       CAST(NULL AS INT) AS ai_score,
+                       CAST(NULL AS DECIMAL(18,2)) AS reward_coin,
+                       CAST(NULL AS NVARCHAR(30)) AS trang_thai,
+                       CAST(NULL AS DATETIME2) AS tao_luc,
+                       CAST(NULL AS DATETIME2) AS cap_nhat_luc,
+                       CAST(NULL AS NVARCHAR(500)) AS ghi_chu
+                WHERE 1 = 0;
+                RETURN;
+            END;
+
+            SELECT reward_id_server, tk_id_server, ai_score, reward_coin,
+                   trang_thai, tao_luc, cap_nhat_luc, ghi_chu
+            FROM dbo.reward_proof_seed
+            ORDER BY reward_id_server;
+            """;
+
+            await using var command = new SqlCommand(sql, connection);
+            await using var reader = await command.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                _duLieuDangTai.RewardProofSeed.Add(new RewardProofSeed
+                {
+                    RewardIdServer = DocIntNull(reader, "reward_id_server"),
+                    TaiKhoanIdServer = DocIntNull(reader, "tk_id_server"),
+                    AiScore = DocIntNull(reader, "ai_score"),
+                    RewardCoin = DocDecimalNull(reader, "reward_coin"),
+                    TrangThai = DocChuoi(reader, "trang_thai"),
+                    TaoLuc = DocNgayNull(reader, "tao_luc"),
+                    CapNhatLuc = DocNgayNull(reader, "cap_nhat_luc"),
                     GhiChu = DocChuoiNull(reader, "ghi_chu")
                 });
             }
@@ -427,6 +469,7 @@ namespace HactechTest.ApiShopTesting.Seed
         {
             const string sqlDonHang = """
             SELECT donhang_id_server, buyer_tk_id_server, seller_tk_id_server, diachi_id_server,
+                   sp_id_server, so_luong, don_gia, thanh_tien,
                    trang_thai, order_source, total_price, shipping_fee, final_price,
                    loai_seed, tao_luc, cap_nhat_luc, ghi_chu
             FROM dbo.donhang_seed
@@ -443,6 +486,10 @@ namespace HactechTest.ApiShopTesting.Seed
                     BuyerTaiKhoanIdServer = DocIntNull(reader, "buyer_tk_id_server"),
                     SellerTaiKhoanIdServer = DocIntNull(reader, "seller_tk_id_server"),
                     DiaChiIdServer = DocIntNull(reader, "diachi_id_server"),
+                    SanPhamIdServer = DocIntNull(reader, "sp_id_server"),
+                    SoLuong = DocInt(reader, "so_luong"),
+                    DonGia = DocDecimalNull(reader, "don_gia"),
+                    ThanhTien = DocDecimalNull(reader, "thanh_tien"),
                     TrangThai = DocChuoi(reader, "trang_thai"),
                     OrderSource = DocInt(reader, "order_source"),
                     TotalPrice = DocDecimalNull(reader, "total_price"),
@@ -452,28 +499,6 @@ namespace HactechTest.ApiShopTesting.Seed
                     TaoLuc = DocNgayNull(reader, "tao_luc"),
                     CapNhatLuc = DocNgayNull(reader, "cap_nhat_luc"),
                     GhiChu = DocChuoiNull(reader, "ghi_chu")
-                });
-            }
-
-            await reader.CloseAsync();
-
-            const string sqlSanPham = """
-            SELECT donhang_id_server, sp_id_server, so_luong, don_gia, thanh_tien
-            FROM dbo.donhang_sanpham_seed
-            ORDER BY donhang_id_server, sp_id_server;
-            """;
-
-            await using var commandSanPham = new SqlCommand(sqlSanPham, connection);
-            await using var readerSanPham = await commandSanPham.ExecuteReaderAsync();
-            while (await readerSanPham.ReadAsync())
-            {
-                _duLieuDangTai.DonHangSanPhamSeed.Add(new DonHangSanPhamSeed
-                {
-                    DonHangIdServer = DocIntNull(readerSanPham, "donhang_id_server"),
-                    SanPhamIdServer = DocIntNull(readerSanPham, "sp_id_server"),
-                    SoLuong = DocInt(readerSanPham, "so_luong"),
-                    DonGia = DocDecimalNull(readerSanPham, "don_gia"),
-                    ThanhTien = DocDecimalNull(readerSanPham, "thanh_tien")
                 });
             }
         }
@@ -746,12 +771,12 @@ namespace HactechTest.ApiShopTesting.Seed
 
             if (thongKe.SoTinhThanh < thongKe.SoTinhThanhCanCo)
             {
-                thieu.Add($"Thiếu tỉnh/thành phố seed: hiện có {thongKe.SoTinhThanh}/{thongKe.SoTinhThanhCanCo}. Hãy bấm Kiểm tra seed để đồng bộ từ GET /order/provinces.");
+                thieu.Add("Chưa có tỉnh/thành phố seed. Hãy bấm Kiểm tra seed để đồng bộ từ GET /order/provinces.");
             }
 
             if (thongKe.SoPhuongXa < thongKe.SoPhuongXaCanCo)
             {
-                thieu.Add($"Thiếu phường/xã seed: hiện có {thongKe.SoPhuongXa}/{thongKe.SoPhuongXaCanCo}. Hãy bấm Kiểm tra seed để đồng bộ từ GET /order/wards.");
+                thieu.Add("Chưa có phường/xã seed. Hãy bấm Kiểm tra seed để đồng bộ từ GET /order/wards.");
             }
 
             if (thongKe.SoSavedSearchDangLuu < thongKe.SoSavedSearchCanCo)

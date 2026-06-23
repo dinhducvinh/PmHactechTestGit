@@ -10,6 +10,7 @@ public static partial class BoKichBanApi
     private static readonly IReadOnlySet<string> ProductOkHoacHetDuLieu = Tap("1000", "9994");
     private static readonly IReadOnlySet<string> ProductOkHoacKhongTonTai = Tap("1000", "9992");
     private static readonly IReadOnlySet<string> ProductKhongTonTai = Tap("9992");
+    private static readonly IReadOnlySet<string> ProductKhongCoQuyen = Tap("1009");
     private static readonly IReadOnlySet<string> ProductSaiIdDuongDan = Tap("1002", "1003", "1004", "9992");
     private static readonly IReadOnlySet<string> ProductSaiTokenHoacNguoiDung = Tap("9998", "9995", "HTTP_401", "HTTP_403");
 
@@ -151,21 +152,17 @@ public static partial class BoKichBanApi
     private static void ThemGetProducts(List<KichBanApi> ds)
     {
         Them(ds, "PRODUCT-DETAIL-01", "Product", "Lấy chi tiết sản phẩm hợp lệ",
-            "Token user không có block với seller, id lấy từ sanpham_seed.",
-            async ctx =>
+            "Không kèm Authorization; id lấy từ sanpham_seed.",
+            ctx =>
             {
-                var (user, sp) = ChonCapTaiKhoanXemSanPhamKhongBiChan(ctx);
-                var req = new YeuCauApi(HttpMethod.Post, "/api/get_products",
-                    Obj(("id", IdBatBuoc(sp.SanPhamIdServer, "sanpham_seed.sp_id_server"))),
-                    await LayTokenCuaTaiKhoanAsync(ctx, user));
-                req.Tam["sanPham"] = sp;
-                return req;
+                var sp = LaySanPhamSanSang(ctx);
+                return Req(HttpMethod.Post, "/api/get_products", Obj(("id", IdBatBuoc(sp.SanPhamIdServer, "sanpham_seed.sp_id_server"))));
             },
             Ok,
-            DataCoTruong("id"));
+            KiemTraChiTietPublic());
 
         Them(ds, "PRODUCT-DETAIL-02", "Product", "Seller xem sản phẩm của mình",
-            "Endpoint hiện public và không đọc AuthGuard, nên token seller không còn làm can_edit = true.",
+            "Gửi token của seller sở hữu product, kỳ vọng server trả data.can_edit = true.",
             async ctx =>
             {
                 var (sp, seller) = LaySanPhamKemSeller(ctx);
@@ -173,8 +170,8 @@ public static partial class BoKichBanApi
                     Obj(("id", IdBatBuoc(sp.SanPhamIdServer, "sanpham_seed.sp_id_server"))),
                     await LayTokenCuaTaiKhoanAsync(ctx, seller));
             },
-            ProductOkHoacKhongTonTai,
-            KiemTraCanEditNeuCo(false));
+            Ok,
+            DataBoolBang("can_edit", true));
 
         Them(ds, "PRODUCT-DETAIL-03", "Product", "User khác xem sản phẩm",
             "Dùng token của user khác seller, kỳ vọng can_edit = false nếu server trả trường này.",
@@ -198,18 +195,8 @@ public static partial class BoKichBanApi
             async ctx => new YeuCauApi(HttpMethod.Post, "/api/get_products", Obj(), await YeuCauTokenHopLeAsync(ctx)),
             SaiGiaTri);
 
-        Them(ds, "PRODUCT-DETAIL-06", "Product", "Lấy sản phẩm public không gửi token",
-            "Không kèm Authorization; endpoint get_products hiện không gắn AuthGuard.",
-            ctx =>
-            {
-                var sp = LaySanPhamSanSang(ctx);
-                return Req(HttpMethod.Post, "/api/get_products", Obj(("id", IdBatBuoc(sp.SanPhamIdServer, "sanpham_seed.sp_id_server"))));
-            },
-            Ok,
-            DataCoTruong("id"));
-
-        Them(ds, "PRODUCT-DETAIL-07", "Product", "Lấy sản phẩm khi có quan hệ block",
-            "Current user và seller có quan hệ block theo tk_chan_seed. Server hiện vẫn có thể trả 1000.",
+        Them(ds, "PRODUCT-DETAIL-06", "Product", "Lấy sản phẩm khi có quan hệ block",
+            "Current user và seller có quan hệ block theo tk_chan_seed, kỳ vọng server từ chối truy cập.",
             async ctx =>
             {
                 var (user, sp) = ChonCapTaiKhoanBiChanVoiSanPham(ctx);
@@ -217,7 +204,7 @@ public static partial class BoKichBanApi
                     Obj(("id", IdBatBuoc(sp.SanPhamIdServer, "sanpham_seed.sp_id_server"))),
                     await LayTokenCuaTaiKhoanAsync(ctx, user));
             },
-            ProductOkHoacKhongTonTai);
+            ProductKhongCoQuyen);
     }
 
     private static void ThemGetListProducts(List<KichBanApi> ds)
@@ -542,7 +529,7 @@ public static partial class BoKichBanApi
     private static void ThemAddProduct(List<KichBanApi> ds)
     {
         Them(ds, "PRODUCT-ADD-01", "Product", "Thêm sản phẩm hợp lệ",
-            "Dùng seller có diachi_tk_seed, category/brand từ seed.",
+            "Dùng seller có diachi_tk_seed, category/brand từ seed và variants không rỗng.",
             async ctx =>
             {
                 var seller = LaySellerCoDiaChi(ctx);
@@ -553,7 +540,7 @@ public static partial class BoKichBanApi
                 return req;
             },
             Ok,
-            null,
+            KiemTraResponseAddProduct(),
             async (response, request, ctx) =>
             {
                 var seller = (TaiKhoanSignupThanhCongSeed)request.Tam["seller"]!;
@@ -568,49 +555,54 @@ public static partial class BoKichBanApi
                     duLieu.DanhMuc.DanhMucIdServer,
                     duLieu.ThuongHieu?.ThuongHieuIdServer,
                     duLieu.DiaChi.DiaChiIdServer,
-                    response.Data?["title"]?.ToString() ?? duLieu.Ten,
+                    response.Data?["name"]?.ToString() ?? duLieu.Ten,
                     duLieu.Gia);
             });
 
-        Them(ds, "PRODUCT-ADD-02", "Product", "Thêm sản phẩm token sai",
-            "Authorization sai định dạng.",
+        Them(ds, "PRODUCT-ADD-02", "Product", "Thêm sản phẩm token thiếu/sai/hết hạn",
+            "Gửi body hợp lệ nhưng Authorization sai định dạng.",
             ctx =>
             {
                 var seller = LaySellerCoDiaChi(ctx);
                 var duLieu = TaoDuLieuBodySanPhamMoi(ctx, seller);
                 return Req(HttpMethod.Post, "/api/add_product", duLieu.Body, ctx.TokenSaiDinhDang);
             },
-            ProductSaiTokenHoacNguoiDung);
+            SaiToken);
 
-        Them(ds, "PRODUCT-ADD-03", "Product", "Thêm sản phẩm thiếu field",
+        Them(ds, "PRODUCT-ADD-03", "Product", "Thêm sản phẩm user không validate",
+            "Cần token ký hợp lệ nhưng sub trỏ tới user không còn tồn tại/không validate được.",
+            _ => Req(HttpMethod.Post, "/api/add_product", Obj()),
+            Tap("9995"),
+            lyDoBoQua: "Chưa có hook/secret test để tạo JWT hợp lệ có sub trỏ tới user không validate được.");
+
+        Them(ds, "PRODUCT-ADD-04", "Product", "Thêm sản phẩm thiếu field",
             "Thiếu title/description/ship_from_id/variants.",
             async ctx => new YeuCauApi(HttpMethod.Post, "/api/add_product", Obj(("price", 100000), ("category_id", IdBatBuoc(LayDanhMucSanSang(ctx).DanhMucIdServer, "danhmuc_seed.dm_id_server"))), await LayTokenCuaTaiKhoanAsync(ctx, LaySellerCoDiaChi(ctx))),
             ThieuThamSo);
 
-        Them(ds, "PRODUCT-ADD-04", "Product", "Thêm sản phẩm sai kiểu",
-            "price/category_id/ship_from_id sai kiểu.",
+        Them(ds, "PRODUCT-ADD-05", "Product", "Thêm sản phẩm sai kiểu",
+            "price/category_id/ship_from_id/image_urls/variants sai kiểu.",
             async ctx => new YeuCauApi(HttpMethod.Post, "/api/add_product",
-                Obj(("title", "Sai kiểu"), ("price", "abc"), ("description", "Sai kiểu"), ("category_id", "abc"), ("ship_from_id", "abc"), ("variants", new[] { Obj(("size", "M"), ("stock", "abc"), ("color", "Đỏ"), ("weight", "abc")) })),
+                Obj(("title", "Sai kiểu"), ("price", "abc"), ("description", "Sai kiểu"), ("category_id", "abc"), ("ship_from_id", "abc"), ("image_urls", "khong_phai_mang"), ("variants", new[] { Obj(("size", "M"), ("stock", "abc"), ("color", "Đỏ"), ("weight", "abc")) })),
                 await LayTokenCuaTaiKhoanAsync(ctx, LaySellerCoDiaChi(ctx))),
             SaiKieu);
 
-        Them(ds, "PRODUCT-ADD-05", "Product", "Thêm sản phẩm giá trị không hợp lệ",
-            "price < 0, ship_from_id/category_id không tồn tại.",
-            async ctx => new YeuCauApi(HttpMethod.Post, "/api/add_product",
-                Obj(("title", "Giá trị sai"), ("price", -1), ("description", "Giá trị sai"), ("category_id", 999999999), ("ship_from_id", 999999999), ("variants", new[] { Obj(("size", "M"), ("stock", -1), ("color", "Đỏ"), ("weight", -1)) })),
-                await LayTokenCuaTaiKhoanAsync(ctx, LaySellerCoDiaChi(ctx))),
-            SaiGiaTri);
-
-        Them(ds, "PRODUCT-ADD-06", "Product", "Thêm sản phẩm vượt quá số ảnh",
-            "image_urls có 5 ảnh.",
+        Them(ds, "PRODUCT-ADD-06", "Product", "Thêm sản phẩm giá trị không hợp lệ",
+            "title quá 255 ký tự, price/stock âm, id tham chiếu không tồn tại và image_urls trùng.",
             async ctx =>
             {
                 var seller = LaySellerCoDiaChi(ctx);
                 var duLieu = TaoDuLieuBodySanPhamMoi(ctx, seller);
-                duLieu.Body["image_urls"] = new[] { "https://example.com/1.jpg", "https://example.com/2.jpg", "https://example.com/3.jpg", "https://example.com/4.jpg", "https://example.com/5.jpg" };
+                duLieu.Body["title"] = new string('A', 256);
+                duLieu.Body["price"] = -1;
+                duLieu.Body["category_id"] = 999999999;
+                duLieu.Body["brand_id"] = 999999999;
+                duLieu.Body["ship_from_id"] = 999999999;
+                duLieu.Body["image_urls"] = new[] { "https://example.com/trung.jpg", "https://example.com/trung.jpg" };
+                duLieu.Body["variants"] = new[] { Obj(("size", "M"), ("stock", -1), ("color", "Đỏ"), ("weight", 1)) };
                 return new YeuCauApi(HttpMethod.Post, "/api/add_product", duLieu.Body, await LayTokenCuaTaiKhoanAsync(ctx, seller));
             },
-            Tap("1008"));
+            SaiGiaTri);
     }
 
     private static void ThemUpdateProduct(List<KichBanApi> ds)
@@ -828,7 +820,7 @@ public static partial class BoKichBanApi
             "Cần seed đơn hàng có liên kết tới sản phẩm để kiểm tra nghiệp vụ này.",
             _ => Req(HttpMethod.Delete, "/api/delete/0"),
             Ok,
-            lyDoBoQua: "Đã có donhang_seed/donhang_sanpham_seed nhưng server hiện chưa có mã nghiệp vụ ổn định cho xóa sản phẩm đã phát sinh order_items.");
+            lyDoBoQua: "Đã có donhang_seed nhưng server hiện chưa có mã nghiệp vụ ổn định cho xóa sản phẩm đã phát sinh order_items.");
     }
 
     private static Func<PhanHoiApi, YeuCauApi, NguCanhKiemThu, Task<KetQuaKiemTraThem>> KiemTraSoLuongMangToiDa(int toiDa)
@@ -869,6 +861,131 @@ public static partial class BoKichBanApi
             return Task.FromResult(canEdit == mongDoi
                 ? KetQuaKiemTraThem.ThanhCong
                 : new KetQuaKiemTraThem(false, $"data.can_edit phải bằng {mongDoi}, thực tế là {canEdit}."));
+        };
+    }
+
+    private static Func<PhanHoiApi, YeuCauApi, NguCanhKiemThu, Task<KetQuaKiemTraThem>> KiemTraChiTietPublic()
+    {
+        return (response, _, _) =>
+        {
+            if (!LaMaThanhCong(response))
+            {
+                return Task.FromResult(KetQuaKiemTraThem.ThanhCong);
+            }
+
+            if (response.Data is not JsonObject data)
+            {
+                return Task.FromResult(new KetQuaKiemTraThem(false, "Response thiếu data object."));
+            }
+
+            if (!data.ContainsKey("id"))
+            {
+                return Task.FromResult(new KetQuaKiemTraThem(false, "data thiếu trường `id`."));
+            }
+
+            var canEdit = DocBoolTuNode(data["can_edit"]);
+            if (canEdit != false)
+            {
+                return Task.FromResult(new KetQuaKiemTraThem(false, $"data.can_edit phải bằng False, thực tế là {canEdit?.ToString() ?? "null"}."));
+            }
+
+            var isLiked = DocBoolTuNode(data["is_liked"]);
+            if (isLiked != false)
+            {
+                return Task.FromResult(new KetQuaKiemTraThem(false, $"data.is_liked phải bằng False, thực tế là {isLiked?.ToString() ?? "null"}."));
+            }
+
+            return Task.FromResult(KetQuaKiemTraThem.ThanhCong);
+        };
+    }
+
+    private static Func<PhanHoiApi, YeuCauApi, NguCanhKiemThu, Task<KetQuaKiemTraThem>> KiemTraResponseAddProduct()
+    {
+        return (response, request, _) =>
+        {
+            if (!LaMaThanhCong(response))
+            {
+                return Task.FromResult(KetQuaKiemTraThem.ThanhCong);
+            }
+
+            if (response.Data is not JsonObject data)
+            {
+                return Task.FromResult(new KetQuaKiemTraThem(false, "Response thiếu data object."));
+            }
+
+            var seller = (TaiKhoanSignupThanhCongSeed)request.Tam["seller"]!;
+            var duLieu = (DuLieuBodySanPham)request.Tam["duLieu"]!;
+            foreach (var truong in new[] { "id", "seller_id", "ship_from_id", "category_id", "description", "price", "created_at", "name" })
+            {
+                if (!data.ContainsKey(truong))
+                {
+                    return Task.FromResult(new KetQuaKiemTraThem(false, $"data thiếu trường `{truong}`."));
+                }
+            }
+
+            if (data.ContainsKey("title"))
+            {
+                return Task.FromResult(new KetQuaKiemTraThem(false, "data không được trả field `title`, phải dùng `name`."));
+            }
+
+            if (data.ContainsKey("variants"))
+            {
+                return Task.FromResult(new KetQuaKiemTraThem(false, "data create product không được include `variants`."));
+            }
+
+            var id = DocIdSanPham(data);
+            if (id is not > 0)
+            {
+                return Task.FromResult(new KetQuaKiemTraThem(false, "data.id thiếu hoặc không hợp lệ."));
+            }
+
+            var sellerId = DocIntTuNode(data["seller_id"]);
+            if (sellerId != seller.TaiKhoanIdServer)
+            {
+                return Task.FromResult(new KetQuaKiemTraThem(false, $"data.seller_id phải bằng {seller.TaiKhoanIdServer}, thực tế là {sellerId?.ToString() ?? "null"}."));
+            }
+
+            var shipFromId = DocIntTuNode(data["ship_from_id"]);
+            if (shipFromId != duLieu.DiaChi.DiaChiIdServer)
+            {
+                return Task.FromResult(new KetQuaKiemTraThem(false, $"data.ship_from_id phải bằng {duLieu.DiaChi.DiaChiIdServer}, thực tế là {shipFromId?.ToString() ?? "null"}."));
+            }
+
+            var categoryId = DocIntTuNode(data["category_id"]);
+            if (categoryId != duLieu.DanhMuc.DanhMucIdServer)
+            {
+                return Task.FromResult(new KetQuaKiemTraThem(false, $"data.category_id phải bằng {duLieu.DanhMuc.DanhMucIdServer}, thực tế là {categoryId?.ToString() ?? "null"}."));
+            }
+
+            if (duLieu.ThuongHieu?.ThuongHieuIdServer is > 0)
+            {
+                var brandId = DocIntTuNode(data["brand_id"]);
+                if (brandId != duLieu.ThuongHieu.ThuongHieuIdServer)
+                {
+                    return Task.FromResult(new KetQuaKiemTraThem(false, $"data.brand_id phải bằng {duLieu.ThuongHieu.ThuongHieuIdServer}, thực tế là {brandId?.ToString() ?? "null"}."));
+                }
+            }
+
+            var ten = data["name"]?.ToString();
+            if (!string.Equals(ten, duLieu.Ten, StringComparison.Ordinal))
+            {
+                return Task.FromResult(new KetQuaKiemTraThem(false, $"data.name phải bằng title đã gửi `{duLieu.Ten}`, thực tế là `{ten ?? "null"}`."));
+            }
+
+            var moTa = data["description"]?.ToString();
+            var moTaMongDoi = duLieu.Body.TryGetValue("description", out var moTaRequest) ? moTaRequest?.ToString() : null;
+            if (!string.Equals(moTa, moTaMongDoi, StringComparison.Ordinal))
+            {
+                return Task.FromResult(new KetQuaKiemTraThem(false, "data.description khác description đã gửi."));
+            }
+
+            var gia = DocDecimalTuNode(data["price"]);
+            if (gia != duLieu.Gia)
+            {
+                return Task.FromResult(new KetQuaKiemTraThem(false, $"data.price phải bằng {duLieu.Gia}, thực tế là {gia?.ToString() ?? "null"}."));
+            }
+
+            return Task.FromResult(KetQuaKiemTraThem.ThanhCong);
         };
     }
 

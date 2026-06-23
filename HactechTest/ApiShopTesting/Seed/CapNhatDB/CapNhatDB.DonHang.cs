@@ -8,11 +8,6 @@ public sealed partial class CapNhatDB
 {
     private async Task LuuDonHangAsync(SqlConnection connection, SqlTransaction transaction)
     {
-        await using (var xoaItemCommand = TaoLenh("DELETE FROM dbo.donhang_sanpham_seed;", connection, transaction))
-        {
-            await xoaItemCommand.ExecuteNonQueryAsync();
-        }
-
         await using (var xoaDonHangCommand = TaoLenh("DELETE FROM dbo.donhang_seed;", connection, transaction))
         {
             await xoaDonHangCommand.ExecuteNonQueryAsync();
@@ -21,10 +16,12 @@ public sealed partial class CapNhatDB
         const string sqlDonHang = """
             INSERT INTO dbo.donhang_seed
             (donhang_id_server, buyer_tk_id_server, seller_tk_id_server, diachi_id_server,
+             sp_id_server, so_luong, don_gia, thanh_tien,
              trang_thai, order_source, total_price, shipping_fee, final_price,
              loai_seed, tao_luc, cap_nhat_luc, ghi_chu)
             VALUES
             (@donhang_id_server, @buyer_tk_id_server, @seller_tk_id_server, @diachi_id_server,
+             @sp_id_server, @so_luong, @don_gia, @thanh_tien,
              @trang_thai, @order_source, @total_price, @shipping_fee, @final_price,
              @loai_seed, @tao_luc, @cap_nhat_luc, @ghi_chu);
             """;
@@ -35,6 +32,8 @@ public sealed partial class CapNhatDB
             if (item.DonHangIdServer is not > 0 ||
                 item.BuyerTaiKhoanIdServer is not > 0 ||
                 item.SellerTaiKhoanIdServer is not > 0 ||
+                item.SanPhamIdServer is not > 0 ||
+                item.SoLuong <= 0 ||
                 !daGhiDonHang.Add(item.DonHangIdServer.Value))
             {
                 continue;
@@ -45,6 +44,10 @@ public sealed partial class CapNhatDB
             Them(command, "@buyer_tk_id_server", item.BuyerTaiKhoanIdServer);
             Them(command, "@seller_tk_id_server", item.SellerTaiKhoanIdServer);
             Them(command, "@diachi_id_server", item.DiaChiIdServer);
+            Them(command, "@sp_id_server", item.SanPhamIdServer);
+            Them(command, "@so_luong", item.SoLuong);
+            Them(command, "@don_gia", item.DonGia);
+            Them(command, "@thanh_tien", item.ThanhTien);
             Them(command, "@trang_thai", item.TrangThai);
             Them(command, "@order_source", item.OrderSource);
             Them(command, "@total_price", item.TotalPrice);
@@ -54,35 +57,6 @@ public sealed partial class CapNhatDB
             Them(command, "@tao_luc", item.TaoLuc ?? DateTimeOffset.Now);
             Them(command, "@cap_nhat_luc", item.CapNhatLuc ?? item.TaoLuc ?? DateTimeOffset.Now);
             Them(command, "@ghi_chu", item.GhiChu);
-            await command.ExecuteNonQueryAsync();
-        }
-
-        const string sqlSanPham = """
-            INSERT INTO dbo.donhang_sanpham_seed
-            (donhang_id_server, sp_id_server, so_luong, don_gia, thanh_tien)
-            VALUES
-            (@donhang_id_server, @sp_id_server, @so_luong, @don_gia, @thanh_tien);
-            """;
-
-        var donHangDaLuu = daGhiDonHang;
-        var daGhiSanPham = new HashSet<(int DonHangIdServer, int SanPhamIdServer)>();
-        foreach (var item in DuLieu.DonHangSanPhamSeed)
-        {
-            if (item.DonHangIdServer is not > 0 ||
-                item.SanPhamIdServer is not > 0 ||
-                item.SoLuong <= 0 ||
-                !donHangDaLuu.Contains(item.DonHangIdServer.Value) ||
-                !daGhiSanPham.Add((item.DonHangIdServer.Value, item.SanPhamIdServer.Value)))
-            {
-                continue;
-            }
-
-            await using var command = TaoLenh(sqlSanPham, connection, transaction);
-            Them(command, "@donhang_id_server", item.DonHangIdServer);
-            Them(command, "@sp_id_server", item.SanPhamIdServer);
-            Them(command, "@so_luong", item.SoLuong);
-            Them(command, "@don_gia", item.DonGia);
-            Them(command, "@thanh_tien", item.ThanhTien);
             await command.ExecuteNonQueryAsync();
         }
     }
@@ -97,11 +71,20 @@ public sealed partial class CapNhatDB
         var buyer = (TaiKhoanSignupThanhCongSeed)request.Tam["buyer"]!;
         var seller = (TaiKhoanSignupThanhCongSeed)request.Tam["seller"]!;
         var diaChi = (DiaChiTaiKhoanSeed)request.Tam["diaChi"]!;
-        IReadOnlyList<DonHangSanPhamSeed> itemsSeed =
-            request.Tam.TryGetValue("itemsSeed", out var itemsTam) &&
-            itemsTam is IReadOnlyList<DonHangSanPhamSeed> danhSach
-                ? danhSach
-                : Array.Empty<DonHangSanPhamSeed>();
+        var sanPhamIdServer = request.Tam.TryGetValue("sanPhamIdServer", out var sanPhamTam) && sanPhamTam is int sp
+            ? sp
+            : (int?)null;
+        var soLuong = request.Tam.TryGetValue("soLuong", out var soLuongTam) && soLuongTam is int sl && sl > 0
+            ? sl
+            : 1;
+        var donGia = request.Tam.TryGetValue("donGia", out var donGiaTam) && donGiaTam is decimal dg
+            ? dg
+            : (decimal?)null;
+        decimal? thanhTien = request.Tam.TryGetValue("thanhTien", out var thanhTienTam) && thanhTienTam is decimal tt
+            ? tt
+            : donGia is null
+                ? null
+                : donGia.Value * soLuong;
         var orderSource = request.Tam.TryGetValue("orderSource", out var sourceTam) && sourceTam is int source
             ? source
             : 1;
@@ -130,36 +113,147 @@ public sealed partial class CapNhatDB
         donHang.BuyerTaiKhoanIdServer = buyer.TaiKhoanIdServer;
         donHang.SellerTaiKhoanIdServer = seller.TaiKhoanIdServer;
         donHang.DiaChiIdServer = DocIntTuNode(response.Data?["address_id"]) ?? diaChi.DiaChiIdServer;
+        donHang.SanPhamIdServer = DocIntTuNode(response.Data?["product_id"]) ?? sanPhamIdServer;
+        donHang.SoLuong = soLuong;
+        donHang.DonGia = donGia;
+        donHang.ThanhTien = thanhTien;
         donHang.TrangThai = DocChuoiTuNode(response.Data?["state"]) ?? DocChuoiTuNode(response.Data?["status"]) ?? "pending";
         donHang.OrderSource = orderSource;
-        donHang.TotalPrice = DocDecimalTuNode(response.Data?["total_price"]) ?? itemsSeed.Sum(x => x.ThanhTien ?? 0m);
+        donHang.TotalPrice = DocDecimalTuNode(response.Data?["total_price"]) ?? thanhTien;
         donHang.ShippingFee = DocDecimalTuNode(response.Data?["shipping_fee"]) ?? DocDecimalTuNode(response.Data?["ship_fee"]);
         donHang.FinalPrice = DocDecimalTuNode(response.Data?["final_price"]) ??
                              ((donHang.TotalPrice ?? 0m) + (donHang.ShippingFee ?? 0m));
-        donHang.LoaiSeed ??= "create_order";
+        if (request.Tam.TryGetValue("loaiSeed", out var loaiSeedTam) &&
+            loaiSeedTam is string loaiSeed &&
+            !string.IsNullOrWhiteSpace(loaiSeed))
+        {
+            donHang.LoaiSeed = loaiSeed;
+        }
+        else
+        {
+            donHang.LoaiSeed ??= "create_order";
+        }
         donHang.CapNhatLuc = lucCapNhat;
         donHang.GhiChu = "Tạo bằng API /order/create_order";
 
-        DuLieu.DonHangSanPhamSeed.RemoveAll(x => x.DonHangIdServer == orderId);
-        foreach (var item in itemsSeed)
-        {
-            if (item.SanPhamIdServer is not > 0 || item.SoLuong <= 0)
-            {
-                continue;
-            }
+        CapNhatWalletSauTaoDonHang(buyer, seller, donHang);
 
-            DuLieu.DonHangSanPhamSeed.Add(new DonHangSanPhamSeed
-            {
-                DonHangIdServer = orderId,
-                SanPhamIdServer = item.SanPhamIdServer,
-                SoLuong = item.SoLuong,
-                DonGia = item.DonGia,
-                ThanhTien = item.ThanhTien
-            });
+        await LuuAsync(BangDuLieuSeed.DonHang, BangDuLieuSeed.Wallet);
+        return donHang;
+    }
+
+    internal async Task CapNhatDonHangSauSellerAcceptAsync(YeuCauApi request, bool dongY)
+    {
+        if (request.Tam["donHang"] is not DonHangSeed donHang)
+        {
+            return;
         }
 
+        if (dongY)
+        {
+            donHang.TrangThai = "confirmed";
+            donHang.CapNhatLuc = DateTimeOffset.Now;
+            donHang.GhiChu = "Seller chấp nhận đơn.";
+            await LuuAsync(BangDuLieuSeed.DonHang);
+            return;
+        }
+
+        donHang.TrangThai = "cancelled";
+        donHang.CapNhatLuc = DateTimeOffset.Now;
+        donHang.GhiChu = "Seller từ chối đơn.";
+        HoanTienTuPendingSellerChoBuyer(donHang, "Cập nhật ví sau seller reject order.");
+        await LuuAsync(BangDuLieuSeed.DonHang, BangDuLieuSeed.Wallet);
+    }
+
+    internal async Task CapNhatDonHangSauBuyerCancelAsync(YeuCauApi request, PhanHoiApi response)
+    {
+        if (request.Tam["donHang"] is not DonHangSeed donHang)
+        {
+            return;
+        }
+
+        donHang.TrangThai = DocChuoiTuNode(response.Data?["state"]) ?? "cancelled";
+        donHang.CapNhatLuc = DateTimeOffset.Now;
+        donHang.GhiChu = "Buyer hủy đơn.";
+        HoanTienTuPendingSellerChoBuyer(donHang, "Cập nhật ví sau buyer cancel order.");
+        await LuuAsync(BangDuLieuSeed.DonHang, BangDuLieuSeed.Wallet);
+    }
+
+    internal async Task CapNhatDonHangSauSellerShippedAsync(YeuCauApi request)
+    {
+        if (request.Tam["donHang"] is not DonHangSeed donHang)
+        {
+            return;
+        }
+
+        donHang.TrangThai = "shipping";
+        donHang.CapNhatLuc = DateTimeOffset.Now;
+        donHang.GhiChu = "Seller đánh dấu đã gửi hàng.";
         await LuuAsync(BangDuLieuSeed.DonHang);
-        return donHang;
+    }
+
+    internal async Task CapNhatDonHangSauBuyerReceivedAsync(YeuCauApi request)
+    {
+        if (request.Tam["donHang"] is not DonHangSeed donHang)
+        {
+            return;
+        }
+
+        donHang.TrangThai = "delivered";
+        donHang.CapNhatLuc = DateTimeOffset.Now;
+        donHang.GhiChu = "Buyer xác nhận đã nhận hàng.";
+
+        var soTien = TinhSoTienDonHang(donHang);
+        if (soTien > 0)
+        {
+            var sellerWallet = LayWalletTheoTaiKhoan(donHang.SellerTaiKhoanIdServer);
+            if (sellerWallet is not null)
+            {
+                sellerWallet.PendingBalance = (sellerWallet.PendingBalance ?? 0m) - soTien;
+                sellerWallet.Balance += soTien;
+                sellerWallet.AvailableBalance = sellerWallet.Balance;
+                sellerWallet.XacMinhLuc = DateTimeOffset.Now;
+                sellerWallet.GhiChu = "Cập nhật ví sau buyer confirm received.";
+            }
+        }
+
+        await LuuAsync(BangDuLieuSeed.DonHang, BangDuLieuSeed.Wallet);
+    }
+
+    internal async Task CapNhatDonHangSauRefundAsync(YeuCauApi request)
+    {
+        if (request.Tam["donHang"] is not DonHangSeed donHang)
+        {
+            return;
+        }
+
+        donHang.TrangThai = "refunded";
+        donHang.CapNhatLuc = DateTimeOffset.Now;
+        donHang.GhiChu = "Buyer yêu cầu refund.";
+
+        var soTien = TinhSoTienDonHang(donHang);
+        if (soTien > 0)
+        {
+            var buyerWallet = LayWalletTheoTaiKhoan(donHang.BuyerTaiKhoanIdServer);
+            if (buyerWallet is not null)
+            {
+                buyerWallet.Balance += soTien;
+                buyerWallet.AvailableBalance = buyerWallet.Balance;
+                buyerWallet.XacMinhLuc = DateTimeOffset.Now;
+                buyerWallet.GhiChu = "Cập nhật ví buyer sau refund order.";
+            }
+
+            var sellerWallet = LayWalletTheoTaiKhoan(donHang.SellerTaiKhoanIdServer);
+            if (sellerWallet is not null)
+            {
+                sellerWallet.Balance -= soTien;
+                sellerWallet.AvailableBalance = sellerWallet.Balance;
+                sellerWallet.XacMinhLuc = DateTimeOffset.Now;
+                sellerWallet.GhiChu = "Cập nhật ví seller sau refund order.";
+            }
+        }
+
+        await LuuAsync(BangDuLieuSeed.DonHang, BangDuLieuSeed.Wallet);
     }
 
     internal async Task CapNhatGhiChuDonHangAsync(DonHangSeed donHang, string ghiChu)
@@ -167,6 +261,82 @@ public sealed partial class CapNhatDB
         donHang.CapNhatLuc = DateTimeOffset.Now;
         donHang.GhiChu = ghiChu;
         await LuuAsync(BangDuLieuSeed.DonHang);
+    }
+
+    private void CapNhatWalletSauTaoDonHang(
+        TaiKhoanSignupThanhCongSeed buyer,
+        TaiKhoanSignupThanhCongSeed seller,
+        DonHangSeed donHang)
+    {
+        var soTien = TinhSoTienDonHang(donHang);
+        if (soTien <= 0)
+        {
+            return;
+        }
+
+        var buyerWallet = LayWalletTheoTaiKhoan(buyer.TaiKhoanIdServer);
+        if (buyerWallet is not null)
+        {
+            buyerWallet.Balance -= soTien;
+            buyerWallet.AvailableBalance = buyerWallet.Balance;
+            buyerWallet.PendingBalance ??= 0m;
+            buyerWallet.XacMinhLuc = DateTimeOffset.Now;
+            buyerWallet.GhiChu = "Cập nhật ví sau create_order.";
+        }
+
+        var sellerWallet = LayWalletTheoTaiKhoan(seller.TaiKhoanIdServer);
+        if (sellerWallet is not null)
+        {
+            sellerWallet.AvailableBalance ??= sellerWallet.Balance;
+            sellerWallet.PendingBalance = (sellerWallet.PendingBalance ?? 0m) + soTien;
+            sellerWallet.XacMinhLuc = DateTimeOffset.Now;
+            sellerWallet.GhiChu = "Cập nhật pending_balance sau create_order.";
+        }
+    }
+
+    private void HoanTienTuPendingSellerChoBuyer(DonHangSeed donHang, string ghiChu)
+    {
+        var soTien = TinhSoTienDonHang(donHang);
+        if (soTien <= 0)
+        {
+            return;
+        }
+
+        var buyerWallet = LayWalletTheoTaiKhoan(donHang.BuyerTaiKhoanIdServer);
+        if (buyerWallet is not null)
+        {
+            buyerWallet.Balance += soTien;
+            buyerWallet.AvailableBalance = buyerWallet.Balance;
+            buyerWallet.XacMinhLuc = DateTimeOffset.Now;
+            buyerWallet.GhiChu = ghiChu;
+        }
+
+        var sellerWallet = LayWalletTheoTaiKhoan(donHang.SellerTaiKhoanIdServer);
+        if (sellerWallet is not null)
+        {
+            sellerWallet.PendingBalance = (sellerWallet.PendingBalance ?? 0m) - soTien;
+            sellerWallet.XacMinhLuc = DateTimeOffset.Now;
+            sellerWallet.GhiChu = ghiChu;
+        }
+    }
+
+    private WalletSeed? LayWalletTheoTaiKhoan(int? taiKhoanIdServer)
+    {
+        return taiKhoanIdServer is > 0
+            ? DuLieu.WalletSeed.FirstOrDefault(x => x.TaiKhoanIdServer == taiKhoanIdServer)
+            : null;
+    }
+
+    private static decimal TinhSoTienDonHang(DonHangSeed donHang)
+    {
+        if (donHang.FinalPrice is > 0)
+        {
+            return donHang.FinalPrice.Value;
+        }
+
+        var total = donHang.TotalPrice ?? donHang.ThanhTien ?? 0m;
+        var shipping = donHang.ShippingFee ?? 0m;
+        return total + shipping;
     }
 
 }

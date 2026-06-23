@@ -210,7 +210,7 @@ namespace HactechTest
 
         private bool XacNhanHanhDongThoat(string cauHoiMacDinh, string cauHoiKhiCoKetQua, string tenNutTiepTuc)
         {
-            if (!chayTest1.CoKetQuaPhienChay)
+            if (!chayTest1.CoPhienChayChuaLuu)
             {
                 return MessageBox.Show(
                     cauHoiMacDinh,

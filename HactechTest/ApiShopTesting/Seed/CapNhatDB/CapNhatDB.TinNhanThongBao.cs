@@ -133,7 +133,7 @@ public sealed partial class CapNhatDB
         thongBao.DaDoc = false;
         thongBao.TrangThai = "dang_luu";
         thongBao.LayLuc = DateTimeOffset.Now;
-        thongBao.GhiChu = "Tao bang API /notification/add_notification.";
+        thongBao.GhiChu = "Tạo bằng API /notification/add_notification.";
 
         await LuuAsync(BangDuLieuSeed.ThongBao);
     }

@@ -10,6 +10,7 @@ public sealed partial class CapNhatDB
         BangDuLieuSeed.PhuongXa,
         BangDuLieuSeed.TaiKhoan,
         BangDuLieuSeed.Wallet,
+        BangDuLieuSeed.RewardProof,
         BangDuLieuSeed.TimKiem,
         BangDuLieuSeed.TheoDoi,
         BangDuLieuSeed.Chan,
@@ -85,6 +86,9 @@ public sealed partial class CapNhatDB
                 break;
             case BangDuLieuSeed.Wallet:
                 await LuuWalletAsync(connection, transaction);
+                break;
+            case BangDuLieuSeed.RewardProof:
+                await LuuRewardProofAsync(connection, transaction);
                 break;
             case BangDuLieuSeed.TimKiem:
                 await LuuTimKiemAsync(connection, transaction);

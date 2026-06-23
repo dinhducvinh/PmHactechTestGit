@@ -9,8 +9,8 @@ public static class YeuCauDuLieuSeed
     public const int SoSavedSearchToiThieu = 2;
     public const int SoQuanHeChinhToiThieu = 2;
     public const int SoQuanHeChinhMucTieu = 3;
-    public const int SoTinhThanhToiThieu = 5;
-    public const int SoPhuongXaToiThieu = 28;
+    public const int SoTinhThanhToiThieu = 1;
+    public const int SoPhuongXaToiThieu = 1;
     public const int SoDiaChiTaiKhoanMucTieu = 50;
     public const int SoDanhMucToiThieu = 1;
     public const int SoSellerSanPhamMucTieu = 20;
@@ -68,6 +68,9 @@ public sealed class BoDuLieuSeed
     [JsonPropertyName("wallet_seed")]
     public List<WalletSeed> WalletSeed { get; set; } = [];
 
+    [JsonPropertyName("reward_proof_seed")]
+    public List<RewardProofSeed> RewardProofSeed { get; set; } = [];
+
     [JsonPropertyName("tk_timkiem_seed")]
     public List<TaiKhoanTimKiemSeed> TaiKhoanTimKiemSeed { get; set; } = [];
 
@@ -100,9 +103,6 @@ public sealed class BoDuLieuSeed
 
     [JsonPropertyName("donhang_seed")]
     public List<DonHangSeed> DonHangSeed { get; set; } = [];
-
-    [JsonPropertyName("donhang_sanpham_seed")]
-    public List<DonHangSanPhamSeed> DonHangSanPhamSeed { get; set; } = [];
 
     [JsonPropertyName("tk_thich_sanpham_seed")]
     public List<TaiKhoanThichSanPhamSeed> TaiKhoanThichSanPhamSeed { get; set; } = [];
@@ -197,6 +197,33 @@ public sealed class WalletSeed
 
     [JsonPropertyName("xac_minh_luc")]
     public DateTimeOffset? XacMinhLuc { get; set; }
+
+    [JsonPropertyName("ghi_chu")]
+    public string? GhiChu { get; set; }
+}
+
+public sealed class RewardProofSeed
+{
+    [JsonPropertyName("reward_id_server")]
+    public int? RewardIdServer { get; set; }
+
+    [JsonPropertyName("tk_id_server")]
+    public int? TaiKhoanIdServer { get; set; }
+
+    [JsonPropertyName("ai_score")]
+    public int? AiScore { get; set; }
+
+    [JsonPropertyName("reward_coin")]
+    public decimal? RewardCoin { get; set; }
+
+    [JsonPropertyName("trang_thai")]
+    public string TrangThai { get; set; } = "san_sang";
+
+    [JsonPropertyName("tao_luc")]
+    public DateTimeOffset? TaoLuc { get; set; }
+
+    [JsonPropertyName("cap_nhat_luc")]
+    public DateTimeOffset? CapNhatLuc { get; set; }
 
     [JsonPropertyName("ghi_chu")]
     public string? GhiChu { get; set; }
@@ -510,6 +537,18 @@ public sealed class DonHangSeed
     [JsonPropertyName("diachi_id_server")]
     public int? DiaChiIdServer { get; set; }
 
+    [JsonPropertyName("sp_id_server")]
+    public int? SanPhamIdServer { get; set; }
+
+    [JsonPropertyName("so_luong")]
+    public int SoLuong { get; set; } = 1;
+
+    [JsonPropertyName("don_gia")]
+    public decimal? DonGia { get; set; }
+
+    [JsonPropertyName("thanh_tien")]
+    public decimal? ThanhTien { get; set; }
+
     [JsonPropertyName("trang_thai")]
     public string TrangThai { get; set; } = "pending";
 
@@ -536,24 +575,6 @@ public sealed class DonHangSeed
 
     [JsonPropertyName("ghi_chu")]
     public string? GhiChu { get; set; }
-}
-
-public sealed class DonHangSanPhamSeed
-{
-    [JsonPropertyName("donhang_id_server")]
-    public int? DonHangIdServer { get; set; }
-
-    [JsonPropertyName("sp_id_server")]
-    public int? SanPhamIdServer { get; set; }
-
-    [JsonPropertyName("so_luong")]
-    public int SoLuong { get; set; } = 1;
-
-    [JsonPropertyName("don_gia")]
-    public decimal? DonGia { get; set; }
-
-    [JsonPropertyName("thanh_tien")]
-    public decimal? ThanhTien { get; set; }
 }
 
 public sealed class TinNhanSeed

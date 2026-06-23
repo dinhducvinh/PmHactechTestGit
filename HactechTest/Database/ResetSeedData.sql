@@ -23,9 +23,9 @@ GO
 
 DELETE FROM dbo.thongbao_seed;
 DELETE FROM dbo.tinnhan_seed;
+DELETE FROM dbo.reward_proof_seed;
 DELETE FROM dbo.report_seed;
 DELETE FROM dbo.tk_thich_sanpham_seed;
-DELETE FROM dbo.donhang_sanpham_seed;
 DELETE FROM dbo.donhang_seed;
 DELETE FROM dbo.giohang_seed;
 DELETE FROM dbo.sanpham_seed;
@@ -56,8 +56,8 @@ SELECT
     (SELECT COUNT(*) FROM dbo.taikhoan_seed) AS tai_khoan_chua_dang_ky,
     (SELECT COUNT(*) FROM dbo.taikhoan_signupthanhcong) AS tai_khoan_signup_thanh_cong,
     (SELECT COUNT(*) FROM dbo.wallet_seed) AS wallet_seed,
+    (SELECT COUNT(*) FROM dbo.reward_proof_seed) AS reward_proof_seed,
     (SELECT COUNT(*) FROM dbo.giohang_seed) AS giohang_seed,
     (SELECT COUNT(*) FROM dbo.donhang_seed) AS donhang_seed,
-    (SELECT COUNT(*) FROM dbo.donhang_sanpham_seed) AS donhang_sanpham_seed,
     (SELECT COUNT(*) FROM dbo.report_seed) AS report_seed;
 GO

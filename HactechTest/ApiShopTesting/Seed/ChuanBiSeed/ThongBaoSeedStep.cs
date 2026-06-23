@@ -113,12 +113,12 @@ public sealed partial class ChuanBiSeed
             var nguoiNhan = cap.Value.NguoiNhan;
             if (!tokenCache.TryGetValue(nguoiGui.SoThuTu, out var token))
             {
-                token = await LayTokenSeedAsync(nguoiGui, $"tao thong bao seed cho tai khoan {nguoiGui.SoThuTu}");
+                token = await LayTokenSeedAsync(nguoiGui, $"tạo thông báo seed cho tài khoản {nguoiGui.SoThuTu}");
                 tokenCache[nguoiGui.SoThuTu] = token;
             }
 
             var thongTin = ChonThongTinObjectThongBao();
-            var title = $"Thong bao seed {DateTimeOffset.Now:yyyyMMddHHmmssfff}";
+            var title = $"Thông báo seed {DateTimeOffset.Now:yyyyMMddHHmmssfff}";
             var body = new Dictionary<string, object?>
             {
                 ["type"] = thongTin.Type,
@@ -132,12 +132,12 @@ public sealed partial class ChuanBiSeed
                 "/notification/add_notification",
                 body,
                 token,
-                $"tao thong bao seed tu tai khoan {nguoiGui.SoThuTu} toi {nguoiNhan.SoThuTu}");
+                $"tạo thông báo seed từ tài khoản {nguoiGui.SoThuTu} tới {nguoiNhan.SoThuTu}");
 
             var notificationId = DocNotificationIdServer(response.Data);
             if (notificationId is not > 0)
             {
-                throw new LoiChuanBiKiemThuException("API /notification/add_notification thanh cong nhung khong tra data.id.");
+                throw new LoiChuanBiKiemThuException("API /notification/add_notification thành công nhưng không trả data.id.");
             }
 
             UpsertThongBaoSauTao(notificationId.Value, nguoiGui, nguoiNhan, thongTin.Type, thongTin.ObjectId, title);
@@ -227,7 +227,7 @@ public sealed partial class ChuanBiSeed
         thongBao.DaDoc = false;
         thongBao.TrangThai = "dang_luu";
         thongBao.LayLuc = DateTimeOffset.Now;
-        thongBao.GhiChu = "Tao bang API /notification/add_notification.";
+        thongBao.GhiChu = "Tạo bằng API /notification/add_notification.";
     }
 
     private static bool ThongBaoDangLuu(ThongBaoSeed thongBao)

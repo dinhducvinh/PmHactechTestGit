@@ -232,8 +232,8 @@ public sealed partial class ChuanBiSeed
         dong.Add("");
         dong.Add("Số lượng seed hiện tại:");
         dong.Add($"- Tài khoản đã đăng ký qua API signup: {thongKe.SoTaiKhoanDaDangKy}/{thongKe.SoTaiKhoanDangKyCanCo}.");
-        dong.Add($"- Tỉnh/thành phố seed: {thongKe.SoTinhThanh}/{thongKe.SoTinhThanhCanCo}.");
-        dong.Add($"- Phường/xã seed: {thongKe.SoPhuongXa}/{thongKe.SoPhuongXaCanCo}.");
+        dong.Add($"- Tỉnh/thành phố seed đã đồng bộ từ API: {thongKe.SoTinhThanh}.");
+        dong.Add($"- Phường/xã seed đã đồng bộ từ API: {thongKe.SoPhuongXa}.");
         dong.Add($"- Saved search dang_luu: {thongKe.SoSavedSearchDangLuu}/{thongKe.SoSavedSearchCanCo}.");
         dong.Add($"- Quan hệ follow dang_theo_doi: {thongKe.SoQuanHeFollowDangTheoDoi} quan hệ; tài khoản chính có {thongKe.SoQuanHeFollowToiDaCuaMotTaiKhoan} quan hệ, yêu cầu tối thiểu {thongKe.SoQuanHeFollowCanCoCuaMotTaiKhoan}.");
         dong.Add($"- Quan hệ block dang_chan: {thongKe.SoQuanHeBlockDangChan} quan hệ; tài khoản chính có {thongKe.SoQuanHeBlockToiDaCuaMotTaiKhoan} quan hệ, yêu cầu tối thiểu {thongKe.SoQuanHeBlockCanCoCuaMotTaiKhoan}.");

@@ -101,7 +101,7 @@ public sealed partial class ChuanBiSeed
                     DanhMucIdServer = danhMuc.DanhMucIdServer,
                     ThuongHieuIdServer = thuongHieu?.ThuongHieuIdServer,
                     DiaChiGuiHangIdServer = seller.DiaChi.DiaChiIdServer,
-                    TenSanPham = response.Data?["title"]?.ToString() ?? tenSanPham,
+                    TenSanPham = response.Data?["name"]?.ToString() ?? tenSanPham,
                     Gia = gia,
                     TrangThai = "san_sang",
                     TaoBoiTest = true,

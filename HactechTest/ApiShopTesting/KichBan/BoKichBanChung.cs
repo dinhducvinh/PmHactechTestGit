@@ -34,10 +34,12 @@ public static partial class BoKichBanApi
         ThemKichBanSearch(ds);
         ThemKichBanOrder(ds);
         ThemKichBanWallet(ds);
+        ThemKichBanRewards(ds);
         ThemKichBanFollowBlock(ds);
         ThemKichBanConversation(ds);
         ThemKichBanNotification(ds);
         ThemKichBanDevTokenPush(ds);
+        ThemKichBanNews(ds);
         ThemKichBanTai(ds);
         return ds.AsReadOnly();
     }

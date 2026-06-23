@@ -22,6 +22,9 @@ namespace HactechTest.Control
         private bool _dangSuaBaseUrl;
         private bool _dangNapBoLoc;
         private bool _daNapBoLocLanDau;
+        private bool _daLuuPhienHienTai;
+        private bool _dangLuuPhienHienTai;
+        private int? _phienDaLuuId;
         private string _cheDoChayPhienHienTai = "all";
         private string _cheDoLoiPhienHienTai = "continue_on_fail";
         private DateTimeOffset? _batDauLuc;
@@ -52,7 +55,7 @@ namespace HactechTest.Control
             }
         }
 
-        public bool CoKetQuaPhienChay => _ketQuaPhienHienTai.Count > 0;
+        public bool CoPhienChayChuaLuu => CoTheLuuPhienVaoCSDL();
 
         public bool DangChayTest => _dangChay;
 
@@ -320,7 +323,7 @@ namespace HactechTest.Control
         // ----------------------------------------------------------------
         private async Task ChayAsync(bool chiChayCaseDaChon)
         {
-            if (_dangChay) return;
+            if (_dangChay || _dangLuuPhienHienTai) return;
 
             if (!TaoCauHinhChay(out var cauHinh))
             {
@@ -343,6 +346,8 @@ namespace HactechTest.Control
             _ketThucLuc = null;
             _cheDoChayPhienHienTai = chiChayCaseDaChon ? "selected" : "all";
             _cheDoLoiPhienHienTai = rdoDungKhiLoi.Checked ? "stop_on_fail" : "continue_on_fail";
+            _daLuuPhienHienTai = false;
+            _phienDaLuuId = null;
             _ketQuaPhienHienTai.Clear();
             dgvKetQuaChay.Rows.Clear();
             prgTienTrinh.Maximum = dsCanChay.Count;
@@ -483,6 +488,21 @@ namespace HactechTest.Control
 
         private async Task BtnLuuVaoCSDL_ClickAsync()
         {
+            if (_dangLuuPhienHienTai)
+            {
+                return;
+            }
+
+            if (_daLuuPhienHienTai)
+            {
+                var thongBao = _phienDaLuuId.HasValue
+                    ? $"Phiên chạy hiện tại đã được lưu vào lịch sử với mã #{_phienDaLuuId.Value}. Hãy chạy test phiên mới trước khi lưu tiếp."
+                    : "Phiên chạy hiện tại đã được lưu vào lịch sử. Hãy chạy test phiên mới trước khi lưu tiếp.";
+                MessageBox.Show(thongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CapNhatTrangThaiNut(_dangChay);
+                return;
+            }
+
             if (_ketQuaPhienHienTai.Count == 0)
             {
                 MessageBox.Show("Chưa có kết quả để lưu.", "Thông báo");
@@ -496,7 +516,8 @@ namespace HactechTest.Control
 
             try
             {
-                btnLuuVaoCSDL.Enabled = false;
+                _dangLuuPhienHienTai = true;
+                CapNhatTrangThaiNut(_dangChay);
                 var store = new PhienChayStore(cauHinh.ChuoiKetNoiSqlServer);
                 var ketQuaLuu = _ketQuaPhienHienTai
                     .Select((item, index) => BoChuyenDoiKetQuaChayTest.TaoKetQuaLuuPhien(
@@ -510,6 +531,8 @@ namespace HactechTest.Control
                     cauHinh.BaseUrl,
                     ketQuaLuu);
 
+                _daLuuPhienHienTai = true;
+                _phienDaLuuId = phienId;
                 MessageBox.Show($"Đã lưu phiên chạy #{phienId} vào dbo.phien_chay và dbo.chi_tiet_phien_chay.", "Thành công",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
@@ -519,7 +542,8 @@ namespace HactechTest.Control
             }
             finally
             {
-                btnLuuVaoCSDL.Enabled = _ketQuaPhienHienTai.Count > 0;
+                _dangLuuPhienHienTai = false;
+                CapNhatTrangThaiNut(_dangChay);
             }
         }
 
@@ -645,36 +669,48 @@ namespace HactechTest.Control
 
         private void CapNhatTrangThaiNut(bool dangChay)
         {
-            btnChayTatCa.Enabled = !dangChay;
-            btnChayDaChon.Enabled = !dangChay;
-            btnDungLai.Enabled = dangChay;
-            btnLuuVaoCSDL.Enabled = !dangChay && _ketQuaPhienHienTai.Count > 0;
-            btnLuuBaoCao.Enabled = !dangChay && _ketQuaPhienHienTai.Count > 0;
+            var choPhepThaoTac = !dangChay && !_dangLuuPhienHienTai;
 
-            btnTaiTestCase.Enabled = !dangChay;
-            cboBoSuuTap.Enabled = !dangChay;
-            cboModule.Enabled = !dangChay;
-            clbDanhSachTestCase.Enabled = !dangChay;
-            CapNhatTrangThaiBaseUrl(!dangChay);
-            numTimeout.Enabled = !dangChay;
-            btnKiemTraSeed.Enabled = !dangChay;
+            btnChayTatCa.Enabled = choPhepThaoTac;
+            btnChayDaChon.Enabled = choPhepThaoTac;
+            btnDungLai.Enabled = dangChay;
+            btnLuuVaoCSDL.Enabled = CoTheLuuPhienVaoCSDL();
+            btnLuuBaoCao.Enabled = choPhepThaoTac && _ketQuaPhienHienTai.Count > 0;
+
+            btnTaiTestCase.Enabled = choPhepThaoTac;
+            cboBoSuuTap.Enabled = choPhepThaoTac;
+            cboModule.Enabled = choPhepThaoTac;
+            clbDanhSachTestCase.Enabled = choPhepThaoTac;
+            CapNhatTrangThaiBaseUrl(choPhepThaoTac);
+            numTimeout.Enabled = choPhepThaoTac;
+            btnKiemTraSeed.Enabled = choPhepThaoTac;
         }
 
         private void CapNhatTrangThaiKhiKiemTraSeed(bool dangKiemTraSeed)
         {
-            btnChayTatCa.Enabled = !dangKiemTraSeed && !_dangChay;
-            btnChayDaChon.Enabled = !dangKiemTraSeed && !_dangChay;
-            btnDungLai.Enabled = _dangChay;
-            btnLuuVaoCSDL.Enabled = !dangKiemTraSeed && !_dangChay && _ketQuaPhienHienTai.Count > 0;
-            btnLuuBaoCao.Enabled = !dangKiemTraSeed && !_dangChay && _ketQuaPhienHienTai.Count > 0;
+            var choPhepThaoTac = !dangKiemTraSeed && !_dangChay && !_dangLuuPhienHienTai;
 
-            btnTaiTestCase.Enabled = !dangKiemTraSeed && !_dangChay;
-            cboBoSuuTap.Enabled = !dangKiemTraSeed && !_dangChay;
-            cboModule.Enabled = !dangKiemTraSeed && !_dangChay;
-            clbDanhSachTestCase.Enabled = !dangKiemTraSeed && !_dangChay;
-            CapNhatTrangThaiBaseUrl(!dangKiemTraSeed && !_dangChay);
-            numTimeout.Enabled = !dangKiemTraSeed && !_dangChay;
-            btnKiemTraSeed.Enabled = !dangKiemTraSeed && !_dangChay;
+            btnChayTatCa.Enabled = choPhepThaoTac;
+            btnChayDaChon.Enabled = choPhepThaoTac;
+            btnDungLai.Enabled = _dangChay;
+            btnLuuVaoCSDL.Enabled = !dangKiemTraSeed && CoTheLuuPhienVaoCSDL();
+            btnLuuBaoCao.Enabled = choPhepThaoTac && _ketQuaPhienHienTai.Count > 0;
+
+            btnTaiTestCase.Enabled = choPhepThaoTac;
+            cboBoSuuTap.Enabled = choPhepThaoTac;
+            cboModule.Enabled = choPhepThaoTac;
+            clbDanhSachTestCase.Enabled = choPhepThaoTac;
+            CapNhatTrangThaiBaseUrl(choPhepThaoTac);
+            numTimeout.Enabled = choPhepThaoTac;
+            btnKiemTraSeed.Enabled = choPhepThaoTac;
+        }
+
+        private bool CoTheLuuPhienVaoCSDL()
+        {
+            return !_dangChay &&
+                !_dangLuuPhienHienTai &&
+                !_daLuuPhienHienTai &&
+                _ketQuaPhienHienTai.Count > 0;
         }
 
     }

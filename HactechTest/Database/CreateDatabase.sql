@@ -20,12 +20,12 @@
     A. Tài khoản phần mềm    : taikhoan_phanmemtest
     B. Lịch sử chạy          : phien_chay, chi_tiet_phien_chay
     C. Seed runner API Shop  : taikhoan_seed, taikhoan_signupthanhcong,
-                               wallet_seed, tk_timkiem_seed,
+                               wallet_seed, reward_proof_seed, tk_timkiem_seed,
                                tk_theodoi_seed, tk_chan_seed,
                                Provinces_seed, Wards_seed,
                                diachi_tk_seed, danhmuc_seed,
                                thuonghieu_seed, sanpham_seed,
-                               giohang_seed, donhang_seed, donhang_sanpham_seed,
+                               giohang_seed, donhang_seed,
                                tk_thich_sanpham_seed, report_seed, tinnhan_seed,
                                thongbao_seed
     D. Test case động        : test_case_dong
@@ -219,6 +219,24 @@ CREATE TABLE dbo.wallet_seed
         REFERENCES dbo.taikhoan_signupthanhcong(tk_id_server)
 );
 CREATE UNIQUE INDEX UX_wallet_seed_tk_id_server ON dbo.wallet_seed(tk_id_server);
+GO
+
+CREATE TABLE dbo.reward_proof_seed
+(
+    reward_id_server INT NOT NULL CONSTRAINT PK_reward_proof_seed PRIMARY KEY,
+    tk_id_server INT NOT NULL,
+    ai_score INT NULL,
+    reward_coin DECIMAL(18,2) NULL,
+    trang_thai NVARCHAR(30) NOT NULL
+        CONSTRAINT DF_reward_proof_seed_trang_thai DEFAULT N'san_sang',
+    tao_luc DATETIME2(0) NULL,
+    cap_nhat_luc DATETIME2(0) NULL,
+    ghi_chu NVARCHAR(500) NULL,
+    CONSTRAINT FK_reward_proof_seed_taikhoan_signupthanhcong FOREIGN KEY (tk_id_server)
+        REFERENCES dbo.taikhoan_signupthanhcong(tk_id_server)
+);
+CREATE INDEX IX_reward_proof_seed_tk_trang_thai
+    ON dbo.reward_proof_seed(tk_id_server, trang_thai);
 GO
 
 CREATE TABLE dbo.tk_timkiem_seed
@@ -415,6 +433,10 @@ CREATE TABLE dbo.donhang_seed
     buyer_tk_id_server INT NOT NULL,
     seller_tk_id_server INT NOT NULL,
     diachi_id_server INT NULL,
+    sp_id_server INT NOT NULL,
+    so_luong INT NOT NULL CONSTRAINT DF_donhang_seed_so_luong DEFAULT 1,
+    don_gia DECIMAL(18,2) NULL,
+    thanh_tien DECIMAL(18,2) NULL,
     trang_thai NVARCHAR(30) NOT NULL CONSTRAINT DF_donhang_seed_trang_thai DEFAULT N'pending',
     order_source INT NOT NULL CONSTRAINT DF_donhang_seed_order_source DEFAULT 1,
     total_price DECIMAL(18,2) NULL,
@@ -428,31 +450,17 @@ CREATE TABLE dbo.donhang_seed
         REFERENCES dbo.taikhoan_signupthanhcong(tk_id_server),
     CONSTRAINT FK_donhang_seed_seller FOREIGN KEY (seller_tk_id_server)
         REFERENCES dbo.taikhoan_signupthanhcong(tk_id_server),
-    CONSTRAINT CK_donhang_seed_order_source CHECK (order_source IN (0, 1))
+    CONSTRAINT FK_donhang_seed_sanpham FOREIGN KEY (sp_id_server)
+        REFERENCES dbo.sanpham_seed(sp_id_server),
+    CONSTRAINT CK_donhang_seed_order_source CHECK (order_source IN (0, 1)),
+    CONSTRAINT CK_donhang_seed_so_luong CHECK (so_luong > 0)
 );
 CREATE INDEX IX_donhang_seed_buyer_trang_thai
     ON dbo.donhang_seed(buyer_tk_id_server, trang_thai);
 CREATE INDEX IX_donhang_seed_seller_trang_thai
     ON dbo.donhang_seed(seller_tk_id_server, trang_thai);
-GO
-
-CREATE TABLE dbo.donhang_sanpham_seed
-(
-    donhang_id_server INT NOT NULL,
-    sp_id_server INT NOT NULL,
-    so_luong INT NOT NULL CONSTRAINT DF_donhang_sanpham_seed_so_luong DEFAULT 1,
-    don_gia DECIMAL(18,2) NULL,
-    thanh_tien DECIMAL(18,2) NULL,
-    CONSTRAINT PK_donhang_sanpham_seed PRIMARY KEY (donhang_id_server, sp_id_server),
-    CONSTRAINT FK_donhang_sanpham_seed_donhang FOREIGN KEY (donhang_id_server)
-        REFERENCES dbo.donhang_seed(donhang_id_server)
-        ON DELETE CASCADE,
-    CONSTRAINT FK_donhang_sanpham_seed_sanpham FOREIGN KEY (sp_id_server)
-        REFERENCES dbo.sanpham_seed(sp_id_server),
-    CONSTRAINT CK_donhang_sanpham_seed_so_luong CHECK (so_luong > 0)
-);
-CREATE INDEX IX_donhang_sanpham_seed_sp
-    ON dbo.donhang_sanpham_seed(sp_id_server);
+CREATE INDEX IX_donhang_seed_sp
+    ON dbo.donhang_seed(sp_id_server);
 GO
 
 CREATE TABLE dbo.tk_thich_sanpham_seed

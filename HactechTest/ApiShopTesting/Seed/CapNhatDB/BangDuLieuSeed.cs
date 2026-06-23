@@ -6,6 +6,7 @@ internal enum BangDuLieuSeed
     PhuongXa,
     TaiKhoan,
     Wallet,
+    RewardProof,
     TimKiem,
     TheoDoi,
     Chan,
