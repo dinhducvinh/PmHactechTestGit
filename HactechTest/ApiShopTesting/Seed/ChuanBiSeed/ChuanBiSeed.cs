@@ -242,7 +242,7 @@ public sealed partial class ChuanBiSeed
         dong.Add($"- Thương hiệu seed san_sang: {thongKe.SoThuongHieuSanSang}.");
         dong.Add($"- Sản phẩm seed san_sang: {thongKe.SoSanPhamSanSang}/{thongKe.SoSanPhamCanCo}.");
         dong.Add($"- Giỏ hàng seed dang_trong_gio: {thongKe.SoGioHangDangTrongGio}/{thongKe.SoGioHangCanCo}.");
-        dong.Add($"- Đơn hàng seed: {thongKe.SoDonHangDangLuu}/{thongKe.SoDonHangCanCo}.");
+        dong.Add($"- Đơn hàng seed: {thongKe.SoDonHangDangLuu}/{thongKe.SoDonHangCanCo}; pending/confirmed: {thongKe.SoDonHangCoTheSua}/{thongKe.SoDonHangCoTheSuaCanCo}.");
         dong.Add($"- Like sản phẩm seed đang lưu: {thongKe.SoLikeSanPhamDangLuu}/{thongKe.SoLikeSanPhamCanCo}.");
         dong.Add($"- Tin nhắn seed da_gui: {thongKe.SoTinNhanDaGui}/{thongKe.SoTinNhanCanCo}.");
         dong.Add($"- Thông báo seed dang_luu: {thongKe.SoThongBaoDangLuu}/{thongKe.SoThongBaoCanCo}.");

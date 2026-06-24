@@ -39,7 +39,7 @@ public sealed partial class ChuanBiSeed
 
         foreach (var sanPham in danhSachSanPhamUuTien)
         {
-            if (_nguCanh.CapNhatDB.DuLieu.DonHangSeed.Count(DonHangDangLuu) >= YeuCauDuLieuSeed.SoDonHangMucTieu)
+            if (DaDuDonHangSeed())
             {
                 break;
             }
@@ -104,6 +104,20 @@ public sealed partial class ChuanBiSeed
             await _nguCanh.CapNhatDB.LuuDonHangSauCreateOrderAsync(response, requestLuu);
             sanPhamDaCoDon.Add(sanPhamIdServer.Value);
         }
+    }
+
+    private bool DaDuDonHangSeed()
+    {
+        var donHangSeed = _nguCanh.CapNhatDB.DuLieu.DonHangSeed;
+        return donHangSeed.Count(DonHangDangLuu) >= YeuCauDuLieuSeed.SoDonHangMucTieu &&
+               donHangSeed.Count(DonHangCoTheSua) >= YeuCauDuLieuSeed.SoDonHangCoTheSuaMucTieu;
+    }
+
+    private static bool DonHangCoTheSua(DonHangSeed donHang)
+    {
+        return DonHangDangLuu(donHang) &&
+               (string.Equals(donHang.TrangThai, "pending", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(donHang.TrangThai, "confirmed", StringComparison.OrdinalIgnoreCase));
     }
 
 }

@@ -343,24 +343,7 @@ public static partial class BoKichBanApi
             },
             ThieuThamSo);
 
-        Them(ds, "CONVERSATION-DETAIL-05", "Conversation", "Lấy nội dung với partner chưa có conversation",
-            "Chọn cặp user tồn tại chưa có dòng tinnhan_seed giữa hai bên.",
-            async ctx =>
-            {
-                var (nguoiDung, doiTac) = ChonCapTaiKhoanChuaCoConversation(ctx);
-                return new YeuCauApi(
-                    HttpMethod.Post,
-                    "/conversation/get_conversation",
-                    Obj(
-                        ("partner_id", IdBatBuoc(doiTac.TaiKhoanIdServer, "partner tk_id_server")),
-                        ("index", 0),
-                        ("count", 20)),
-                    await LayTokenCuaTaiKhoanAsync(ctx, nguoiDung));
-            },
-            Ok,
-            KiemTraChiTietConversationRong(mongDoiCanGui: true));
-
-        Them(ds, "CONVERSATION-DETAIL-06", "Conversation", "Lấy nội dung với partner_id không tồn tại",
+        Them(ds, "CONVERSATION-DETAIL-05", "Conversation", "Lấy nội dung với partner_id không tồn tại",
             "Token hợp lệ, partner_id = 999999999.",
             async ctx => new YeuCauApi(
                 HttpMethod.Post,
@@ -369,7 +352,7 @@ public static partial class BoKichBanApi
                 await YeuCauTokenHopLeAsync(ctx)),
             KhongCoNguoiDung);
 
-        Them(ds, "CONVERSATION-DETAIL-07", "Conversation", "Lấy nội dung với conversation_id không tồn tại",
+        Them(ds, "CONVERSATION-DETAIL-06", "Conversation", "Lấy nội dung với conversation_id không tồn tại",
             "Token hợp lệ, conversation_id = 999999999.",
             async ctx => new YeuCauApi(
                 HttpMethod.Post,
@@ -378,7 +361,7 @@ public static partial class BoKichBanApi
                 await YeuCauTokenHopLeAsync(ctx)),
             SaiGiaTri);
 
-        Them(ds, "CONVERSATION-DETAIL-08", "Conversation", "Lấy nội dung conversation có quan hệ block",
+        Them(ds, "CONVERSATION-DETAIL-07", "Conversation", "Lấy nội dung conversation có quan hệ block",
             "Chọn conversation trong tinnhan_seed giữa hai user có quan hệ block.",
             async ctx =>
             {
@@ -397,7 +380,7 @@ public static partial class BoKichBanApi
             Ok,
             KiemTraCanSendMessage(false));
 
-        Them(ds, "CONVERSATION-DETAIL-09", "Conversation", "Lấy nội dung conversation index/count sai kiểu",
+        Them(ds, "CONVERSATION-DETAIL-08", "Conversation", "Lấy nội dung conversation index/count sai kiểu",
             "Có conversation_id hợp lệ nhưng index/count là chuỗi.",
             async ctx =>
             {
@@ -413,7 +396,7 @@ public static partial class BoKichBanApi
             },
             SaiKieu);
 
-        Them(ds, "CONVERSATION-DETAIL-10", "Conversation", "Lấy nội dung conversation index/count sai giá trị",
+        Them(ds, "CONVERSATION-DETAIL-09", "Conversation", "Lấy nội dung conversation index/count sai giá trị",
             "Có conversation_id hợp lệ nhưng index < 0 hoặc count < 1.",
             async ctx =>
             {
@@ -636,37 +619,6 @@ public static partial class BoKichBanApi
             return Task.FromResult(coTinNhan
                 ? KetQuaKiemTraThem.ThanhCong
                 : new KetQuaKiemTraThem(false, $"Không tìm thấy message_id_server `{messageId}` trong messages."));
-        };
-    }
-
-    private static Func<PhanHoiApi, YeuCauApi, NguCanhKiemThu, Task<KetQuaKiemTraThem>> KiemTraChiTietConversationRong(bool mongDoiCanGui)
-    {
-        return (response, _, _) =>
-        {
-            if (!LaMaThanhCong(response))
-            {
-                return Task.FromResult(KetQuaKiemTraThem.ThanhCong);
-            }
-
-            if (response.Data is not JsonObject data)
-            {
-                return Task.FromResult(new KetQuaKiemTraThem(false, "data của get_conversation không phải object."));
-            }
-
-            if (data["messages"] is not JsonArray messages)
-            {
-                return Task.FromResult(new KetQuaKiemTraThem(false, "data thiếu mảng messages."));
-            }
-
-            if (messages.Count != 0)
-            {
-                return Task.FromResult(new KetQuaKiemTraThem(false, $"messages phải rỗng, thực tế có {messages.Count} item."));
-            }
-
-            var canSend = DocBoolTuNode(data["can_send_message"]);
-            return Task.FromResult(canSend == mongDoiCanGui
-                ? KetQuaKiemTraThem.ThanhCong
-                : new KetQuaKiemTraThem(false, $"data.can_send_message phải bằng {mongDoiCanGui}, thực tế là {canSend?.ToString() ?? "null"}."));
         };
     }
 

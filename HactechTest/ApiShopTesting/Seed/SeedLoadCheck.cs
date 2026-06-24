@@ -667,8 +667,10 @@ namespace HactechTest.ApiShopTesting.Seed
                 SoSanPhamCanCo = YeuCauDuLieuSeed.SoSanPhamToiThieu,
                 SoGioHangDangTrongGio = duLieu.GioHangSeed.Count(x => x.TrangThai == "dang_trong_gio" && x.CartItemIdServer is > 0),
                 SoGioHangCanCo = YeuCauDuLieuSeed.SoGioHangMucTieu,
-                SoDonHangDangLuu = duLieu.DonHangSeed.Count(x => x.DonHangIdServer is > 0 && x.TrangThai != "da_xoa"),
+                SoDonHangDangLuu = duLieu.DonHangSeed.Count(LaDonHangDangLuu),
                 SoDonHangCanCo = YeuCauDuLieuSeed.SoDonHangMucTieu,
+                SoDonHangCoTheSua = duLieu.DonHangSeed.Count(LaDonHangCoTheSua),
+                SoDonHangCoTheSuaCanCo = YeuCauDuLieuSeed.SoDonHangCoTheSuaMucTieu,
                 SoLikeSanPhamDangLuu = duLieu.TaiKhoanThichSanPhamSeed.Count(x => x.TaiKhoanIdServer is > 0 && x.SanPhamIdServer is > 0),
                 SoLikeSanPhamCanCo = YeuCauDuLieuSeed.SoLikeSanPhamMucTieu,
                 SoTinNhanDaGui = duLieu.TinNhanSeed.Count(x => x.TrangThai == "da_gui"),
@@ -732,7 +734,8 @@ namespace HactechTest.ApiShopTesting.Seed
                 hangMuc.Add(HangMucChuanBiDuLieuSeed.GioHang);
             }
 
-            if (thongKe.SoDonHangDangLuu < thongKe.SoDonHangCanCo)
+            if (thongKe.SoDonHangDangLuu < thongKe.SoDonHangCanCo ||
+                thongKe.SoDonHangCoTheSua < thongKe.SoDonHangCoTheSuaCanCo)
             {
                 hangMuc.Add(HangMucChuanBiDuLieuSeed.DonHang);
             }
@@ -825,6 +828,11 @@ namespace HactechTest.ApiShopTesting.Seed
                 thieu.Add($"Thiếu đơn hàng seed: hiện có {thongKe.SoDonHangDangLuu}/{thongKe.SoDonHangCanCo}.");
             }
 
+            if (thongKe.SoDonHangCoTheSua < thongKe.SoDonHangCoTheSuaCanCo)
+            {
+                thieu.Add($"Thiếu đơn hàng seed trạng thái pending/confirmed: hiện có {thongKe.SoDonHangCoTheSua}/{thongKe.SoDonHangCoTheSuaCanCo}.");
+            }
+
             if (thongKe.SoLikeSanPhamDangLuu < thongKe.SoLikeSanPhamCanCo)
             {
                 thieu.Add($"Thiếu like sản phẩm seed đang lưu: hiện có {thongKe.SoLikeSanPhamDangLuu}/{thongKe.SoLikeSanPhamCanCo}.");
@@ -847,6 +855,19 @@ namespace HactechTest.ApiShopTesting.Seed
         {
             return duLieu.TaiKhoanSignupThanhCongSeed.Count(x =>
                 x.TaiKhoanIdServer is > 0);
+        }
+
+        private static bool LaDonHangDangLuu(DonHangSeed donHang)
+        {
+            return donHang.DonHangIdServer is > 0 &&
+                   !string.Equals(donHang.TrangThai, "da_xoa", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool LaDonHangCoTheSua(DonHangSeed donHang)
+        {
+            return LaDonHangDangLuu(donHang) &&
+                   (string.Equals(donHang.TrangThai, "pending", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(donHang.TrangThai, "confirmed", StringComparison.OrdinalIgnoreCase));
         }
 
         private static int DemQuanHeNhieuNhat<T>(
@@ -903,6 +924,8 @@ namespace HactechTest.ApiShopTesting.Seed
         public int SoGioHangCanCo { get; init; }
         public int SoDonHangDangLuu { get; init; }
         public int SoDonHangCanCo { get; init; }
+        public int SoDonHangCoTheSua { get; init; }
+        public int SoDonHangCoTheSuaCanCo { get; init; }
         public int SoLikeSanPhamDangLuu { get; init; }
         public int SoLikeSanPhamCanCo { get; init; }
         public int SoTinNhanDaGui { get; init; }

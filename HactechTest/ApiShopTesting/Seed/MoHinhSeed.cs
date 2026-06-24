@@ -17,7 +17,8 @@ public static class YeuCauDuLieuSeed
     public const int SoSanPhamToiThieuMoiSeller = 3;
     public const int SoSanPhamToiThieu = SoSellerSanPhamMucTieu * SoSanPhamToiThieuMoiSeller;
     public const int SoGioHangMucTieu = 3;
-    public const int SoDonHangMucTieu = 2;
+    public const int SoDonHangMucTieu = 4;
+    public const int SoDonHangCoTheSuaMucTieu = 3;
     public const int SoLikeSanPhamMucTieu = 5;
     public const int SoTinNhanMucTieu = 5;
     public const int SoThongBaoMucTieu = 2;
