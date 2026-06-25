@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using HactechTest.Models.Auth;
 using HactechTest.Services.Configuration;
 using Microsoft.Data.SqlClient;
 

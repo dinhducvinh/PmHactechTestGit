@@ -10,9 +10,9 @@
     - Reset identity của toàn bộ bảng seed.
     - Không xóa lịch sử chạy test: phien_chay, chi_tiet_phien_chay.
 
-  Sau khi reset, chạy lại:
-    1. InsertTaiKhoanSeed.sql
-    2. InsertProvinceWardSeed.sql
+  Sau khi reset:
+    - Chạy lại CreateDatabase.sql nếu muốn tạo lại tài khoản seed mặc định.
+    - Hoặc bấm "Kiểm tra seed" trong phần mềm để đồng bộ lại dữ liệu mồi từ API.
 
   Chạy trên database: HactechTestDb
 ================================================================================

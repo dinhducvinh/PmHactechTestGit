@@ -33,6 +33,10 @@ namespace HactechTest.Control
             pnlNoiDung = new Panel();
             splitChayTest = new SplitContainer();
             clbDanhSachTestCase = new CheckedListBox();
+            pnlTimKiemTestCase = new Panel();
+            tblTimKiemTestCaseLayout = new TableLayoutPanel();
+            lblTimKiemTestCase = new Label();
+            txtTimKiemTestCase = new TextBox();
             pnlDauDanhSach = new Panel();
             tblDauDanhSachLayout = new TableLayoutPanel();
             lblTieuDeDanhSach = new Label();
@@ -62,6 +66,7 @@ namespace HactechTest.Control
             btnDungLai = new Button();
             flpNutLuu = new FlowLayoutPanel();
             btnLuuVaoCSDL = new Button();
+            btnLocFail = new Button();
             btnLuuBaoCao = new Button();
             pnlTienTrinh = new Panel();
             tblTienTrinhLayout = new TableLayoutPanel();
@@ -96,6 +101,8 @@ namespace HactechTest.Control
             splitChayTest.Panel1.SuspendLayout();
             splitChayTest.Panel2.SuspendLayout();
             splitChayTest.SuspendLayout();
+            pnlTimKiemTestCase.SuspendLayout();
+            tblTimKiemTestCaseLayout.SuspendLayout();
             pnlDauDanhSach.SuspendLayout();
             tblDauDanhSachLayout.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvKetQuaChay).BeginInit();
@@ -146,6 +153,7 @@ namespace HactechTest.Control
             // splitChayTest.Panel1
             // 
             splitChayTest.Panel1.Controls.Add(clbDanhSachTestCase);
+            splitChayTest.Panel1.Controls.Add(pnlTimKiemTestCase);
             splitChayTest.Panel1.Controls.Add(pnlDauDanhSach);
             splitChayTest.Panel1MinSize = 320;
             // 
@@ -167,10 +175,58 @@ namespace HactechTest.Control
             clbDanhSachTestCase.Font = new Font("Segoe UI", 9.75F);
             clbDanhSachTestCase.FormattingEnabled = true;
             clbDanhSachTestCase.IntegralHeight = false;
-            clbDanhSachTestCase.Location = new Point(0, 44);
+            clbDanhSachTestCase.Location = new Point(0, 86);
             clbDanhSachTestCase.Name = "clbDanhSachTestCase";
-            clbDanhSachTestCase.Size = new Size(450, 353);
-            clbDanhSachTestCase.TabIndex = 1;
+            clbDanhSachTestCase.Size = new Size(450, 311);
+            clbDanhSachTestCase.TabIndex = 2;
+            //
+            // pnlTimKiemTestCase
+            //
+            pnlTimKiemTestCase.BackColor = Color.White;
+            pnlTimKiemTestCase.Controls.Add(tblTimKiemTestCaseLayout);
+            pnlTimKiemTestCase.Dock = DockStyle.Top;
+            pnlTimKiemTestCase.Location = new Point(0, 44);
+            pnlTimKiemTestCase.Name = "pnlTimKiemTestCase";
+            pnlTimKiemTestCase.Size = new Size(450, 42);
+            pnlTimKiemTestCase.TabIndex = 1;
+            //
+            // tblTimKiemTestCaseLayout
+            //
+            tblTimKiemTestCaseLayout.ColumnCount = 2;
+            tblTimKiemTestCaseLayout.ColumnStyles.Add(new ColumnStyle());
+            tblTimKiemTestCaseLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            tblTimKiemTestCaseLayout.Controls.Add(lblTimKiemTestCase, 0, 0);
+            tblTimKiemTestCaseLayout.Controls.Add(txtTimKiemTestCase, 1, 0);
+            tblTimKiemTestCaseLayout.Dock = DockStyle.Fill;
+            tblTimKiemTestCaseLayout.Location = new Point(0, 0);
+            tblTimKiemTestCaseLayout.Margin = new Padding(0);
+            tblTimKiemTestCaseLayout.Name = "tblTimKiemTestCaseLayout";
+            tblTimKiemTestCaseLayout.Padding = new Padding(12, 4, 12, 6);
+            tblTimKiemTestCaseLayout.RowCount = 1;
+            tblTimKiemTestCaseLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            tblTimKiemTestCaseLayout.Size = new Size(450, 42);
+            tblTimKiemTestCaseLayout.TabIndex = 0;
+            //
+            // lblTimKiemTestCase
+            //
+            lblTimKiemTestCase.Anchor = AnchorStyles.Left;
+            lblTimKiemTestCase.AutoSize = true;
+            lblTimKiemTestCase.Location = new Point(12, 11);
+            lblTimKiemTestCase.Margin = new Padding(0, 0, 8, 0);
+            lblTimKiemTestCase.Name = "lblTimKiemTestCase";
+            lblTimKiemTestCase.Size = new Size(56, 20);
+            lblTimKiemTestCase.TabIndex = 0;
+            lblTimKiemTestCase.Text = "Tìm TC:";
+            //
+            // txtTimKiemTestCase
+            //
+            txtTimKiemTestCase.Dock = DockStyle.Fill;
+            txtTimKiemTestCase.Location = new Point(76, 6);
+            txtTimKiemTestCase.Margin = new Padding(0, 2, 0, 0);
+            txtTimKiemTestCase.Name = "txtTimKiemTestCase";
+            txtTimKiemTestCase.PlaceholderText = "Mã hoặc tên test case";
+            txtTimKiemTestCase.Size = new Size(362, 27);
+            txtTimKiemTestCase.TabIndex = 1;
             // 
             // pnlDauDanhSach
             // 
@@ -538,12 +594,13 @@ namespace HactechTest.Control
             flpNutLuu.AutoSize = true;
             flpNutLuu.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             flpNutLuu.Controls.Add(btnLuuVaoCSDL);
+            flpNutLuu.Controls.Add(btnLocFail);
             flpNutLuu.Controls.Add(btnLuuBaoCao);
             flpNutLuu.Dock = DockStyle.Right;
-            flpNutLuu.Location = new Point(1282, 12);
+            flpNutLuu.Location = new Point(1164, 12);
             flpNutLuu.Margin = new Padding(0);
             flpNutLuu.Name = "flpNutLuu";
-            flpNutLuu.Size = new Size(328, 34);
+            flpNutLuu.Size = new Size(446, 34);
             flpNutLuu.TabIndex = 1;
             flpNutLuu.WrapContents = false;
             // 
@@ -564,7 +621,25 @@ namespace HactechTest.Control
             btnLuuVaoCSDL.TabIndex = 0;
             btnLuuVaoCSDL.Text = "Lưu phiên chạy";
             btnLuuVaoCSDL.UseVisualStyleBackColor = false;
-            // 
+            //
+            // btnLocFail
+            //
+            btnLocFail.BackColor = Color.FromArgb(178, 34, 52);
+            btnLocFail.Cursor = Cursors.Hand;
+            btnLocFail.Enabled = false;
+            btnLocFail.FlatAppearance.BorderSize = 0;
+            btnLocFail.FlatAppearance.MouseDownBackColor = Color.FromArgb(139, 26, 40);
+            btnLocFail.FlatAppearance.MouseOverBackColor = Color.FromArgb(195, 50, 68);
+            btnLocFail.FlatStyle = FlatStyle.Flat;
+            btnLocFail.ForeColor = Color.White;
+            btnLocFail.Location = new Point(178, 0);
+            btnLocFail.Margin = new Padding(8, 0, 0, 0);
+            btnLocFail.Name = "btnLocFail";
+            btnLocFail.Size = new Size(110, 32);
+            btnLocFail.TabIndex = 1;
+            btnLocFail.Text = "Lọc fail";
+            btnLocFail.UseVisualStyleBackColor = false;
+            //
             // btnLuuBaoCao
             // 
             btnLuuBaoCao.BackColor = Color.FromArgb(108, 117, 125);
@@ -575,11 +650,11 @@ namespace HactechTest.Control
             btnLuuBaoCao.FlatAppearance.MouseOverBackColor = Color.FromArgb(126, 136, 146);
             btnLuuBaoCao.FlatStyle = FlatStyle.Flat;
             btnLuuBaoCao.ForeColor = Color.White;
-            btnLuuBaoCao.Location = new Point(178, 0);
+            btnLuuBaoCao.Location = new Point(296, 0);
             btnLuuBaoCao.Margin = new Padding(8, 0, 0, 0);
             btnLuuBaoCao.Name = "btnLuuBaoCao";
             btnLuuBaoCao.Size = new Size(150, 32);
-            btnLuuBaoCao.TabIndex = 1;
+            btnLuuBaoCao.TabIndex = 2;
             btnLuuBaoCao.Text = "Lưu báo cáo";
             btnLuuBaoCao.UseVisualStyleBackColor = false;
             // 
@@ -972,6 +1047,9 @@ namespace HactechTest.Control
             splitChayTest.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)splitChayTest).EndInit();
             splitChayTest.ResumeLayout(false);
+            pnlTimKiemTestCase.ResumeLayout(false);
+            tblTimKiemTestCaseLayout.ResumeLayout(false);
+            tblTimKiemTestCaseLayout.PerformLayout();
             pnlDauDanhSach.ResumeLayout(false);
             tblDauDanhSachLayout.ResumeLayout(false);
             tblDauDanhSachLayout.PerformLayout();
@@ -1019,6 +1097,10 @@ namespace HactechTest.Control
         private Button btnKiemTraSeed;
         private SplitContainer splitChayTest;
         private CheckedListBox clbDanhSachTestCase;
+        private Panel pnlTimKiemTestCase;
+        private TableLayoutPanel tblTimKiemTestCaseLayout;
+        private Label lblTimKiemTestCase;
+        private TextBox txtTimKiemTestCase;
         private Panel pnlDauDanhSach;
         private TableLayoutPanel tblDauDanhSachLayout;
         private Label lblTieuDeDanhSach;
@@ -1048,6 +1130,7 @@ namespace HactechTest.Control
         private Button btnDungLai;
         private Button btnLuuVaoCSDL;
         private FlowLayoutPanel flpNutLuu;
+        private Button btnLocFail;
         private Button btnLuuBaoCao;
         private Panel pnlTienTrinh;
         private TableLayoutPanel tblTienTrinhLayout;

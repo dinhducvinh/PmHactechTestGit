@@ -1,6 +1,7 @@
 ﻿using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using HactechTest.ApiShopTesting.Core;
+using HactechTest.Models.TestCases;
 
 namespace HactechTest.Services.DynamicTests
 {

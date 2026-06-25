@@ -1,7 +1,7 @@
+using System.Reflection;
 using System.Windows.Forms;
 using System.Drawing;
-using HactechTest.ApiShopTesting.Core;
-using HactechTest.Services.App;
+using HactechTest.Models.History;
 using HactechTest.Services.History;
 using HactechTest.Services.Reports;
 
@@ -12,13 +12,17 @@ namespace HactechTest.Control
         private bool _dangNapDanhSach;
         private CancellationTokenSource? _timKiemCts;
         private CancellationTokenSource? _chiTietCts;
-        private readonly Dictionary<int, List<ChiTietPhienChayDaLuu>> _chiTietCache = [];
+        private readonly Dictionary<int, List<ChiTietPhienChayDaLuu>> _chiTietTomTatCache = [];
+        private readonly Dictionary<int, List<ChiTietPhienChayDaLuu>> _chiTietDayDuCache = [];
+        private readonly LichSuService _lichSuService = new();
 
         public LichSu()
         {
             InitializeComponent();
             if (!DesignMode)
             {
+                BatDoubleBuffer(gridSessions);
+                BatDoubleBuffer(gridSessionDetail);
                 btnClearHistory.Click += BtnClearHistory_Click;
                 btnExportReport.Click += BtnExportReport_Click;
                 txtSearch.TextChanged += TxtSearch_TextChanged;
@@ -36,27 +40,19 @@ namespace HactechTest.Control
             var keyword = txtSearch.Text.Trim();
             _chiTietCts?.Cancel();
             var filteredSessions = await LaySessionsAsync(keyword, ct);
-            _chiTietCache.Clear();
+            _chiTietTomTatCache.Clear();
+            _chiTietDayDuCache.Clear();
 
             _dangNapDanhSach = true;
             try
             {
+                gridSessions.SuspendLayout();
+                gridSessionDetail.SuspendLayout();
                 gridSessions.Rows.Clear();
                 gridSessionDetail.Rows.Clear();
-                foreach (var session in filteredSessions)
+                if (filteredSessions.Count > 0)
                 {
-                    var index = gridSessions.Rows.Add(
-                        session.RunAt.ToString("yyyy-MM-dd HH:mm:ss"),
-                        session.NguoiChay,
-                        session.Machine,
-                        session.OperatingSystem,
-                        session.TotalTests,
-                        session.PassedTests,
-                        session.FailedTests,
-                        session.PassRate + "%",
-                        session.AverageDurationMs);
-
-                    gridSessions.Rows[index].Tag = session;
+                    gridSessions.Rows.AddRange(filteredSessions.Select(TaoDongPhien).ToArray());
                 }
 
                 lblSelectedSession.Text = filteredSessions.Count == 0
@@ -72,13 +68,63 @@ namespace HactechTest.Control
             }
             finally
             {
+                gridSessionDetail.ResumeLayout();
+                gridSessions.ResumeLayout();
                 _dangNapDanhSach = false;
             }
 
             if (gridSessions.Rows.Count > 0)
             {
-                await HienThiChiTietPhienDangChonAsync(ct);
+                TaiChiTietDangChonSauKhiVe(ct);
             }
+        }
+
+        private void TaiChiTietDangChonSauKhiVe(CancellationToken ct)
+        {
+            if (!IsHandleCreated || IsDisposed)
+            {
+                return;
+            }
+
+            BeginInvoke(new Action(async () =>
+            {
+                try
+                {
+                    await HienThiChiTietPhienDangChonAsync(ct);
+                }
+                catch (OperationCanceledException)
+                {
+                }
+                catch (Exception ex)
+                {
+                    lblSelectedSession.Text = "KhÃ´ng táº£i Ä‘Æ°á»£c chi tiáº¿t lá»‹ch sá»­: " + ex.Message;
+                }
+            }));
+        }
+
+        private DataGridViewRow TaoDongPhien(PhienChayDaLuu session)
+        {
+            var row = new DataGridViewRow();
+            row.CreateCells(
+                gridSessions,
+                session.RunAt.ToString("yyyy-MM-dd HH:mm:ss"),
+                session.NguoiChay,
+                session.Machine,
+                session.OperatingSystem,
+                session.TotalTests,
+                session.PassedTests,
+                session.FailedTests,
+                session.PassRate + "%",
+                session.AverageDurationMs);
+            row.Tag = session;
+            return row;
+        }
+
+        private static void BatDoubleBuffer(DataGridView grid)
+        {
+            typeof(DataGridView)
+                .GetProperty("DoubleBuffered", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?.SetValue(grid, true);
         }
 
         private async void TxtSearch_TextChanged(object? sender, EventArgs e)
@@ -128,7 +174,7 @@ namespace HactechTest.Control
             List<ChiTietPhienChayDaLuu> chiTiet;
             try
             {
-                chiTiet = await LayChiTietPhienAsync(session.Id, chiTietCt);
+                chiTiet = await LayChiTietTomTatPhienAsync(session.Id, chiTietCt);
             }
             catch (OperationCanceledException)
             {
@@ -152,22 +198,30 @@ namespace HactechTest.Control
             try
             {
                 gridSessionDetail.Rows.Clear();
-                foreach (var detail in chiTiet)
+                if (chiTiet.Count > 0)
                 {
-                    var index = gridSessionDetail.Rows.Add(
-                        detail.SequenceNo,
-                        detail.TestCaseName,
-                        detail.Result,
-                        detail.ActualStatus,
-                        detail.DurationMs,
-                        detail.Reason);
-                    ApDungMauDongChiTiet(gridSessionDetail.Rows[index], detail.Result);
+                    gridSessionDetail.Rows.AddRange(chiTiet.Select(TaoDongChiTiet).ToArray());
                 }
             }
             finally
             {
                 gridSessionDetail.ResumeLayout();
             }
+        }
+
+        private DataGridViewRow TaoDongChiTiet(ChiTietPhienChayDaLuu detail)
+        {
+            var row = new DataGridViewRow();
+            row.CreateCells(
+                gridSessionDetail,
+                detail.SequenceNo,
+                detail.TestCaseName,
+                detail.Result,
+                detail.ActualStatus,
+                detail.DurationMs,
+                detail.Reason);
+            ApDungMauDongChiTiet(row, detail.Result);
+            return row;
         }
 
         private static void ApDungMauDongChiTiet(DataGridViewRow row, string ketQua)
@@ -203,7 +257,6 @@ namespace HactechTest.Control
             row.DefaultCellStyle.ForeColor = mauChu;
             row.DefaultCellStyle.SelectionBackColor = mauChon;
             row.DefaultCellStyle.SelectionForeColor = mauChu;
-            row.Cells[2].Style.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
         }
 
         private PhienChayDaLuu? LayPhienDangChon()
@@ -246,8 +299,9 @@ namespace HactechTest.Control
             try
             {
                 btnClearHistory.Enabled = false;
-                await XoaPhienAsync(session.Id);
-                _chiTietCache.Remove(session.Id);
+                await _lichSuService.XoaPhienAsync(session.Id);
+                _chiTietTomTatCache.Remove(session.Id);
+                _chiTietDayDuCache.Remove(session.Id);
                 await NapDanhSachAsync();
             }
             catch (Exception ex)
@@ -291,12 +345,9 @@ namespace HactechTest.Control
             try
             {
                 btnExportReport.Enabled = false;
-                var chiTiet = await LayChiTietPhienAsync(session.Id, CancellationToken.None);
-                var baoCaoService = new BaoCaoPhienChayService();
-                var duLieuBaoCao = baoCaoService.TaoDuLieuBaoCaoTuDongKetQua(
-                    TaoThongTinBaoCao(session),
-                    TaoDongBaoCao(chiTiet));
-                var ketQuaLuu = baoCaoService.LuuBaoCao(dialog.FileName, duLieuBaoCao);
+                var chiTiet = await LayChiTietDayDuPhienAsync(session.Id, CancellationToken.None);
+                var duLieuBaoCao = _lichSuService.TaoDuLieuBaoCao(session, chiTiet);
+                var ketQuaLuu = new BaoCaoPhienChayService().LuuBaoCao(dialog.FileName, duLieuBaoCao);
 
                 MessageBox.Show(
                     $"Đã xuất báo cáo phiên #{session.Id}:\n{ketQuaLuu.DuongDanHtml}\n{ketQuaLuu.DuongDanJson}\n{ketQuaLuu.DuongDanExcel}",
@@ -315,148 +366,39 @@ namespace HactechTest.Control
             }
         }
 
-        private static async Task<List<PhienChayDaLuu>> LaySessionsAsync(string keyword, CancellationToken ct)
+        private Task<List<PhienChayDaLuu>> LaySessionsAsync(string keyword, CancellationToken ct)
         {
-            var store = TaoStore();
-            return store is null ? [] : await store.LayDanhSachAsync(keyword, ct);
+            return _lichSuService.LayDanhSachAsync(keyword, ct);
         }
 
-        private async Task<List<ChiTietPhienChayDaLuu>> LayChiTietPhienAsync(int phienChayId, CancellationToken ct)
+        private async Task<List<ChiTietPhienChayDaLuu>> LayChiTietTomTatPhienAsync(int phienChayId, CancellationToken ct)
         {
-            if (_chiTietCache.TryGetValue(phienChayId, out var chiTietDaCo))
+            if (_chiTietDayDuCache.TryGetValue(phienChayId, out var chiTietDayDu))
+            {
+                return chiTietDayDu;
+            }
+
+            if (_chiTietTomTatCache.TryGetValue(phienChayId, out var chiTietTomTat))
+            {
+                return chiTietTomTat;
+            }
+
+            var chiTiet = await _lichSuService.LayChiTietTomTatAsync(phienChayId, ct);
+            _chiTietTomTatCache[phienChayId] = chiTiet;
+            return chiTiet;
+        }
+
+        private async Task<List<ChiTietPhienChayDaLuu>> LayChiTietDayDuPhienAsync(int phienChayId, CancellationToken ct)
+        {
+            if (_chiTietDayDuCache.TryGetValue(phienChayId, out var chiTietDaCo))
             {
                 return chiTietDaCo;
             }
 
-            var store = TaoStore();
-            if (store is null)
-            {
-                return [];
-            }
-
-            var chiTiet = await store.LayChiTietAsync(phienChayId, ct);
-            _chiTietCache[phienChayId] = chiTiet;
+            var chiTiet = await _lichSuService.LayChiTietAsync(phienChayId, ct);
+            _chiTietDayDuCache[phienChayId] = chiTiet;
+            _chiTietTomTatCache[phienChayId] = chiTiet;
             return chiTiet;
-        }
-
-        private static ThongTinBaoCaoPhienChay TaoThongTinBaoCao(PhienChayDaLuu session)
-        {
-            return new ThongTinBaoCaoPhienChay(
-                new DateTimeOffset(session.RunAt),
-                null,
-                session.NguoiChay,
-                session.Machine,
-                session.OperatingSystem,
-                session.BaseUrl,
-                session.CheDoChay,
-                session.CheDoLoi);
-        }
-
-        private static List<DongBaoCaoTestCase> TaoDongBaoCao(IReadOnlyList<ChiTietPhienChayDaLuu> chiTiet)
-        {
-            return chiTiet.Select((item, index) =>
-            {
-                var (ma, tenHienThi) = TachMaVaTenTestCase(item.TestCaseName);
-                var trangThai = ChuyenTrangThai(item.Result);
-                return new DongBaoCaoTestCase
-                {
-                    Stt = item.SequenceNo > 0 ? item.SequenceNo : index + 1,
-                    Ma = ma,
-                    Nhom = TaoNhomTuMa(ma),
-                    TenHienThi = tenHienThi,
-                    TrangThai = string.IsNullOrWhiteSpace(item.Result)
-                        ? DinhDangKetQuaKiemThu.TrangThaiHienThi(trangThai)
-                        : item.Result,
-                    MaMongDoi = item.ExpectedStatus,
-                    MaThucTe = item.ActualStatus,
-                    HttpStatus = LayHttpStatus(item.ActualStatus),
-                    ThoiGianMs = item.DurationMs,
-                    Endpoint = TaoEndpoint(item),
-                    RequestBodyJson = item.RequestBody,
-                    ThongDiep = item.Reason,
-                    ResponseRutGon = item.ResponseBody,
-                    TrangThaiGoc = trangThai
-                };
-            }).ToList();
-        }
-
-        private static (string Ma, string TenHienThi) TachMaVaTenTestCase(string tenTestCase)
-        {
-            var parts = tenTestCase.Split(" - ", 2, StringSplitOptions.TrimEntries);
-            return parts.Length == 2
-                ? (parts[0], parts[1])
-                : ("", tenTestCase);
-        }
-
-        private static string TaoNhomTuMa(string ma)
-        {
-            if (string.IsNullOrWhiteSpace(ma))
-            {
-                return "Lịch sử";
-            }
-
-            var nhom = ma.Split('-', 2, StringSplitOptions.TrimEntries)[0];
-            return string.IsNullOrWhiteSpace(nhom)
-                ? "Lịch sử"
-                : char.ToUpperInvariant(nhom[0]) + nhom[1..].ToLowerInvariant();
-        }
-
-        private static TrangThaiKetQua ChuyenTrangThai(string ketQua)
-        {
-            return ketQua.Trim().ToUpperInvariant() switch
-            {
-                "PASS" => TrangThaiKetQua.Dat,
-                "SKIP" => TrangThaiKetQua.BoQua,
-                "FAIL" => TrangThaiKetQua.ThatBai,
-                _ => TrangThaiKetQua.LoiMoiTruong
-            };
-        }
-
-        private static int? LayHttpStatus(string actualStatus)
-        {
-            var raw = actualStatus.Trim();
-            if (raw.StartsWith("HTTP_", StringComparison.OrdinalIgnoreCase))
-            {
-                raw = raw[5..];
-            }
-            else if (raw.StartsWith("HTTP ", StringComparison.OrdinalIgnoreCase))
-            {
-                raw = raw[5..];
-            }
-            else
-            {
-                return null;
-            }
-
-            return int.TryParse(raw, out var status) ? status : null;
-        }
-
-        private static string? TaoEndpoint(ChiTietPhienChayDaLuu chiTiet)
-        {
-            if (string.IsNullOrWhiteSpace(chiTiet.HttpMethod))
-            {
-                return string.IsNullOrWhiteSpace(chiTiet.Url) ? null : chiTiet.Url;
-            }
-
-            return string.IsNullOrWhiteSpace(chiTiet.Url)
-                ? chiTiet.HttpMethod
-                : $"{chiTiet.HttpMethod} {chiTiet.Url}";
-        }
-
-        private static async Task XoaPhienAsync(int phienChayId)
-        {
-            var store = TaoStore();
-            if (store is not null)
-            {
-                await store.XoaPhienAsync(phienChayId);
-            }
-        }
-
-        private static PhienChayStore? TaoStore()
-        {
-            return AppHost.IsInitialized && AppHost.Instance.DatabaseSanSang
-                ? new PhienChayStore(AppHost.Instance.ConnectionString)
-                : null;
         }
     }
 }

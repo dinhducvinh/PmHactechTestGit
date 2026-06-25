@@ -1,32 +1,13 @@
-using HactechTest.Services.Configuration;
+using HactechTest.Models.TestCases;
 using Microsoft.Data.SqlClient;
 
-namespace HactechTest.Services.DynamicTests
+namespace HactechTest.Repositories.TestCases
 {
-    public sealed class TestCaseDong
-    {
-        public int Id { get; init; }
-        public string Ma { get; init; } = "";
-        public string Nhom { get; init; } = "Custom";
-        public string TenHienThi { get; init; } = "";
-        public string MoTa { get; init; } = "";
-        public string HttpMethod { get; init; } = "GET";
-        public string Endpoint { get; init; } = "";
-        public string AuthMode { get; init; } = "none";
-        public string? PathParamsJson { get; init; }
-        public string? HeadersJson { get; init; }
-        public string? BodyJson { get; init; }
-        public string? ExpectedCodes { get; init; }
-        public int? ExpectedHttpStatus { get; init; }
-        public string? ExpectedJsonPath { get; init; }
-        public string? ExpectedJsonValue { get; init; }
-    }
-
-    public sealed class TestCaseDongStore
+    public sealed class TestCaseDongRepository
     {
         private readonly string _connectionString;
 
-        public TestCaseDongStore(string connectionString)
+        public TestCaseDongRepository(string connectionString)
         {
             _connectionString = connectionString;
         }
@@ -34,7 +15,7 @@ namespace HactechTest.Services.DynamicTests
         public async Task<List<TestCaseDong>> LayDanhSachAsync(CancellationToken ct = default)
         {
             var result = new List<TestCaseDong>();
-            await using var conn = await CauHinhUngDung.OpenConnectionAsync(_connectionString, ct);
+            await using var conn = await KetNoiSql.MoAsync(_connectionString, ct);
             await using var cmd = conn.CreateCommand();
             cmd.CommandText = """
                 SELECT
@@ -57,7 +38,7 @@ namespace HactechTest.Services.DynamicTests
 
         public async Task<TestCaseDong?> LayTheoIdAsync(int id, CancellationToken ct = default)
         {
-            await using var conn = await CauHinhUngDung.OpenConnectionAsync(_connectionString, ct);
+            await using var conn = await KetNoiSql.MoAsync(_connectionString, ct);
             await using var cmd = conn.CreateCommand();
             cmd.CommandText = """
                 SELECT TOP 1
@@ -76,7 +57,7 @@ namespace HactechTest.Services.DynamicTests
 
         public async Task<int> LuuAsync(TestCaseDong testCase, CancellationToken ct = default)
         {
-            await using var conn = await CauHinhUngDung.OpenConnectionAsync(_connectionString, ct);
+            await using var conn = await KetNoiSql.MoAsync(_connectionString, ct);
             await using var cmd = conn.CreateCommand();
 
             if (testCase.Id == 0)
@@ -124,7 +105,7 @@ namespace HactechTest.Services.DynamicTests
 
         public async Task XoaAsync(int id, CancellationToken ct = default)
         {
-            await using var conn = await CauHinhUngDung.OpenConnectionAsync(_connectionString, ct);
+            await using var conn = await KetNoiSql.MoAsync(_connectionString, ct);
             await using var cmd = conn.CreateCommand();
             cmd.CommandText = "DELETE FROM dbo.test_case_dong WHERE id = @id;";
             cmd.Parameters.AddWithValue("@id", id);

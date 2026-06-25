@@ -15,48 +15,81 @@ public sealed partial class ChuanBiSeed
 
     private async Task DongBoDanhMucAsync()
     {
-        var response = await GuiApiSeedAsync(
-            HttpMethod.Post,
-            "/api/get_categories",
-            new Dictionary<string, object?>(),
-            mucDich: "đồng bộ danh mục seed");
+        const int pageSize = 100;
+        var index = 0;
+        var idDaXuLy = new HashSet<int>();
 
-        foreach (var item in LayObjectDeQuy(response.Data))
+        while (index < 10000)
         {
-            var id = DocIdSau(item, "id");
-            if (id is not > 0)
+            var body = new Dictionary<string, object?> { ["index"] = index, ["count"] = pageSize };
+            var response = await GuiApiSeedAsync(
+                HttpMethod.Post,
+                "/api/get_categories",
+                body,
+                mucDich: "đồng bộ danh mục seed");
+
+            if (response.MaSoSanh == "9994")
             {
-                continue;
+                break;
             }
 
-            var ten = item["name"]?.ToString() ?? $"Danh muc {id}";
-            var hienCo = _nguCanh.CapNhatDB.DuLieu.DanhMucSeed.FirstOrDefault(x => x.DanhMucIdServer == id.Value);
-            if (hienCo is null)
+            var itemsTrang = LayObjectTuNode(response.Data).ToList();
+            if (itemsTrang.Count == 0)
             {
-                _nguCanh.CapNhatDB.DuLieu.DanhMucSeed.Add(new DanhMucSeed
+                break;
+            }
+
+            var coIdMoiTrongTrang = false;
+            foreach (var item in LayObjectDeQuy(response.Data))
+            {
+                var id = DocIdSau(item, "id");
+                if (id is not > 0)
                 {
-                    DanhMucIdServer = id.Value,
-                    TenDanhMuc = ten,
-                    DanhMucChaIdServer = DocIdSau(item, "parent_id"),
-                    CoDanhMucCon = DocBoolTuNode(item["has_child"]),
-                    CoThuongHieu = DocBoolTuNode(item["has_brand"]),
-                    CoKichCo = DocBoolTuNode(item["has_size"]),
-                    YeuCauCanNang = DocBoolTuNode(item["require_weight"]),
-                    TrangThai = "san_sang",
-                    DongBoLuc = DateTimeOffset.Now
-                });
+                    continue;
+                }
+
+                coIdMoiTrongTrang |= idDaXuLy.Add(id.Value);
+                var ten = item["name"]?.ToString() ?? $"Danh muc {id}";
+                var hienCo = _nguCanh.CapNhatDB.DuLieu.DanhMucSeed.FirstOrDefault(x => x.DanhMucIdServer == id.Value);
+                if (hienCo is null)
+                {
+                    _nguCanh.CapNhatDB.DuLieu.DanhMucSeed.Add(new DanhMucSeed
+                    {
+                        DanhMucIdServer = id.Value,
+                        TenDanhMuc = ten,
+                        DanhMucChaIdServer = DocIdSau(item, "parent_id"),
+                        CoDanhMucCon = DocBoolTuNode(item["has_child"]),
+                        CoThuongHieu = DocBoolTuNode(item["has_brand"]),
+                        CoKichCo = DocBoolTuNode(item["has_size"]),
+                        YeuCauCanNang = DocBoolTuNode(item["require_weight"]),
+                        TrangThai = "san_sang",
+                        DongBoLuc = DateTimeOffset.Now
+                    });
+                }
+                else
+                {
+                    hienCo.TenDanhMuc = ten;
+                    hienCo.DanhMucChaIdServer = DocIdSau(item, "parent_id");
+                    hienCo.CoDanhMucCon = DocBoolTuNode(item["has_child"]);
+                    hienCo.CoThuongHieu = DocBoolTuNode(item["has_brand"]);
+                    hienCo.CoKichCo = DocBoolTuNode(item["has_size"]);
+                    hienCo.YeuCauCanNang = DocBoolTuNode(item["require_weight"]);
+                    hienCo.TrangThai = "san_sang";
+                    hienCo.DongBoLuc = DateTimeOffset.Now;
+                }
             }
-            else
+
+            if (!coIdMoiTrongTrang)
             {
-                hienCo.TenDanhMuc = ten;
-                hienCo.DanhMucChaIdServer = DocIdSau(item, "parent_id");
-                hienCo.CoDanhMucCon = DocBoolTuNode(item["has_child"]);
-                hienCo.CoThuongHieu = DocBoolTuNode(item["has_brand"]);
-                hienCo.CoKichCo = DocBoolTuNode(item["has_size"]);
-                hienCo.YeuCauCanNang = DocBoolTuNode(item["require_weight"]);
-                hienCo.TrangThai = "san_sang";
-                hienCo.DongBoLuc = DateTimeOffset.Now;
+                break;
             }
+
+            if (itemsTrang.Count < pageSize)
+            {
+                break;
+            }
+
+            index += pageSize;
         }
     }
 

@@ -1,3 +1,4 @@
+using HactechTest.Models.Auth;
 using HactechTest.Services.Auth;
 using HactechTest.Services.Configuration;
 using Microsoft.Data.SqlClient;
@@ -58,6 +59,20 @@ namespace HactechTest.Services.App
         public Task<SqlConnection> OpenConnectionAsync(CancellationToken ct = default)
         {
             return CauHinhUngDung.Instance.OpenConnectionAsync(ct);
+        }
+
+        public static T? TaoKhiDatabaseSanSang<T>(Func<string, T> tao)
+            where T : class
+        {
+            return IsInitialized && Instance.DatabaseSanSang
+                ? tao(Instance.ConnectionString)
+                : null;
+        }
+
+        public static T TaoBatBuocKhiDatabaseSanSang<T>(Func<string, T> tao, string thongBaoLoi)
+            where T : class
+        {
+            return TaoKhiDatabaseSanSang(tao) ?? throw new InvalidOperationException(thongBaoLoi);
         }
 
         private async Task<bool> KiemTraDatabaseAsync(CancellationToken ct)

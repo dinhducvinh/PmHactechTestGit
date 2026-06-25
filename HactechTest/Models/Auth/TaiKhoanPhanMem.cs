@@ -1,4 +1,4 @@
-namespace HactechTest.Services.Auth
+namespace HactechTest.Models.Auth
 {
     public sealed record TaiKhoanPhanMem(
         int Id,

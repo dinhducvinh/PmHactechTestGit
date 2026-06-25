@@ -1,5 +1,6 @@
 using HactechTest.ApiShopTesting.Core;
 using HactechTest.ApiShopTesting.KichBan;
+using HactechTest.Repositories.TestCases;
 using HactechTest.Services.DynamicTests;
 
 namespace HactechTest.Services.ChayTest;
@@ -18,8 +19,8 @@ public sealed class DichVuDanhSachKichBan
             return danhSach;
         }
 
-        var store = new TestCaseDongStore(chuoiKetNoi);
-        var testCaseDong = await store.LayDanhSachAsync(ct);
+        var repository = new TestCaseDongRepository(chuoiKetNoi);
+        var testCaseDong = await repository.LayDanhSachAsync(ct);
         danhSach.AddRange(testCaseDong.Select(BoKichBanDong.TaoKichBan));
         return danhSach;
     }

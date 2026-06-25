@@ -197,6 +197,27 @@ internal static class HelperTC
         return await DangKyTaiKhoanMoiAsync(ctx);
     }
 
+    internal static async Task<TaiKhoanSignupThanhCongSeed> YeuCauTaiKhoanDaDangKyTheoViTriAsync(
+        NguCanhKiemThu ctx,
+        int viTri)
+    {
+        if (viTri < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(viTri), "Vị trí tài khoản seed phải >= 0.");
+        }
+
+        while (true)
+        {
+            var danhSach = LayDanhSachTaiKhoanSanSang(ctx);
+            if (viTri < danhSach.Count)
+            {
+                return danhSach[viTri];
+            }
+
+            await DangKyTaiKhoanMoiAsync(ctx);
+        }
+    }
+
     internal static async Task<TaiKhoanSignupThanhCongSeed> DangKyTaiKhoanMoiAsync(NguCanhKiemThu ctx)
     {
         var taiKhoan = LayTaiKhoanChuaDangKy(ctx);
@@ -404,7 +425,9 @@ internal static class HelperTC
         }
 
         throw new BoQuaKiemThuException(
-            "Không lấy được OTP từ /auth/create_code_reset_password. Nếu server không trả OTP ra response thì cần chuẩn bị OTP thủ công trong môi trường test.");
+            $"Không lấy được OTP từ /auth/create_code_reset_password cho SĐT {taiKhoan.SoDienThoai}. " +
+            $"API tạo OTP trả mã {response.MaSoSanh}, message: {response.Message ?? "(không có)"}, " +
+            $"response: {RutGon(response.NoiDungRaw, 300)}");
     }
 
     internal static async Task XacThucOtpResetMatKhauAsync(NguCanhKiemThu ctx, TaiKhoanSignupThanhCongSeed taiKhoan)

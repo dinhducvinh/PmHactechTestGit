@@ -1,4 +1,6 @@
 ﻿using System.Text.Json.Nodes;
+using System.Diagnostics;
+using System.Globalization;
 using HactechTest.ApiShopTesting.Core;
 using static HactechTest.ApiShopTesting.Core.HelperTC;
 using HactechTest.ApiShopTesting.Seed;
@@ -13,6 +15,7 @@ public static partial class BoKichBanApi
     private static readonly IReadOnlySet<string> ProductKhongCoQuyen = Tap("1009");
     private static readonly IReadOnlySet<string> ProductSaiIdDuongDan = Tap("1002", "1003", "1004", "9992");
     private static readonly IReadOnlySet<string> ProductSaiTokenHoacNguoiDung = Tap("9998", "9995", "HTTP_401", "HTTP_403");
+    private static readonly IReadOnlySet<string> ProductLoiNghiepVuXoaSanPhamDaCoDonHang = Tap("1004", "1009", "1010", "1013", "9992");
 
     private static void ThemKichBanProduct(List<KichBanApi> ds)
     {
@@ -36,49 +39,51 @@ public static partial class BoKichBanApi
             "POST /api/get_categories với body rỗng.",
             _ => Req(HttpMethod.Post, "/api/get_categories", Obj()),
             ProductOkHoacHetDuLieu,
-            DataLaMang("id"));
+            KiemTraDanhSachDanhMuc(10));
 
         Them(ds, "PRODUCT-CAT-02", "Product", "Lấy danh mục theo parent_id hợp lệ",
-            "Dùng parent_id lấy từ danhmuc_seed.",
+            "Dùng parent_id lấy từ danhmuc_seed, kèm index/count.",
             ctx =>
             {
                 var dm = LayDanhMucCoCon(ctx);
-                return Req(HttpMethod.Post, "/api/get_categories", Obj(("parent_id", IdBatBuoc(dm.DanhMucIdServer, "danhmuc_seed.dm_id_server"))));
+                return Req(HttpMethod.Post, "/api/get_categories",
+                    Obj(("parent_id", IdBatBuoc(dm.DanhMucIdServer, "danhmuc_seed.dm_id_server")), ("index", 0), ("count", 10)));
             },
-            ProductOkHoacHetDuLieu,
-            DataLaMang());
+            Ok,
+            KiemTraDanhSachDanhMuc(10, kiemTraParentId: true));
 
         Them(ds, "PRODUCT-CAT-03", "Product", "Lấy danh mục parent_id không có con",
             "parent_id lấy từ danh mục tồn tại nhưng không có category con.",
             ctx =>
             {
                 var dm = LayDanhMucKhongCoCon(ctx);
-                return Req(HttpMethod.Post, "/api/get_categories", Obj(("parent_id", IdBatBuoc(dm.DanhMucIdServer, "danhmuc_seed.dm_id_server"))));
+                return Req(HttpMethod.Post, "/api/get_categories",
+                    Obj(("parent_id", IdBatBuoc(dm.DanhMucIdServer, "danhmuc_seed.dm_id_server")), ("index", 0), ("count", 10)));
             },
-            ProductOkHoacHetDuLieu,
-            DataLaMang());
+            Tap("9994"),
+            KiemTraDataLaMangRong());
 
         Them(ds, "PRODUCT-CAT-04", "Product", "Lấy danh mục parent_id không tồn tại",
             "parent_id = 999999999.",
             _ => Req(HttpMethod.Post, "/api/get_categories", Obj(("parent_id", 999999999))),
-            ProductOkHoacHetDuLieu,
-            DataLaMang());
+            Tap("9994"),
+            KiemTraDataLaMangRong());
 
         Them(ds, "PRODUCT-CAT-05", "Product", "Lấy danh mục parent_id sai kiểu",
             "parent_id = abc.",
             _ => Req(HttpMethod.Post, "/api/get_categories", Obj(("parent_id", "abc"))),
-            SaiKieuHoacSaiGiaTri);
+            SaiGiaTri);
 
-        Them(ds, "PRODUCT-CAT-06", "Product", "Lấy danh mục parent_id không hợp lệ",
-            "parent_id = -1.",
-            _ => Req(HttpMethod.Post, "/api/get_categories", Obj(("parent_id", -1))),
-            Tap("1004", "9994"));
+        Them(ds, "PRODUCT-CAT-06", "Product", "Lấy danh mục tham số không hợp lệ",
+            "parent_id = 1.5, index = -1, count = 0.",
+            _ => Req(HttpMethod.Post, "/api/get_categories", Obj(("parent_id", 1.5), ("index", -1), ("count", 0))),
+            SaiGiaTri);
 
         Them(ds, "PRODUCT-CAT-07", "Product", "Lấy danh mục kiểm tra sắp xếp",
-            "Gọi danh sách category và chỉ kiểm tra response là mảng khi có data.",
-            _ => Req(HttpMethod.Post, "/api/get_categories", Obj()),
+            "Gọi danh sách category với index/count hợp lệ, kiểm tra sort ASC rồi id ASC.",
+            _ => Req(HttpMethod.Post, "/api/get_categories", Obj(("index", 0), ("count", 20))),
             ProductOkHoacHetDuLieu,
-            DataLaMang());
+            KiemTraDanhSachDanhMuc(20, kiemTraSapXep: true));
     }
 
     private static void ThemGetListBrands(List<KichBanApi> ds)
@@ -213,11 +218,22 @@ public static partial class BoKichBanApi
             "Không cần token, truyền index/count.",
             _ => Req(HttpMethod.Post, "/api/get_list_products", Obj(("index", 0), ("count", 10))),
             ProductOkHoacHetDuLieu,
-            KiemTraSoLuongMangToiDa(10));
+            KiemTraDanhSachSanPham(10, kiemTraTruongBatBuoc: true));
 
-        Them(ds, "PRODUCT-LIST-02", "Product", "Lọc sản phẩm theo seed",
+        ds.Add(new KichBanApi
+        {
+            Ma = "PRODUCT-LIST-02",
+            Nhom = "Product",
+            TenHienThi = "Kiểm tra phân trang sản phẩm theo offset",
+            MoTa = "Gọi 2 lần với index/count = 0/2 và 2/2; index là offset, không phải page index.",
+            TaoYeuCauAsync = _ => Req(HttpMethod.Post, "/api/get_list_products", Obj(("index", 0), ("count", 2))),
+            ChayRiengAsync = ChayKiemTraPhanTrangSanPhamAsync,
+            MaChapNhan = ProductOkHoacHetDuLieu
+        });
+
+        Them(ds, "PRODUCT-LIST-03", "Product", "Lọc sản phẩm theo seed",
             "Dùng category, brand, keyword, khoảng giá từ sanpham_seed.",
-            ctx =>
+            async ctx =>
             {
                 var sp = LaySanPhamSanSang(ctx);
                 var body = Obj(
@@ -233,31 +249,37 @@ public static partial class BoKichBanApi
                     body["brand_id"] = IdBatBuoc(sp.ThuongHieuIdServer, "sanpham_seed.thuonghieu_id_server");
                 }
 
-                return Req(HttpMethod.Post, "/api/get_list_products", body);
+                var variantId = await LayVariantIdSanPhamAsync(ctx, sp);
+                if (variantId is > 0)
+                {
+                    body["product_size_id"] = variantId.Value;
+                }
+
+                return new YeuCauApi(HttpMethod.Post, "/api/get_list_products", body);
             },
             ProductOkHoacHetDuLieu,
-            KiemTraSoLuongMangToiDa(10));
+            KiemTraDanhSachSanPhamTheoFilter(10));
 
-        Them(ds, "PRODUCT-LIST-03", "Product", "Lọc sản phẩm không có dữ liệu",
+        Them(ds, "PRODUCT-LIST-04", "Product", "Lọc sản phẩm không có dữ liệu",
             "keyword không khớp sản phẩm nào.",
             _ => Req(HttpMethod.Post, "/api/get_list_products", Obj(("keyword", $"khong_co_san_pham_{Guid.NewGuid():N}"), ("index", 0), ("count", 10))),
-            Tap("9994"));
+            Tap("9994"),
+            KiemTraDataLaMangRong());
 
-        Them(ds, "PRODUCT-LIST-04", "Product", "Lấy danh sách thiếu index/count",
+        Them(ds, "PRODUCT-LIST-05", "Product", "Lấy danh sách thiếu index/count",
             "Body rỗng.",
             _ => Req(HttpMethod.Post, "/api/get_list_products", Obj()),
             SaiGiaTri);
 
-        Them(ds, "PRODUCT-LIST-05", "Product", "Lấy danh sách index/count sai kiểu",
-            "index = abc, count = xyz.",
-            _ => Req(HttpMethod.Post, "/api/get_list_products", Obj(("index", "abc"), ("count", "xyz"))),
+        Them(ds, "PRODUCT-LIST-06", "Product", "Lấy danh sách index/count sai kiểu",
+            "index = abc, count = 10.",
+            _ => Req(HttpMethod.Post, "/api/get_list_products", Obj(("index", "abc"), ("count", 10))),
             SaiGiaTri);
 
-        Them(ds, "PRODUCT-LIST-06", "Product", "Lấy danh sách filter mâu thuẫn",
-            "price_min > price_max và order lạ.",
-            _ => Req(HttpMethod.Post, "/api/get_list_products", Obj(("price_min", 10000000), ("price_max", 1000), ("order", "invalid_order"), ("index", 0), ("count", 10))),
-            ProductOkHoacHetDuLieu,
-            KiemTraSoLuongMangToiDa(10));
+        Them(ds, "PRODUCT-LIST-07", "Product", "Lấy danh sách phân trang không hợp lệ",
+            "index = -1, count = 0.",
+            _ => Req(HttpMethod.Post, "/api/get_list_products", Obj(("index", -1), ("count", 0))),
+            SaiGiaTri);
     }
 
     private static void ThemGetCommentsProduct(List<KichBanApi> ds)
@@ -810,10 +832,40 @@ public static partial class BoKichBanApi
             Tap("1004", "9992"));
 
         Them(ds, "PRODUCT-DELETE-08", "Product", "Xóa sản phẩm đã phát sinh đơn hàng",
-            "Cần seed đơn hàng có liên kết tới sản phẩm để kiểm tra nghiệp vụ này.",
-            _ => Req(HttpMethod.Delete, "/api/delete/0"),
-            Ok,
-            lyDoBoQua: "Đã có donhang_seed nhưng server hiện chưa có mã nghiệp vụ ổn định cho xóa sản phẩm đã phát sinh order_items.");
+            "Seller gọi DELETE sản phẩm đã phát sinh order_items. Server bắt buộc phải báo lỗi nghiệp vụ, không được xóa thành công.",
+            async ctx =>
+            {
+                var (sp, seller) = LaySanPhamDaPhatSinhDonHangKemSeller(ctx);
+                return new YeuCauApi(
+                    HttpMethod.Delete,
+                    $"/api/delete/{IdBatBuoc(sp.SanPhamIdServer, "sanpham_seed.sp_id_server")}",
+                    token: await LayTokenCuaTaiKhoanAsync(ctx, seller));
+            },
+            ProductLoiNghiepVuXoaSanPhamDaCoDonHang);
+    }
+
+    private static CapSanPhamVaSeller LaySanPhamDaPhatSinhDonHangKemSeller(NguCanhKiemThu ctx)
+    {
+        var sanPhamDaCoDon = ctx.CapNhatDB.DuLieu.DonHangSeed
+            .Where(DonHangDangLuu)
+            .Where(x => x.SanPhamIdServer is > 0)
+            .Select(x => x.SanPhamIdServer!.Value)
+            .ToHashSet();
+
+        foreach (var sanPham in LayDanhSachSanPhamSanSang(ctx)
+                     .Where(x => x.SanPhamIdServer is > 0 && sanPhamDaCoDon.Contains(x.SanPhamIdServer.Value))
+                     .OrderByDescending(x => x.TaoLuc ?? DateTimeOffset.MinValue)
+                     .ThenByDescending(x => x.ThuTuNoiBo))
+        {
+            var seller = LayTaiKhoanTheoServerId(ctx, sanPham.TaiKhoanIdServer);
+            if (seller is not null)
+            {
+                return new CapSanPhamVaSeller(sanPham, seller);
+            }
+        }
+
+        throw new BoQuaKiemThuException(
+            "Thiếu sanpham_seed đang san_sang đã phát sinh donhang_seed. Hãy bấm Kiểm tra seed để tạo đơn hàng gắn với sản phẩm.");
     }
 
     private static Func<PhanHoiApi, YeuCauApi, NguCanhKiemThu, Task<KetQuaKiemTraThem>> KiemTraSoLuongMangToiDa(int toiDa)
@@ -834,6 +886,477 @@ public static partial class BoKichBanApi
                 ? KetQuaKiemTraThem.ThanhCong
                 : new KetQuaKiemTraThem(false, $"data có {mang.Count} phần tử, vượt quá count = {toiDa}."));
         };
+    }
+
+    private static Func<PhanHoiApi, YeuCauApi, NguCanhKiemThu, Task<KetQuaKiemTraThem>> KiemTraDataLaMangRong()
+    {
+        return (response, _, _) =>
+        {
+            if (response.Data is not JsonArray mang)
+            {
+                return Task.FromResult(new KetQuaKiemTraThem(false, "data phải là mảng rỗng."));
+            }
+
+            return Task.FromResult(mang.Count == 0
+                ? KetQuaKiemTraThem.ThanhCong
+                : new KetQuaKiemTraThem(false, $"data phải rỗng, thực tế có {mang.Count} phần tử."));
+        };
+    }
+
+    private static Func<PhanHoiApi, YeuCauApi, NguCanhKiemThu, Task<KetQuaKiemTraThem>> KiemTraDanhSachDanhMuc(
+        int countToiDa,
+        bool kiemTraParentId = false,
+        bool kiemTraSapXep = false)
+    {
+        return (response, request, ctx) =>
+        {
+            if (response.MaSoSanh == "9994")
+            {
+                return KiemTraDataLaMangRong()(response, request, ctx);
+            }
+
+            if (!LaMaThanhCong(response))
+            {
+                return Task.FromResult(KetQuaKiemTraThem.ThanhCong);
+            }
+
+            if (response.Data is not JsonArray mang)
+            {
+                return Task.FromResult(new KetQuaKiemTraThem(false, "data không phải mảng category."));
+            }
+
+            if (mang.Count > countToiDa)
+            {
+                return Task.FromResult(new KetQuaKiemTraThem(false, $"data có {mang.Count} danh mục, vượt quá count = {countToiDa}."));
+            }
+
+            var parentId = DocIntTuBody(request, "parent_id");
+            int? sortTruoc = null;
+            int? idTruoc = null;
+            foreach (var node in mang)
+            {
+                if (node is not JsonObject item)
+                {
+                    return Task.FromResult(new KetQuaKiemTraThem(false, "Một phần tử category không phải object."));
+                }
+
+                foreach (var truong in new[] { "id", "name", "parent_id", "sort" })
+                {
+                    if (!item.ContainsKey(truong))
+                    {
+                        return Task.FromResult(new KetQuaKiemTraThem(false, $"category thiếu trường `{truong}`."));
+                    }
+                }
+
+                if (kiemTraParentId && parentId is > 0)
+                {
+                    var parentIdThucTe = HelperTC.DocIntTuObject(item, "parent_id");
+                    if (parentIdThucTe != parentId)
+                    {
+                        return Task.FromResult(new KetQuaKiemTraThem(false,
+                            $"category parent_id phải bằng {parentId}, thực tế là {parentIdThucTe?.ToString() ?? "null"}."));
+                    }
+                }
+
+                if (kiemTraSapXep)
+                {
+                    var sort = HelperTC.DocIntTuObject(item, "sort");
+                    var id = HelperTC.DocIntTuObject(item, "id");
+                    if (sort is null || id is null)
+                    {
+                        return Task.FromResult(new KetQuaKiemTraThem(false, "Không đọc được sort/id để kiểm tra sắp xếp category."));
+                    }
+
+                    if (sortTruoc.HasValue &&
+                        idTruoc.HasValue &&
+                        (sort.Value < sortTruoc.Value ||
+                         (sort.Value == sortTruoc.Value && id.Value < idTruoc.Value)))
+                    {
+                        return Task.FromResult(new KetQuaKiemTraThem(false, "Danh mục không sắp xếp theo sort ASC rồi id ASC."));
+                    }
+
+                    sortTruoc = sort;
+                    idTruoc = id;
+                }
+            }
+
+            return Task.FromResult(KetQuaKiemTraThem.ThanhCong);
+        };
+    }
+
+    private static Func<PhanHoiApi, YeuCauApi, NguCanhKiemThu, Task<KetQuaKiemTraThem>> KiemTraDanhSachSanPham(
+        int countToiDa,
+        bool kiemTraTruongBatBuoc = false)
+    {
+        return (response, request, ctx) =>
+        {
+            if (response.MaSoSanh == "9994")
+            {
+                return KiemTraDataLaMangRong()(response, request, ctx);
+            }
+
+            if (!LaMaThanhCong(response))
+            {
+                return Task.FromResult(KetQuaKiemTraThem.ThanhCong);
+            }
+
+            if (response.Data is not JsonArray mang)
+            {
+                return Task.FromResult(new KetQuaKiemTraThem(false, "data không phải mảng sản phẩm."));
+            }
+
+            if (mang.Count > countToiDa)
+            {
+                return Task.FromResult(new KetQuaKiemTraThem(false, $"data có {mang.Count} sản phẩm, vượt quá count = {countToiDa}."));
+            }
+
+            if (!kiemTraTruongBatBuoc)
+            {
+                return Task.FromResult(KetQuaKiemTraThem.ThanhCong);
+            }
+
+            foreach (var node in mang)
+            {
+                if (node is not JsonObject item)
+                {
+                    return Task.FromResult(new KetQuaKiemTraThem(false, "Một phần tử product list không phải object."));
+                }
+
+                foreach (var truong in new[]
+                         {
+                             "id", "name", "price", "price_new", "image", "video", "like", "comment",
+                             "is_liked", "is_stock", "variants", "brand", "category"
+                         })
+                {
+                    if (!item.ContainsKey(truong))
+                    {
+                        return Task.FromResult(new KetQuaKiemTraThem(false, $"product list item thiếu trường `{truong}`."));
+                    }
+                }
+
+                if (item["variants"] is not JsonArray)
+                {
+                    return Task.FromResult(new KetQuaKiemTraThem(false, "product list item.variants không phải mảng."));
+                }
+            }
+
+            return Task.FromResult(KetQuaKiemTraThem.ThanhCong);
+        };
+    }
+
+    private static Func<PhanHoiApi, YeuCauApi, NguCanhKiemThu, Task<KetQuaKiemTraThem>> KiemTraDanhSachSanPhamTheoFilter(int countToiDa)
+    {
+        return async (response, request, ctx) =>
+        {
+            var kiemTraCoBan = await KiemTraDanhSachSanPham(countToiDa, kiemTraTruongBatBuoc: true)(response, request, ctx);
+            if (!kiemTraCoBan.Dat || !LaMaThanhCong(response))
+            {
+                return kiemTraCoBan;
+            }
+
+            var categoryId = DocIntTuBody(request, "category_id");
+            var brandId = DocIntTuBody(request, "brand_id");
+            var variantId = DocIntTuBody(request, "product_size_id");
+            var priceMin = DocDecimalTuBody(request, "price_min");
+            var priceMax = DocDecimalTuBody(request, "price_max");
+            var keyword = DocChuoiTuBody(request, "keyword");
+
+            foreach (var item in response.Data!.AsArray().OfType<JsonObject>())
+            {
+                if (categoryId is > 0)
+                {
+                    var categoryIdThucTe = HelperTC.DocIntTuObject(item["category"], "id");
+                    if (categoryIdThucTe != categoryId)
+                    {
+                        return new KetQuaKiemTraThem(false,
+                            $"product category.id phải bằng {categoryId}, thực tế là {categoryIdThucTe?.ToString() ?? "null"}.");
+                    }
+                }
+
+                if (brandId is > 0)
+                {
+                    var brandIdThucTe = HelperTC.DocIntTuObject(item["brand"], "id");
+                    if (brandIdThucTe != brandId)
+                    {
+                        return new KetQuaKiemTraThem(false,
+                            $"product brand.id phải bằng {brandId}, thực tế là {brandIdThucTe?.ToString() ?? "null"}.");
+                    }
+                }
+
+                if (variantId is > 0)
+                {
+                    var variants = item["variants"] as JsonArray;
+                    var coVariant = variants?.OfType<JsonObject>().Any(x => HelperTC.DocIntTuObject(x, "id") == variantId) == true;
+                    if (!coVariant)
+                    {
+                        return new KetQuaKiemTraThem(false, $"product không có variant id {variantId}.");
+                    }
+                }
+
+                var gia = DocDecimalTuNode(item["price_new"]) ?? DocDecimalTuNode(item["price"]);
+                if (priceMin.HasValue && gia.HasValue && gia.Value < priceMin.Value)
+                {
+                    return new KetQuaKiemTraThem(false, $"product price {gia} nhỏ hơn price_min {priceMin}.");
+                }
+
+                if (priceMax.HasValue && gia.HasValue && gia.Value > priceMax.Value)
+                {
+                    return new KetQuaKiemTraThem(false, $"product price {gia} lớn hơn price_max {priceMax}.");
+                }
+
+                if (!string.IsNullOrWhiteSpace(keyword))
+                {
+                    var ten = item["name"]?.ToString() ?? "";
+                    if (!ten.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return new KetQuaKiemTraThem(false, $"product name `{ten}` không khớp keyword `{keyword}`.");
+                    }
+                }
+            }
+
+            return KetQuaKiemTraThem.ThanhCong;
+        };
+    }
+
+    private static async Task<int?> LayVariantIdSanPhamAsync(NguCanhKiemThu ctx, SanPhamSeed sanPham)
+    {
+        var sanPhamId = IdBatBuoc(sanPham.SanPhamIdServer, "sanpham_seed.sp_id_server");
+        var response = await ctx.Api.GuiAsync(new YeuCauApi(HttpMethod.Post, "/api/get_products", Obj(("id", sanPhamId))));
+        if (!LaMaThanhCong(response))
+        {
+            return null;
+        }
+
+        foreach (var tenMang in new[] { "variants", "size" })
+        {
+            if (response.Data?[tenMang] is not JsonArray variants)
+            {
+                continue;
+            }
+
+            foreach (var variant in variants.OfType<JsonObject>())
+            {
+                var id = HelperTC.DocIntTuObject(variant, "id");
+                if (id is > 0)
+                {
+                    return id.Value;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static async Task<KetQuaChay> ChayKiemTraPhanTrangSanPhamAsync(NguCanhKiemThu ctx, CancellationToken cancellationToken)
+    {
+        if (LayDanhSachSanPhamSanSang(ctx).Count < 3)
+        {
+            throw new BoQuaKiemThuException("Cần ít nhất 3 sản phẩm sanpham_seed trạng thái san_sang để kiểm tra phân trang offset.");
+        }
+
+        var dongHo = Stopwatch.StartNew();
+        var yeuCauTrang1 = new YeuCauApi(HttpMethod.Post, "/api/get_list_products", Obj(("index", 0), ("count", 2)));
+        var responseTrang1 = await ctx.Api.GuiAsync(yeuCauTrang1, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var yeuCauTrang2 = new YeuCauApi(HttpMethod.Post, "/api/get_list_products", Obj(("index", 2), ("count", 2)));
+        var responseTrang2 = await ctx.Api.GuiAsync(yeuCauTrang2, cancellationToken);
+        dongHo.Stop();
+
+        if (responseTrang1.MaSoSanh != "1000")
+        {
+            return KetQuaSanPhamRieng(
+                "PRODUCT-LIST-02",
+                "Kiểm tra phân trang sản phẩm theo offset",
+                TrangThaiKetQua.ThatBai,
+                $"Trang đầu tiên phải trả 1000 khi đã có seed sản phẩm, thực tế là {responseTrang1.MaSoSanh}.",
+                dongHo.Elapsed,
+                responseTrang1,
+                responseTrang2);
+        }
+
+        if (!ProductOkHoacHetDuLieu.Contains(responseTrang2.MaSoSanh))
+        {
+            return KetQuaSanPhamRieng(
+                "PRODUCT-LIST-02",
+                "Kiểm tra phân trang sản phẩm theo offset",
+                TrangThaiKetQua.ThatBai,
+                $"Trang thứ hai trả mã ngoài kỳ vọng: {responseTrang2.MaSoSanh}.",
+                dongHo.Elapsed,
+                responseTrang1,
+                responseTrang2);
+        }
+
+        var kiemTraTrang1 = await KiemTraDanhSachSanPham(2, kiemTraTruongBatBuoc: true)(responseTrang1, yeuCauTrang1, ctx);
+        if (!kiemTraTrang1.Dat)
+        {
+            return KetQuaSanPhamRieng(
+                "PRODUCT-LIST-02",
+                "Kiểm tra phân trang sản phẩm theo offset",
+                TrangThaiKetQua.ThatBai,
+                $"Trang đầu tiên sai dữ liệu: {kiemTraTrang1.Loi}",
+                dongHo.Elapsed,
+                responseTrang1,
+                responseTrang2);
+        }
+
+        var kiemTraTrang2 = await KiemTraDanhSachSanPham(2, kiemTraTruongBatBuoc: true)(responseTrang2, yeuCauTrang2, ctx);
+        if (!kiemTraTrang2.Dat)
+        {
+            return KetQuaSanPhamRieng(
+                "PRODUCT-LIST-02",
+                "Kiểm tra phân trang sản phẩm theo offset",
+                TrangThaiKetQua.ThatBai,
+                $"Trang thứ hai sai dữ liệu: {kiemTraTrang2.Loi}",
+                dongHo.Elapsed,
+                responseTrang1,
+                responseTrang2);
+        }
+
+        var idsTrang1 = LayProductIds(responseTrang1).ToList();
+        var idsTrang2 = LayProductIds(responseTrang2).ToList();
+        if (idsTrang2.Any(id => idsTrang1.Contains(id)))
+        {
+            return KetQuaSanPhamRieng(
+                "PRODUCT-LIST-02",
+                "Kiểm tra phân trang sản phẩm theo offset",
+                TrangThaiKetQua.ThatBai,
+                "Trang index=0 và index=2 có product id bị trùng, không đúng offset pagination.",
+                dongHo.Elapsed,
+                responseTrang1,
+                responseTrang2);
+        }
+
+        var idsGhep = idsTrang1.Concat(idsTrang2).ToList();
+        if (!SapXepIdGiamDan(idsGhep))
+        {
+            return KetQuaSanPhamRieng(
+                "PRODUCT-LIST-02",
+                "Kiểm tra phân trang sản phẩm theo offset",
+                TrangThaiKetQua.ThatBai,
+                "Danh sách mặc định không sắp xếp theo product.id DESC.",
+                dongHo.Elapsed,
+                responseTrang1,
+                responseTrang2);
+        }
+
+        return KetQuaSanPhamRieng(
+            "PRODUCT-LIST-02",
+            "Kiểm tra phân trang sản phẩm theo offset",
+            TrangThaiKetQua.Dat,
+            "Hai trang phân trang dùng index như offset; dữ liệu không trùng và giữ thứ tự id DESC.",
+            dongHo.Elapsed,
+            responseTrang1,
+            responseTrang2);
+    }
+
+    private static KetQuaChay KetQuaSanPhamRieng(
+        string ma,
+        string ten,
+        TrangThaiKetQua trangThai,
+        string thongDiep,
+        TimeSpan thoiGian,
+        PhanHoiApi responseTrang1,
+        PhanHoiApi responseTrang2)
+    {
+        return new KetQuaChay
+        {
+            Ma = ma,
+            Nhom = "Product",
+            TenHienThi = ten,
+            TrangThai = trangThai,
+            ThongDiep = thongDiep,
+            MaMongDoi = "Trang 1: 1000; trang 2: 1000 hoặc 9994; không trùng product id",
+            MaThucTe = $"Trang 1: {responseTrang1.MaSoSanh}; trang 2: {responseTrang2.MaSoSanh}",
+            HttpStatus = (int)responseTrang2.HttpStatusCode,
+            ThoiGian = thoiGian,
+            Endpoint = "POST /api/get_list_products x2",
+            RequestBodyJson = "{\"index\":0,\"count\":2}\n{\"index\":2,\"count\":2}",
+            ResponseRutGon = $"Trang 1: {RutGon(responseTrang1.NoiDungRaw, 900)} | Trang 2: {RutGon(responseTrang2.NoiDungRaw, 900)}"
+        };
+    }
+
+    private static IEnumerable<int> LayProductIds(PhanHoiApi response)
+    {
+        if (!LaMaThanhCong(response) || response.Data is not JsonArray mang)
+        {
+            yield break;
+        }
+
+        foreach (var item in mang.OfType<JsonObject>())
+        {
+            var id = HelperTC.DocIntTuObject(item, "id");
+            if (id is > 0)
+            {
+                yield return id.Value;
+            }
+        }
+    }
+
+    private static bool SapXepIdGiamDan(IReadOnlyList<int> ids)
+    {
+        for (var i = 1; i < ids.Count; i++)
+        {
+            if (ids[i] > ids[i - 1])
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static int? DocIntTuBody(YeuCauApi request, string tenTruong)
+    {
+        if (request.Body is not IReadOnlyDictionary<string, object?> body ||
+            !body.TryGetValue(tenTruong, out var giaTri) ||
+            giaTri is null)
+        {
+            return null;
+        }
+
+        return giaTri switch
+        {
+            int v => v,
+            long v when v >= int.MinValue && v <= int.MaxValue => (int)v,
+            decimal v when decimal.Truncate(v) == v && v >= int.MinValue && v <= int.MaxValue => (int)v,
+            double v when Math.Truncate(v) == v && v >= int.MinValue && v <= int.MaxValue => (int)v,
+            string v when int.TryParse(v, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) => parsed,
+            _ => null
+        };
+    }
+
+    private static decimal? DocDecimalTuBody(YeuCauApi request, string tenTruong)
+    {
+        if (request.Body is not IReadOnlyDictionary<string, object?> body ||
+            !body.TryGetValue(tenTruong, out var giaTri) ||
+            giaTri is null)
+        {
+            return null;
+        }
+
+        return giaTri switch
+        {
+            decimal v => v,
+            int v => v,
+            long v => v,
+            double v => (decimal)v,
+            string v when decimal.TryParse(v, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed) => parsed,
+            _ => null
+        };
+    }
+
+    private static string? DocChuoiTuBody(YeuCauApi request, string tenTruong)
+    {
+        if (request.Body is not IReadOnlyDictionary<string, object?> body ||
+            !body.TryGetValue(tenTruong, out var giaTri) ||
+            giaTri is null)
+        {
+            return null;
+        }
+
+        var chuoi = giaTri.ToString();
+        return string.IsNullOrWhiteSpace(chuoi) ? null : chuoi;
     }
 
     private static Func<PhanHoiApi, YeuCauApi, NguCanhKiemThu, Task<KetQuaKiemTraThem>> KiemTraCanEditNeuCo(bool mongDoi)

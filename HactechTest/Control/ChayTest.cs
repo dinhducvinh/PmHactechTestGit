@@ -1,10 +1,8 @@
 using System.Drawing;
 using HactechTest.ApiShopTesting.Core;
 using HactechTest.ApiShopTesting.Seed;
-using HactechTest.Services.App;
 using HactechTest.Services.ChayTest;
 using HactechTest.Services.Configuration;
-using HactechTest.Services.History;
 using HactechTest.Services.Reports;
 
 namespace HactechTest.Control
@@ -13,14 +11,17 @@ namespace HactechTest.Control
     {
         private readonly DichVuDanhSachKichBan _dichVuDanhSachKichBan = new();
         private readonly DichVuChayTestApi _dichVuChayTest = new();
+        private readonly DichVuKetQuaChayTest _dichVuKetQuaChayTest = new();
         private readonly List<KichBanApi> _tatCaKichBan = new();
         private readonly List<KichBanApi> _dsTestCaseHienThi = new();
         private readonly List<KetQuaChay> _ketQuaPhienHienTai = new();
+        private readonly HashSet<string> _maTestCaseDuocChon = new(StringComparer.OrdinalIgnoreCase);
 
         private CancellationTokenSource? _cts;
         private bool _dangChay;
         private bool _dangSuaBaseUrl;
         private bool _dangNapBoLoc;
+        private bool _dangDongBoDanhSachTestCase;
         private bool _daNapBoLocLanDau;
         private bool _daLuuPhienHienTai;
         private bool _dangLuuPhienHienTai;
@@ -41,6 +42,8 @@ namespace HactechTest.Control
                 btnTaiTestCase.Click += async (_, _) => await TaiTestCaseTheoBoLocAsync();
                 cboBoSuuTap.SelectedIndexChanged += CboBoSuuTap_SelectedIndexChanged;
                 cboModule.SelectedIndexChanged += async (_, _) => await TaiTestCaseTheoBoLocAsync();
+                txtTimKiemTestCase.TextChanged += (_, _) => ApDungBoLocTestCase();
+                clbDanhSachTestCase.ItemCheck += ClbDanhSachTestCase_ItemCheck;
                 btnChonTatCa.Click += (_, _) => ChonTatCaTrongList(true);
                 btnBoChonTatCa.Click += (_, _) => ChonTatCaTrongList(false);
                 btnChayTatCa.Click += async (_, _) => await ChayAsync(false);
@@ -49,6 +52,7 @@ namespace HactechTest.Control
                 btnSuaUrl.Click += (_, _) => BatDauSuaBaseUrl();
                 btnLuuUrl.Click += (_, _) => LuuBaseUrl();
                 btnLuuVaoCSDL.Click += async (_, _) => await BtnLuuVaoCSDL_ClickAsync();
+                btnLocFail.Click += (_, _) => SapXepKetQuaKhongPassLenDau();
                 btnLuuBaoCao.Click += (_, _) => LuuBaoCao();
                 btnKiemTraSeed.Click += async (_, _) => await BtnKiemTraSeed_ClickAsync();
 
@@ -277,22 +281,8 @@ namespace HactechTest.Control
                 return;
             }
 
-            var nhom = cboModule.SelectedItem?.ToString();
-            var danhSach = string.IsNullOrWhiteSpace(nhom) || nhom == "(Tất cả)"
-                ? _tatCaKichBan
-                : _tatCaKichBan.Where(x => string.Equals(x.Nhom, nhom, StringComparison.OrdinalIgnoreCase)).ToList();
-
-            clbDanhSachTestCase.Items.Clear();
-            _dsTestCaseHienThi.Clear();
-            _dsTestCaseHienThi.AddRange(danhSach);
-
-            foreach (var tc in _dsTestCaseHienThi)
-            {
-                clbDanhSachTestCase.Items.Add($"[{tc.Nhom}] {tc.Ma} - {tc.TenHienThi}", true);
-            }
-
-            lblTrangThaiChay.Text = $"Sẵn sàng - {_dsTestCaseHienThi.Count} testcase.";
-            HienThiChiTietMacDinh();
+            KhoiTaoLuaChonMacDinh();
+            ApDungBoLocTestCase();
         }
 
         private async Task NapTatCaKichBanAsync()
@@ -310,12 +300,126 @@ namespace HactechTest.Control
             }
         }
 
+        private List<KichBanApi> LayDanhSachTheoModule()
+        {
+            var nhom = cboModule.SelectedItem?.ToString();
+            return string.IsNullOrWhiteSpace(nhom) || nhom == "(Tất cả)"
+                ? _tatCaKichBan.ToList()
+                : _tatCaKichBan
+                    .Where(x => string.Equals(x.Nhom, nhom, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+        }
+
+        private void KhoiTaoLuaChonMacDinh()
+        {
+            _maTestCaseDuocChon.Clear();
+            foreach (var tc in LayDanhSachTheoModule())
+            {
+                _maTestCaseDuocChon.Add(tc.Ma);
+            }
+        }
+
+        private void ApDungBoLocTestCase()
+        {
+            if (cboModule.Items.Count == 0)
+            {
+                return;
+            }
+
+            var danhSachTheoModule = LayDanhSachTheoModule();
+            var tuKhoa = txtTimKiemTestCase.Text.Trim();
+            var danhSach = string.IsNullOrWhiteSpace(tuKhoa)
+                ? danhSachTheoModule
+                : danhSachTheoModule.Where(tc => KichBanKhopTuKhoa(tc, tuKhoa)).ToList();
+
+            _dangDongBoDanhSachTestCase = true;
+            try
+            {
+                clbDanhSachTestCase.Items.Clear();
+                _dsTestCaseHienThi.Clear();
+                _dsTestCaseHienThi.AddRange(danhSach);
+
+                foreach (var tc in _dsTestCaseHienThi)
+                {
+                    clbDanhSachTestCase.Items.Add(
+                        $"[{tc.Nhom}] {tc.Ma} - {tc.TenHienThi}",
+                        _maTestCaseDuocChon.Contains(tc.Ma));
+                }
+            }
+            finally
+            {
+                _dangDongBoDanhSachTestCase = false;
+            }
+
+            CapNhatTrangThaiDanhSachTestCase(danhSachTheoModule.Count);
+            HienThiChiTietMacDinh();
+        }
+
+        private static bool KichBanKhopTuKhoa(KichBanApi tc, string tuKhoa)
+        {
+            var noiDungTim = $"{tc.Nhom} {tc.Ma} {tc.TenHienThi} {tc.MoTa}";
+            return tuKhoa
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .All(tu => noiDungTim.Contains(tu, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private void CapNhatTrangThaiDanhSachTestCase(int tongTheoModule)
+        {
+            var daChon = _dsTestCaseHienThi.Count(tc => _maTestCaseDuocChon.Contains(tc.Ma));
+            var dangTim = !string.IsNullOrWhiteSpace(txtTimKiemTestCase.Text);
+            lblTrangThaiChay.Text = dangTim
+                ? $"Sẵn sàng - tìm thấy {_dsTestCaseHienThi.Count}/{tongTheoModule} testcase, đã chọn {daChon}."
+                : $"Sẵn sàng - {_dsTestCaseHienThi.Count} testcase, đã chọn {daChon}.";
+        }
+
+        private void ClbDanhSachTestCase_ItemCheck(object? sender, ItemCheckEventArgs e)
+        {
+            if (_dangDongBoDanhSachTestCase ||
+                e.Index < 0 ||
+                e.Index >= _dsTestCaseHienThi.Count)
+            {
+                return;
+            }
+
+            var ma = _dsTestCaseHienThi[e.Index].Ma;
+            if (e.NewValue == CheckState.Checked)
+            {
+                _maTestCaseDuocChon.Add(ma);
+            }
+            else
+            {
+                _maTestCaseDuocChon.Remove(ma);
+            }
+
+            BeginInvoke(() => CapNhatTrangThaiDanhSachTestCase(LayDanhSachTheoModule().Count));
+        }
+
         private void ChonTatCaTrongList(bool isChecked)
         {
-            for (var i = 0; i < clbDanhSachTestCase.Items.Count; i++)
+            _dangDongBoDanhSachTestCase = true;
+            try
             {
-                clbDanhSachTestCase.SetItemChecked(i, isChecked);
+                for (var i = 0; i < clbDanhSachTestCase.Items.Count; i++)
+                {
+                    var ma = _dsTestCaseHienThi[i].Ma;
+                    if (isChecked)
+                    {
+                        _maTestCaseDuocChon.Add(ma);
+                    }
+                    else
+                    {
+                        _maTestCaseDuocChon.Remove(ma);
+                    }
+
+                    clbDanhSachTestCase.SetItemChecked(i, isChecked);
+                }
             }
+            finally
+            {
+                _dangDongBoDanhSachTestCase = false;
+            }
+
+            CapNhatTrangThaiDanhSachTestCase(LayDanhSachTheoModule().Count);
         }
 
         // ----------------------------------------------------------------
@@ -449,8 +553,13 @@ namespace HactechTest.Control
 
         private void ThemDongKetQua(KetQuaChay r)
         {
+            ThemDongKetQua(r, _ketQuaPhienHienTai.Count);
+        }
+
+        private void ThemDongKetQua(KetQuaChay r, int stt)
+        {
             var index = dgvKetQuaChay.Rows.Add(
-                _ketQuaPhienHienTai.Count,
+                stt,
                 r.TenHienThi,
                 DinhDangKetQuaKiemThu.TrangThaiHienThi(r.TrangThai),
                 r.MaThucTe ?? (r.HttpStatus.HasValue ? "HTTP " + r.HttpStatus.Value : "-"),
@@ -474,16 +583,68 @@ namespace HactechTest.Control
             };
         }
 
+        private void SapXepKetQuaKhongPassLenDau()
+        {
+            if (_ketQuaPhienHienTai.Count == 0)
+            {
+                return;
+            }
+
+            var ketQuaSapXep = _ketQuaPhienHienTai
+                .Select((ketQua, index) => new
+                {
+                    KetQua = ketQua,
+                    Stt = index + 1
+                })
+                .OrderBy(x => x.KetQua.TrangThai == TrangThaiKetQua.Dat ? 1 : 0)
+                .ThenBy(x => x.Stt)
+                .ToList();
+
+            dgvKetQuaChay.SuspendLayout();
+            try
+            {
+                dgvKetQuaChay.Rows.Clear();
+                foreach (var item in ketQuaSapXep)
+                {
+                    ThemDongKetQua(item.KetQua, item.Stt);
+                }
+            }
+            finally
+            {
+                dgvKetQuaChay.ResumeLayout();
+            }
+
+            var dongCanChon = ketQuaSapXep.FindIndex(x => x.KetQua.TrangThai != TrangThaiKetQua.Dat);
+            if (dongCanChon < 0)
+            {
+                dongCanChon = 0;
+            }
+
+            ChonDongKetQua(dongCanChon);
+        }
+
+        private void ChonDongKetQua(int rowIndex)
+        {
+            if (rowIndex < 0 || rowIndex >= dgvKetQuaChay.Rows.Count)
+            {
+                return;
+            }
+
+            dgvKetQuaChay.ClearSelection();
+            var row = dgvKetQuaChay.Rows[rowIndex];
+            row.Selected = true;
+            dgvKetQuaChay.CurrentCell = row.Cells[colSTT.Index];
+            if (row.Tag is KetQuaChay ketQua)
+            {
+                HienThiChiTietKetQua(ketQua);
+            }
+        }
+
         private void CapNhatTongKet()
         {
-            var tong = _ketQuaPhienHienTai.Count;
-            var dat = _ketQuaPhienHienTai.Count(item => item.TrangThai == TrangThaiKetQua.Dat);
-            var khongDat = tong - dat;
-            var tyLe = tong == 0 ? 0 : Math.Round(100m * dat / tong, 2);
-            var tb = tong == 0 ? 0 : (int)_ketQuaPhienHienTai.Average(item => item.ThoiGian.TotalMilliseconds);
-
-            lblTongKet.Text =
-                $"Tổng: {tong}   Đạt: {dat}   Không đạt: {khongDat}   Tỷ lệ: {tyLe}%   TB: {tb} ms";
+            lblTongKet.Text = _dichVuKetQuaChayTest
+                .TaoTongKet(_ketQuaPhienHienTai)
+                .TaoNoiDungHienThi();
         }
 
         private async Task BtnLuuVaoCSDL_ClickAsync()
@@ -518,18 +679,10 @@ namespace HactechTest.Control
             {
                 _dangLuuPhienHienTai = true;
                 CapNhatTrangThaiNut(_dangChay);
-                var store = new PhienChayStore(cauHinh.ChuoiKetNoiSqlServer);
-                var ketQuaLuu = _ketQuaPhienHienTai
-                    .Select((item, index) => BoChuyenDoiKetQuaChayTest.TaoKetQuaLuuPhien(
-                        item,
-                        index + 1,
-                        cauHinh.BaseUrl))
-                    .ToList();
-                var phienId = await store.LuuPhienChayAsync(
-                    _cheDoChayPhienHienTai,
-                    _cheDoLoiPhienHienTai,
-                    cauHinh.BaseUrl,
-                    ketQuaLuu);
+                var phienId = await _dichVuKetQuaChayTest.LuuPhienChayAsync(
+                    cauHinh.ChuoiKetNoiSqlServer,
+                    _ketQuaPhienHienTai,
+                    TaoThongTinPhienChay(cauHinh.BaseUrl));
 
                 _daLuuPhienHienTai = true;
                 _phienDaLuuId = phienId;
@@ -569,7 +722,8 @@ namespace HactechTest.Control
                 return;
             }
 
-            var thongTinBaoCao = TaoThongTinBaoCao();
+            var thongTinBaoCao = _dichVuKetQuaChayTest.TaoThongTinBaoCao(
+                TaoThongTinPhienChay(txtBaseUrl.Text));
             var ketQuaLuu = new BaoCaoPhienChayService()
                 .LuuBaoCao(dialog.FileName, thongTinBaoCao, _ketQuaPhienHienTai);
 
@@ -577,27 +731,14 @@ namespace HactechTest.Control
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
-        private ThongTinBaoCaoPhienChay TaoThongTinBaoCao()
+        private ThongTinPhienChayHienTai TaoThongTinPhienChay(string baseUrl)
         {
-            return new ThongTinBaoCaoPhienChay(
+            return new ThongTinPhienChayHienTai(
                 _batDauLuc,
                 _ketThucLuc,
-                LayTenDangNhapNguoiThucHien(),
-                Environment.MachineName,
-                Environment.OSVersion.VersionString,
-                txtBaseUrl.Text,
+                baseUrl,
                 _cheDoChayPhienHienTai,
                 _cheDoLoiPhienHienTai);
-        }
-
-        private static string LayTenDangNhapNguoiThucHien()
-        {
-            if (AppHost.IsInitialized && AppHost.Instance.TaiKhoanDangNhap is { } taiKhoan)
-            {
-                return taiKhoan.TenDangNhap;
-            }
-
-            return Environment.UserName;
         }
 
         // ----------------------------------------------------------------
@@ -675,11 +816,13 @@ namespace HactechTest.Control
             btnChayDaChon.Enabled = choPhepThaoTac;
             btnDungLai.Enabled = dangChay;
             btnLuuVaoCSDL.Enabled = CoTheLuuPhienVaoCSDL();
+            btnLocFail.Enabled = choPhepThaoTac && _ketQuaPhienHienTai.Count > 0;
             btnLuuBaoCao.Enabled = choPhepThaoTac && _ketQuaPhienHienTai.Count > 0;
 
             btnTaiTestCase.Enabled = choPhepThaoTac;
             cboBoSuuTap.Enabled = choPhepThaoTac;
             cboModule.Enabled = choPhepThaoTac;
+            txtTimKiemTestCase.Enabled = choPhepThaoTac;
             clbDanhSachTestCase.Enabled = choPhepThaoTac;
             CapNhatTrangThaiBaseUrl(choPhepThaoTac);
             numTimeout.Enabled = choPhepThaoTac;
@@ -694,11 +837,13 @@ namespace HactechTest.Control
             btnChayDaChon.Enabled = choPhepThaoTac;
             btnDungLai.Enabled = _dangChay;
             btnLuuVaoCSDL.Enabled = !dangKiemTraSeed && CoTheLuuPhienVaoCSDL();
+            btnLocFail.Enabled = choPhepThaoTac && _ketQuaPhienHienTai.Count > 0;
             btnLuuBaoCao.Enabled = choPhepThaoTac && _ketQuaPhienHienTai.Count > 0;
 
             btnTaiTestCase.Enabled = choPhepThaoTac;
             cboBoSuuTap.Enabled = choPhepThaoTac;
             cboModule.Enabled = choPhepThaoTac;
+            txtTimKiemTestCase.Enabled = choPhepThaoTac;
             clbDanhSachTestCase.Enabled = choPhepThaoTac;
             CapNhatTrangThaiBaseUrl(choPhepThaoTac);
             numTimeout.Enabled = choPhepThaoTac;

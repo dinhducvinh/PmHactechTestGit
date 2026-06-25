@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using HactechTest.ApiShopTesting.Core;
-using HactechTest.Services.History;
+using HactechTest.Models.History;
 
 namespace HactechTest.Services.ChayTest;
 

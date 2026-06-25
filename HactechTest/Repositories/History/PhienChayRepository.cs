@@ -1,26 +1,28 @@
-using HactechTest.Services.App;
-using HactechTest.Services.Configuration;
+using HactechTest.Models.History;
 using Microsoft.Data.SqlClient;
 
-namespace HactechTest.Services.History
+namespace HactechTest.Repositories.History
 {
-    public sealed class PhienChayStore
+    public sealed class PhienChayRepository
     {
         private readonly string _connectionString;
 
-        public PhienChayStore(string connectionString)
+        public PhienChayRepository(string connectionString)
         {
             _connectionString = connectionString;
         }
 
         public async Task<int> LuuPhienChayAsync(
+            string nguoiChay,
+            string tenMay,
+            string tenHeDieuHanh,
             string cheDoChay,
             string cheDoLoi,
             string baseUrl,
             IReadOnlyList<ChiTietKetQuaTestCase> ketQua,
             CancellationToken ct = default)
         {
-            await using var conn = await CauHinhUngDung.OpenConnectionAsync(_connectionString, ct);
+            await using var conn = await KetNoiSql.MoAsync(_connectionString, ct);
             await using var tran = (SqlTransaction)await conn.BeginTransactionAsync(ct);
 
             var cheDoChayDb = string.Equals(cheDoChay, "selected", StringComparison.OrdinalIgnoreCase)
@@ -48,9 +50,9 @@ namespace HactechTest.Services.History
                 var ty = tong == 0 ? 0m : Math.Round(100m * dat / tong, 2);
                 var tb = tong == 0 ? 0 : (int)ketQua.Average(r => r.DurationMs);
 
-                cmd.Parameters.AddWithValue("@nc", LayTenDangNhapNguoiChay());
-                cmd.Parameters.AddWithValue("@tm", Environment.MachineName);
-                cmd.Parameters.AddWithValue("@os", Environment.OSVersion.VersionString);
+                cmd.Parameters.AddWithValue("@nc", string.IsNullOrWhiteSpace(nguoiChay) ? DBNull.Value : nguoiChay);
+                cmd.Parameters.AddWithValue("@tm", string.IsNullOrWhiteSpace(tenMay) ? DBNull.Value : tenMay);
+                cmd.Parameters.AddWithValue("@os", string.IsNullOrWhiteSpace(tenHeDieuHanh) ? DBNull.Value : tenHeDieuHanh);
                 cmd.Parameters.AddWithValue("@bst", "API Shop");
                 cmd.Parameters.AddWithValue("@mod", "RESTful API thương mại điện tử");
                 cmd.Parameters.AddWithValue("@cdc", cheDoChayDb);
@@ -97,7 +99,7 @@ namespace HactechTest.Services.History
         public async Task<List<PhienChayDaLuu>> LayDanhSachAsync(string keyword, CancellationToken ct = default)
         {
             var tomTat = new List<PhienChayTomTat>();
-            await using var conn = await CauHinhUngDung.OpenConnectionAsync(_connectionString, ct);
+            await using var conn = await KetNoiSql.MoAsync(_connectionString, ct);
             await using (var cmd = conn.CreateCommand())
             {
                 cmd.CommandText = """
@@ -170,6 +172,45 @@ namespace HactechTest.Services.History
             return ketQua;
         }
 
+        public async Task<List<ChiTietPhienChayDaLuu>> LayChiTietTomTatAsync(int phienChayId, CancellationToken ct = default)
+        {
+            if (phienChayId <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(phienChayId), "ID phiÃªn cháº¡y khÃ´ng há»£p lá»‡.");
+            }
+
+            var details = new List<ChiTietPhienChayDaLuu>();
+            await using var conn = await KetNoiSql.MoAsync(_connectionString, ct);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = """
+                SELECT
+                    so_thu_tu,
+                    ISNULL(ten_test_case, N''),
+                    ket_qua,
+                    ISNULL(ma_trang_thai_thuc_te, N''),
+                    thoi_gian_ms,
+                    ISNULL(ly_do, N'')
+                FROM dbo.chi_tiet_phien_chay
+                WHERE ID_phien_chay = @id
+                ORDER BY so_thu_tu;
+                """;
+            cmd.Parameters.AddWithValue("@id", phienChayId);
+
+            await using var reader = await cmd.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
+            {
+                details.Add(new ChiTietPhienChayDaLuu(
+                    reader.GetInt32(0),
+                    reader.GetString(1),
+                    reader.GetString(2),
+                    reader.GetString(3),
+                    reader.GetInt32(4),
+                    reader.GetString(5)));
+            }
+
+            return details;
+        }
+
         public async Task<List<ChiTietPhienChayDaLuu>> LayChiTietAsync(int phienChayId, CancellationToken ct = default)
         {
             if (phienChayId <= 0)
@@ -178,7 +219,7 @@ namespace HactechTest.Services.History
             }
 
             var details = new List<ChiTietPhienChayDaLuu>();
-            await using var conn = await CauHinhUngDung.OpenConnectionAsync(_connectionString, ct);
+            await using var conn = await KetNoiSql.MoAsync(_connectionString, ct);
             await using var cmd = conn.CreateCommand();
             cmd.CommandText = """
                 SELECT
@@ -226,7 +267,7 @@ namespace HactechTest.Services.History
                 throw new ArgumentOutOfRangeException(nameof(phienChayId), "ID phiên chạy không hợp lệ.");
             }
 
-            await using var conn = await CauHinhUngDung.OpenConnectionAsync(_connectionString, ct);
+            await using var conn = await KetNoiSql.MoAsync(_connectionString, ct);
             await using var tran = (SqlTransaction)await conn.BeginTransactionAsync(ct);
 
             await using (var cmd = conn.CreateCommand())
@@ -256,16 +297,6 @@ namespace HactechTest.Services.History
             return r.HttpStatus.HasValue ? $"HTTP_{r.HttpStatus.Value}" : DBNull.Value;
         }
 
-        private static string LayTenDangNhapNguoiChay()
-        {
-            if (AppHost.IsInitialized && AppHost.Instance.TaiKhoanDangNhap is { } taiKhoan)
-            {
-                return taiKhoan.TenDangNhap;
-            }
-
-            return Environment.UserName;
-        }
-
         private sealed record PhienChayTomTat(
             int Id,
             DateTime RunAt,
@@ -282,32 +313,4 @@ namespace HactechTest.Services.History
             int AverageDurationMs);
     }
 
-    public sealed record PhienChayDaLuu(
-        int Id,
-        DateTime RunAt,
-        string NguoiChay,
-        string Machine,
-        string OperatingSystem,
-        string BaseUrl,
-        string CheDoChay,
-        string CheDoLoi,
-        int TotalTests,
-        int PassedTests,
-        int FailedTests,
-        decimal PassRate,
-        int AverageDurationMs,
-        List<ChiTietPhienChayDaLuu> Details);
-
-    public sealed record ChiTietPhienChayDaLuu(
-        int SequenceNo,
-        string TestCaseName,
-        string Result,
-        string ActualStatus,
-        int DurationMs,
-        string Reason,
-        string HttpMethod = "",
-        string Url = "",
-        string ExpectedStatus = "",
-        string RequestBody = "",
-        string ResponseBody = "");
 }

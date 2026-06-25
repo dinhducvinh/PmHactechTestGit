@@ -1,7 +1,6 @@
 using HactechTest.ApiShopTesting.Core;
-using HactechTest.ApiShopTesting.KichBan;
-using HactechTest.Services.App;
-using HactechTest.Services.DynamicTests;
+using HactechTest.Models.TestCases;
+using HactechTest.Services.TestCases;
 
 namespace HactechTest.Control
 {
@@ -9,12 +8,14 @@ namespace HactechTest.Control
     {
         public event EventHandler? OpenRunTestRequested;
 
-        private readonly IReadOnlyList<KichBanApi> _kichBanCode = BoKichBanApi.TaoTatCaKichBan();
+        private readonly BoSuuTapService _boSuuTapService = new();
+        private readonly IReadOnlyList<KichBanApi> _kichBanCode;
         private List<TestCaseDong> _testCaseDong = new();
         private bool _daKhoiTao;
 
         public BoSuuTap()
         {
+            _kichBanCode = _boSuuTapService.LayKichBanCode();
             InitializeComponent();
             if (!DesignMode)
             {
@@ -107,15 +108,14 @@ namespace HactechTest.Control
                 return;
             }
 
-            var store = TaoStoreTestCaseDong();
-            if (store is null)
+            if (!DamBaoCoTheThaoTacTestCaseDong())
             {
                 return;
             }
 
             try
             {
-                await store.XoaAsync(tag.TestCaseDongId.Value);
+                await _boSuuTapService.XoaTestCaseDongAsync(tag.TestCaseDongId.Value);
                 _daKhoiTao = false;
                 await NapCayAsync();
             }
@@ -148,15 +148,14 @@ namespace HactechTest.Control
                 return;
             }
 
-            var store = TaoStoreTestCaseDong();
-            if (store is null)
+            if (!DamBaoCoTheThaoTacTestCaseDong())
             {
                 return;
             }
 
             try
             {
-                var testCase = await store.LayTheoIdAsync(tag.TestCaseDongId.Value);
+                var testCase = await _boSuuTapService.LayTestCaseDongAsync(tag.TestCaseDongId.Value);
                 if (testCase is null)
                 {
                     MessageBox.Show("Không tìm thấy test case trong database.", "Thông báo");
@@ -171,7 +170,7 @@ namespace HactechTest.Control
                     return;
                 }
 
-                await store.LuuAsync(form.TestCase);
+                await _boSuuTapService.LuuTestCaseDongAsync(form.TestCase);
                 _daKhoiTao = false;
                 await NapCayAsync();
             }
@@ -183,8 +182,7 @@ namespace HactechTest.Control
 
         private async void BtnThemApi_Click(object? sender, EventArgs e)
         {
-            var store = TaoStoreTestCaseDong();
-            if (store is null)
+            if (!DamBaoCoTheThaoTacTestCaseDong())
             {
                 return;
             }
@@ -198,7 +196,7 @@ namespace HactechTest.Control
 
             try
             {
-                await store.LuuAsync(form.TestCase);
+                await _boSuuTapService.LuuTestCaseDongAsync(form.TestCase);
                 _daKhoiTao = false;
                 await NapCayAsync();
             }
@@ -215,8 +213,7 @@ namespace HactechTest.Control
 
         private async Task<List<TestCaseDong>> LayDanhSachTestCaseDongAsync()
         {
-            var store = TaoStoreTestCaseDong(false);
-            if (store is null)
+            if (!_boSuuTapService.CoTheThaoTacTestCaseDong())
             {
                 lblGoiY.Text = "Chưa kết nối được database nên chỉ hiển thị test case [CODE].";
                 return [];
@@ -224,7 +221,7 @@ namespace HactechTest.Control
 
             try
             {
-                var danhSach = await store.LayDanhSachAsync();
+                var danhSach = await _boSuuTapService.LayDanhSachTestCaseDongAsync();
                 lblGoiY.Text = "Test case [DB] là case cơ bản thêm từ giao diện; test case [CODE] là case phức tạp viết trong source.";
                 return danhSach;
             }
@@ -235,19 +232,15 @@ namespace HactechTest.Control
             }
         }
 
-        private TestCaseDongStore? TaoStoreTestCaseDong(bool thongBaoNeuLoi = true)
+        private bool DamBaoCoTheThaoTacTestCaseDong()
         {
-            if (!AppHost.IsInitialized || !AppHost.Instance.DatabaseSanSang)
+            if (_boSuuTapService.CoTheThaoTacTestCaseDong())
             {
-                if (thongBaoNeuLoi)
-                {
-                    MessageBox.Show("Chưa kết nối được database HactechTestDb nên không thể thao tác test case cơ bản.", "Thông báo");
-                }
-
-                return null;
+                return true;
             }
 
-            return new TestCaseDongStore(AppHost.Instance.ConnectionString);
+            MessageBox.Show("Chưa kết nối được database HactechTestDb nên không thể thao tác test case cơ bản.", "Thông báo");
+            return false;
         }
 
         private string? LayNhomDangChon()

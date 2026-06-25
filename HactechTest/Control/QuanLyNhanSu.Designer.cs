@@ -17,6 +17,8 @@ namespace HactechTest.Control
 
         private void InitializeComponent()
         {
+            DataGridViewCellStyle dataGridViewCellStyle1 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle2 = new DataGridViewCellStyle();
             pnlRoot = new Panel();
             pnlNoiDung = new Panel();
             tblNoiDung = new TableLayoutPanel();
@@ -98,7 +100,7 @@ namespace HactechTest.Control
             tblNoiDung.Name = "tblNoiDung";
             tblNoiDung.RowCount = 1;
             tblNoiDung.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            tblNoiDung.Size = new Size(1624, 657);
+            tblNoiDung.Size = new Size(1624, 645);
             tblNoiDung.TabIndex = 0;
             // 
             // pnlDanhSach
@@ -110,7 +112,7 @@ namespace HactechTest.Control
             pnlDanhSach.Location = new Point(0, 0);
             pnlDanhSach.Margin = new Padding(0, 0, 16, 0);
             pnlDanhSach.Name = "pnlDanhSach";
-            pnlDanhSach.Size = new Size(1055, 657);
+            pnlDanhSach.Size = new Size(1055, 645);
             pnlDanhSach.TabIndex = 0;
             // 
             // dgvNhanSu
@@ -118,16 +120,24 @@ namespace HactechTest.Control
             dgvNhanSu.AllowUserToAddRows = false;
             dgvNhanSu.AllowUserToDeleteRows = false;
             dgvNhanSu.BackgroundColor = Color.White;
-            dgvNhanSu.BorderStyle = BorderStyle.FixedSingle;
             dgvNhanSu.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
-            dgvNhanSu.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(235, 240, 247);
-            dgvNhanSu.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            dgvNhanSu.ColumnHeadersDefaultCellStyle.ForeColor = Color.FromArgb(30, 39, 50);
+            dataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle1.BackColor = Color.FromArgb(235, 240, 247);
+            dataGridViewCellStyle1.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            dataGridViewCellStyle1.ForeColor = Color.FromArgb(30, 39, 50);
+            dataGridViewCellStyle1.SelectionBackColor = SystemColors.Highlight;
+            dataGridViewCellStyle1.SelectionForeColor = SystemColors.HighlightText;
+            dataGridViewCellStyle1.WrapMode = DataGridViewTriState.True;
+            dgvNhanSu.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle1;
             dgvNhanSu.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dgvNhanSu.DefaultCellStyle.BackColor = Color.White;
-            dgvNhanSu.DefaultCellStyle.ForeColor = Color.FromArgb(24, 30, 37);
-            dgvNhanSu.DefaultCellStyle.SelectionBackColor = Color.FromArgb(214, 228, 255);
-            dgvNhanSu.DefaultCellStyle.SelectionForeColor = Color.FromArgb(20, 32, 45);
+            dataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle2.BackColor = Color.White;
+            dataGridViewCellStyle2.Font = new Font("Segoe UI", 9F);
+            dataGridViewCellStyle2.ForeColor = Color.FromArgb(24, 30, 37);
+            dataGridViewCellStyle2.SelectionBackColor = Color.FromArgb(214, 228, 255);
+            dataGridViewCellStyle2.SelectionForeColor = Color.FromArgb(20, 32, 45);
+            dataGridViewCellStyle2.WrapMode = DataGridViewTriState.False;
+            dgvNhanSu.DefaultCellStyle = dataGridViewCellStyle2;
             dgvNhanSu.Dock = DockStyle.Fill;
             dgvNhanSu.EnableHeadersVisualStyles = false;
             dgvNhanSu.GridColor = Color.FromArgb(216, 222, 230);
@@ -139,7 +149,7 @@ namespace HactechTest.Control
             dgvNhanSu.RowHeadersWidth = 48;
             dgvNhanSu.RowTemplate.Height = 30;
             dgvNhanSu.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dgvNhanSu.Size = new Size(1053, 655);
+            dgvNhanSu.Size = new Size(1053, 643);
             dgvNhanSu.TabIndex = 0;
             // 
             // pnlForm
@@ -151,7 +161,7 @@ namespace HactechTest.Control
             pnlForm.Location = new Point(1071, 0);
             pnlForm.Margin = new Padding(0);
             pnlForm.Name = "pnlForm";
-            pnlForm.Size = new Size(553, 657);
+            pnlForm.Size = new Size(553, 645);
             pnlForm.TabIndex = 1;
             // 
             // tblForm
@@ -193,7 +203,7 @@ namespace HactechTest.Control
             tblForm.RowStyles.Add(new RowStyle(SizeType.Absolute, 38F));
             tblForm.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
             tblForm.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            tblForm.Size = new Size(551, 655);
+            tblForm.Size = new Size(551, 643);
             tblForm.TabIndex = 0;
             // 
             // lblDangChon
@@ -355,7 +365,7 @@ namespace HactechTest.Control
             pnlNutForm.Location = new Point(20, 484);
             pnlNutForm.Margin = new Padding(0);
             pnlNutForm.Name = "pnlNutForm";
-            pnlNutForm.Size = new Size(511, 151);
+            pnlNutForm.Size = new Size(511, 139);
             pnlNutForm.TabIndex = 7;
             // 
             // btnLamMoiForm
@@ -427,7 +437,7 @@ namespace HactechTest.Control
             lblTimKiem.AutoSize = true;
             lblTimKiem.Location = new Point(16, 17);
             lblTimKiem.Name = "lblTimKiem";
-            lblTimKiem.Size = new Size(75, 20);
+            lblTimKiem.Size = new Size(73, 20);
             lblTimKiem.TabIndex = 4;
             lblTimKiem.Text = "Tìm kiếm:";
             // 

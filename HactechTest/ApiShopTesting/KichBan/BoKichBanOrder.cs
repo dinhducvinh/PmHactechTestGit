@@ -526,17 +526,21 @@ public static partial class BoKichBanApi
             OrderSaiToken);
 
         Them(ds, "ORDER-CART-ADD-01", "Order", "Thêm sản phẩm mới vào giỏ",
-            "Buyer/seller không bị block, sản phẩm chưa có trong giohang_seed của buyer.",
+            "Buyer/seller không bị block. Nếu server đã có sẵn cart item ngoài giohang_seed thì kiểm tra cộng dồn đúng số lượng.",
             async ctx =>
             {
                 var (buyer, sanPham) = ChonCapTaiKhoanSanPhamChuaCoGioHang(ctx);
                 const int soLuong = 1;
+                var sanPhamIdServer = IdBatBuoc(sanPham.SanPhamIdServer, "sanpham_seed.sp_id_server");
+                var token = await LayTokenCuaTaiKhoanAsync(ctx, buyer);
+                var soLuongTruoc = await LaySoLuongGioHangTrenServerAsync(ctx, token, sanPhamIdServer) ?? 0;
                 var req = new YeuCauApi(HttpMethod.Post, "/order/add_cart",
-                    Obj(("product_id", IdBatBuoc(sanPham.SanPhamIdServer, "sanpham_seed.sp_id_server")), ("quantity", soLuong)),
-                    await LayTokenCuaTaiKhoanAsync(ctx, buyer));
+                    Obj(("product_id", sanPhamIdServer), ("quantity", soLuong)),
+                    token);
                 req.Tam["buyer"] = buyer;
                 req.Tam["sanPham"] = sanPham;
                 req.Tam["soLuong"] = soLuong;
+                req.Tam["soLuongTruoc"] = soLuongTruoc;
                 return req;
             },
             Ok,
@@ -549,13 +553,17 @@ public static partial class BoKichBanApi
             {
                 var cap = LayGioHangDangTrongGio(ctx);
                 const int soLuongThem = 2;
+                var sanPhamIdServer = IdBatBuoc(cap.GioHang.SanPhamIdServer, "giohang_seed.sp_id_server");
+                var token = await LayTokenCuaTaiKhoanAsync(ctx, cap.Buyer);
+                var soLuongTruoc = await LaySoLuongGioHangTrenServerAsync(ctx, token, sanPhamIdServer) ?? cap.GioHang.SoLuong;
                 var req = new YeuCauApi(HttpMethod.Post, "/order/add_cart",
-                    Obj(("product_id", IdBatBuoc(cap.GioHang.SanPhamIdServer, "giohang_seed.sp_id_server")), ("quantity", soLuongThem)),
-                    await LayTokenCuaTaiKhoanAsync(ctx, cap.Buyer));
+                    Obj(("product_id", sanPhamIdServer), ("quantity", soLuongThem)),
+                    token);
                 req.Tam["buyer"] = cap.Buyer;
                 req.Tam["sanPham"] = cap.SanPham;
                 req.Tam["gioHang"] = cap.GioHang;
                 req.Tam["soLuong"] = soLuongThem;
+                req.Tam["soLuongTruoc"] = soLuongTruoc;
                 return req;
             },
             Ok,
@@ -679,6 +687,84 @@ public static partial class BoKichBanApi
             },
             OrderSaiToken);
     }
+
+    private static async Task<int?> LaySoLuongGioHangTrenServerAsync(
+        NguCanhKiemThu ctx,
+        string token,
+        int sanPhamIdServer)
+    {
+        var response = await ctx.Api.GuiAsync(new YeuCauApi(HttpMethod.Get, "/order/get_cart", token: token));
+        if (!LaMaThanhCong(response))
+        {
+            return null;
+        }
+
+        return TimCartItemTheoSanPham(response.Data, sanPhamIdServer)?.SoLuong ?? 0;
+    }
+
+    private static CartItemDangCo? TimCartItemTheoSanPham(JsonNode? node, int sanPhamIdServer)
+    {
+        foreach (var item in LayCartItemObjects(node))
+        {
+            var productId =
+                HelperTC.DocIntTuObject(item, "product_id", "sp_id", "product_id_server") ??
+                HelperTC.DocIntTuObject(item["product"], "id", "product_id", "sp_id");
+            if (productId != sanPhamIdServer)
+            {
+                continue;
+            }
+
+            var soLuong = HelperTC.DocIntTuObject(item, "quantity", "so_luong", "qty") ?? 0;
+            return new CartItemDangCo(Math.Max(soLuong, 0));
+        }
+
+        return null;
+    }
+
+    private static IEnumerable<JsonObject> LayCartItemObjects(JsonNode? node)
+    {
+        if (node is JsonArray mang)
+        {
+            foreach (var item in mang)
+            {
+                foreach (var cartItem in LayCartItemObjects(item))
+                {
+                    yield return cartItem;
+                }
+            }
+
+            yield break;
+        }
+
+        if (node is not JsonObject obj)
+        {
+            yield break;
+        }
+
+        if (obj.ContainsKey("product_id") ||
+            obj.ContainsKey("sp_id") ||
+            obj.ContainsKey("product_id_server") ||
+            (obj.ContainsKey("product") &&
+             (obj.ContainsKey("quantity") || obj.ContainsKey("so_luong") || obj.ContainsKey("qty"))))
+        {
+            yield return obj;
+        }
+
+        foreach (var tenMang in new[] { "items", "cart_items", "carts", "cart", "data" })
+        {
+            if (!obj.TryGetPropertyValue(tenMang, out var child) || child is null)
+            {
+                continue;
+            }
+
+            foreach (var cartItem in LayCartItemObjects(child))
+            {
+                yield return cartItem;
+            }
+        }
+    }
+
+    private sealed record CartItemDangCo(int SoLuong);
 
     private static void ThemDonHang(List<KichBanApi> ds)
     {
@@ -1822,7 +1908,7 @@ public static partial class BoKichBanApi
             }
 
             var soLuongThem = request.Tam.TryGetValue("soLuong", out var soLuongTam) && soLuongTam is int sl ? sl : (int?)null;
-            var soLuongCu = request.Tam.TryGetValue("gioHang", out var gioHangTam) && gioHangTam is GioHangSeed gioHang ? gioHang.SoLuong : 0;
+            var soLuongCu = LaySoLuongGioHangTruocKhiThem(request);
             if (soLuongThem is > 0)
             {
                 var soLuongMongDoi = soLuongCu + soLuongThem.Value;
@@ -1840,6 +1926,20 @@ public static partial class BoKichBanApi
 
             return Task.FromResult(KetQuaKiemTraThem.ThanhCong);
         };
+    }
+
+    private static int LaySoLuongGioHangTruocKhiThem(YeuCauApi request)
+    {
+        if (request.Tam.TryGetValue("soLuongTruoc", out var soLuongTruocTam) &&
+            soLuongTruocTam is int soLuongTruoc)
+        {
+            return Math.Max(soLuongTruoc, 0);
+        }
+
+        return request.Tam.TryGetValue("gioHang", out var gioHangTam) &&
+               gioHangTam is GioHangSeed gioHang
+            ? Math.Max(gioHang.SoLuong, 0)
+            : 0;
     }
 
     private static Func<PhanHoiApi, YeuCauApi, NguCanhKiemThu, Task<KetQuaKiemTraThem>> KiemTraResponseCartCoIdVaSoLuong(string tenTamSoLuong)

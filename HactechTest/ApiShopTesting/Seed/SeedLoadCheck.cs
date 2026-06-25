@@ -671,6 +671,13 @@ namespace HactechTest.ApiShopTesting.Seed
                 SoDonHangCanCo = YeuCauDuLieuSeed.SoDonHangMucTieu,
                 SoDonHangCoTheSua = duLieu.DonHangSeed.Count(LaDonHangCoTheSua),
                 SoDonHangCoTheSuaCanCo = YeuCauDuLieuSeed.SoDonHangCoTheSuaMucTieu,
+                SoDonHangMoiTrangThaiCanCo = YeuCauDuLieuSeed.SoDonHangMoiTrangThaiMucTieu,
+                SoDonHangPending = DemDonHangTheoTrangThai(duLieu, "pending"),
+                SoDonHangConfirmed = DemDonHangTheoTrangThai(duLieu, "confirmed"),
+                SoDonHangShipping = DemDonHangTheoTrangThai(duLieu, "shipping"),
+                SoDonHangDelivered = DemDonHangTheoTrangThai(duLieu, "delivered"),
+                SoDonHangCancelled = DemDonHangTheoTrangThai(duLieu, "cancelled"),
+                SoDonHangRefunded = DemDonHangTheoTrangThai(duLieu, "refunded"),
                 SoLikeSanPhamDangLuu = duLieu.TaiKhoanThichSanPhamSeed.Count(x => x.TaiKhoanIdServer is > 0 && x.SanPhamIdServer is > 0),
                 SoLikeSanPhamCanCo = YeuCauDuLieuSeed.SoLikeSanPhamMucTieu,
                 SoTinNhanDaGui = duLieu.TinNhanSeed.Count(x => x.TrangThai == "da_gui"),
@@ -735,7 +742,8 @@ namespace HactechTest.ApiShopTesting.Seed
             }
 
             if (thongKe.SoDonHangDangLuu < thongKe.SoDonHangCanCo ||
-                thongKe.SoDonHangCoTheSua < thongKe.SoDonHangCoTheSuaCanCo)
+                thongKe.SoDonHangCoTheSua < thongKe.SoDonHangCoTheSuaCanCo ||
+                !thongKe.DaDuDonHangTheoTrangThai)
             {
                 hangMuc.Add(HangMucChuanBiDuLieuSeed.DonHang);
             }
@@ -833,6 +841,11 @@ namespace HactechTest.ApiShopTesting.Seed
                 thieu.Add($"Thiếu đơn hàng seed trạng thái pending/confirmed: hiện có {thongKe.SoDonHangCoTheSua}/{thongKe.SoDonHangCoTheSuaCanCo}.");
             }
 
+            if (!thongKe.DaDuDonHangTheoTrangThai)
+            {
+                thieu.Add($"Thiếu đơn hàng seed theo trạng thái, mỗi trạng thái cần {thongKe.SoDonHangMoiTrangThaiCanCo}: pending {thongKe.SoDonHangPending}, confirmed {thongKe.SoDonHangConfirmed}, shipping {thongKe.SoDonHangShipping}, delivered {thongKe.SoDonHangDelivered}, cancelled {thongKe.SoDonHangCancelled}, refunded {thongKe.SoDonHangRefunded}.");
+            }
+
             if (thongKe.SoLikeSanPhamDangLuu < thongKe.SoLikeSanPhamCanCo)
             {
                 thieu.Add($"Thiếu like sản phẩm seed đang lưu: hiện có {thongKe.SoLikeSanPhamDangLuu}/{thongKe.SoLikeSanPhamCanCo}.");
@@ -868,6 +881,13 @@ namespace HactechTest.ApiShopTesting.Seed
             return LaDonHangDangLuu(donHang) &&
                    (string.Equals(donHang.TrangThai, "pending", StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(donHang.TrangThai, "confirmed", StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static int DemDonHangTheoTrangThai(BoDuLieuSeed duLieu, string trangThai)
+        {
+            return duLieu.DonHangSeed.Count(x =>
+                LaDonHangDangLuu(x) &&
+                string.Equals(x.TrangThai, trangThai, StringComparison.OrdinalIgnoreCase));
         }
 
         private static int DemQuanHeNhieuNhat<T>(
@@ -926,6 +946,20 @@ namespace HactechTest.ApiShopTesting.Seed
         public int SoDonHangCanCo { get; init; }
         public int SoDonHangCoTheSua { get; init; }
         public int SoDonHangCoTheSuaCanCo { get; init; }
+        public int SoDonHangMoiTrangThaiCanCo { get; init; }
+        public int SoDonHangPending { get; init; }
+        public int SoDonHangConfirmed { get; init; }
+        public int SoDonHangShipping { get; init; }
+        public int SoDonHangDelivered { get; init; }
+        public int SoDonHangCancelled { get; init; }
+        public int SoDonHangRefunded { get; init; }
+        public bool DaDuDonHangTheoTrangThai =>
+            SoDonHangPending >= SoDonHangMoiTrangThaiCanCo &&
+            SoDonHangConfirmed >= SoDonHangMoiTrangThaiCanCo &&
+            SoDonHangShipping >= SoDonHangMoiTrangThaiCanCo &&
+            SoDonHangDelivered >= SoDonHangMoiTrangThaiCanCo &&
+            SoDonHangCancelled >= SoDonHangMoiTrangThaiCanCo &&
+            SoDonHangRefunded >= SoDonHangMoiTrangThaiCanCo;
         public int SoLikeSanPhamDangLuu { get; init; }
         public int SoLikeSanPhamCanCo { get; init; }
         public int SoTinNhanDaGui { get; init; }

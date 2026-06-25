@@ -6,6 +6,15 @@ namespace HactechTest.ApiShopTesting.KichBan;
 
 public static partial class BoKichBanApi
 {
+    private const int TaiKhoanOtpCreateThanhCong = 0;
+    private const int TaiKhoanOtpCheckDung = 1;
+    private const int TaiKhoanOtpCheckSai = 2;
+    private const int TaiKhoanOtpDungLai = 3;
+    private const int TaiKhoanOtpKhongTonTai = 4;
+    private const int TaiKhoanResetThanhCong = 5;
+    private const int TaiKhoanResetMatKhauSaiQuyTac = 6;
+    private const int TaiKhoanResetThieuMatKhau = 7;
+
     private static void ThemKichBanAuth(List<KichBanApi> ds)
     {
         ThemDangKy(ds);
@@ -126,7 +135,7 @@ public static partial class BoKichBanApi
             "Gọi /auth/create_code_reset_password bằng số đã đăng ký.",
             async ctx =>
             {
-                var tk = await YeuCauTaiKhoanDaDangKyAsync(ctx);
+                var tk = await YeuCauTaiKhoanDaDangKyTheoViTriAsync(ctx, TaiKhoanOtpCreateThanhCong);
                 return new YeuCauApi(HttpMethod.Post, "/auth/create_code_reset_password", Obj(("phone_number", tk.SoDienThoai)));
             },
             Ok);
@@ -149,7 +158,7 @@ public static partial class BoKichBanApi
             "Tạo OTP trước rồi gọi check bằng mã đúng.",
             async ctx =>
             {
-                var tk = await YeuCauTaiKhoanDaDangKyAsync(ctx);
+                var tk = await YeuCauTaiKhoanDaDangKyTheoViTriAsync(ctx, TaiKhoanOtpCheckDung);
                 var otp = await LayOtpResetMatKhauAsync(ctx, tk);
                 return new YeuCauApi(HttpMethod.Post, "/auth/check_code_reset_password", Obj(("phone_number", tk.SoDienThoai), ("reset_code", otp)));
             },
@@ -159,7 +168,7 @@ public static partial class BoKichBanApi
             "Tạo OTP rồi gửi mã sai.",
             async ctx =>
             {
-                var tk = await YeuCauTaiKhoanDaDangKyAsync(ctx);
+                var tk = await YeuCauTaiKhoanDaDangKyTheoViTriAsync(ctx, TaiKhoanOtpCheckSai);
                 _ = await LayOtpResetMatKhauAsync(ctx, tk);
                 return new YeuCauApi(HttpMethod.Post, "/auth/check_code_reset_password", Obj(("phone_number", tk.SoDienThoai), ("reset_code", "000000")));
             },
@@ -169,7 +178,7 @@ public static partial class BoKichBanApi
             "Check OTP đúng một lần rồi dùng lại OTP cũ.",
             async ctx =>
             {
-                var tk = await YeuCauTaiKhoanDaDangKyAsync(ctx);
+                var tk = await YeuCauTaiKhoanDaDangKyTheoViTriAsync(ctx, TaiKhoanOtpDungLai);
                 var otp = await LayOtpResetMatKhauAsync(ctx, tk);
                 var first = new YeuCauApi(HttpMethod.Post, "/auth/check_code_reset_password", Obj(("phone_number", tk.SoDienThoai), ("reset_code", otp)));
                 _ = await ctx.Api.GuiAsync(first);
@@ -181,7 +190,7 @@ public static partial class BoKichBanApi
             "Gửi mã OTP không còn tồn tại trong server.",
             async ctx =>
             {
-                var tk = await YeuCauTaiKhoanDaDangKyAsync(ctx);
+                var tk = await YeuCauTaiKhoanDaDangKyTheoViTriAsync(ctx, TaiKhoanOtpKhongTonTai);
                 return new YeuCauApi(HttpMethod.Post, "/auth/check_code_reset_password", Obj(("phone_number", tk.SoDienThoai), ("reset_code", "123456")));
             },
             Tap("9993"));
@@ -193,7 +202,7 @@ public static partial class BoKichBanApi
             "Chuẩn bị OTP verified rồi gọi reset password.",
             async ctx =>
             {
-                var tk = await YeuCauTaiKhoanDaDangKyAsync(ctx);
+                var tk = await YeuCauTaiKhoanDaDangKyTheoViTriAsync(ctx, TaiKhoanResetThanhCong);
                 await XacThucOtpResetMatKhauAsync(ctx, tk);
                 var matKhauMoi = $"Reset{DateTimeOffset.Now:HHmmss}";
                 var req = new YeuCauApi(HttpMethod.Post, "/auth/reset_password", Obj(("phone_number", tk.SoDienThoai), ("password", matKhauMoi)));
@@ -211,7 +220,7 @@ public static partial class BoKichBanApi
             "Chuẩn bị verified flag rồi gửi password invalid.",
             async ctx =>
             {
-                var tk = await YeuCauTaiKhoanDaDangKyAsync(ctx);
+                var tk = await YeuCauTaiKhoanDaDangKyTheoViTriAsync(ctx, TaiKhoanResetMatKhauSaiQuyTac);
                 await XacThucOtpResetMatKhauAsync(ctx, tk);
                 return new YeuCauApi(HttpMethod.Post, "/auth/reset_password", Obj(("phone_number", tk.SoDienThoai), ("password", "123")));
             },
@@ -221,7 +230,7 @@ public static partial class BoKichBanApi
             "Gửi body thiếu password.",
             async ctx =>
             {
-                var tk = await YeuCauTaiKhoanDaDangKyAsync(ctx);
+                var tk = await YeuCauTaiKhoanDaDangKyTheoViTriAsync(ctx, TaiKhoanResetThieuMatKhau);
                 return new YeuCauApi(HttpMethod.Post, "/auth/reset_password", Obj(("phone_number", tk.SoDienThoai)));
             },
             ThieuThamSo);
@@ -257,13 +266,7 @@ public static partial class BoKichBanApi
             },
             SaiGiaTri);
 
-        Them(ds, "AUTH-CHANGE-PASS-03", "Auth", "Xác nhận mật khẩu không trùng mật khẩu mới",
-            "Case này thuộc validation phía client vì đặc tả API không có field confirm password.",
-            _ => Req(HttpMethod.Post, "/auth/change_password", Obj()),
-            SaiGiaTri,
-            lyDoBoQua: "Không tự động hóa ở tầng API: endpoint không có field confirm_password theo đặc tả.");
-
-        Them(ds, "AUTH-CHANGE-PASS-04", "Auth", "Đổi mật khẩu với mật khẩu mới sai định dạng",
+        Them(ds, "AUTH-CHANGE-PASS-03", "Auth", "Đổi mật khẩu với mật khẩu mới sai định dạng",
             "Gửi new_password quá ngắn/trùng mật khẩu cũ.",
             async ctx =>
             {
@@ -273,12 +276,12 @@ public static partial class BoKichBanApi
             },
             SaiGiaTri);
 
-        Them(ds, "AUTH-CHANGE-PASS-05", "Auth", "Đổi mật khẩu thiếu field bắt buộc",
+        Them(ds, "AUTH-CHANGE-PASS-04", "Auth", "Đổi mật khẩu thiếu field bắt buộc",
             "Gửi body thiếu password hoặc new_password.",
             async ctx => new YeuCauApi(HttpMethod.Post, "/auth/change_password", Obj(("password", "abc")), await YeuCauTokenHopLeAsync(ctx)),
             ThieuThamSo);
 
-        Them(ds, "AUTH-CHANGE-PASS-06", "Auth", "Đổi mật khẩu với token không hợp lệ",
+        Them(ds, "AUTH-CHANGE-PASS-05", "Auth", "Đổi mật khẩu với token không hợp lệ",
             "Gửi token sai định dạng, body có đủ password và new_password.",
             ctx => Req(HttpMethod.Post, "/auth/change_password",
                 Obj(("password", "OldPass123"), ("new_password", "NewPass123")),
@@ -309,18 +312,6 @@ public static partial class BoKichBanApi
             "Gửi username sai format/độ dài.",
             async ctx => new YeuCauApi(HttpMethod.Post, "/auth/change_info_after_signup", Obj(("username", "a")), await YeuCauTokenHopLeAsync(ctx)),
             SaiGiaTri);
-
-        Them(ds, "AUTH-CHANGE-INFO-05", "Auth", "Username không hợp lệ đến mức tài khoản bị khóa",
-            "Case cần rule khóa tài khoản riêng trên server.",
-            _ => Req(HttpMethod.Post, "/auth/change_info_after_signup", Obj()),
-            SaiGiaTri,
-            lyDoBoQua: "Cần rule/server hook để giả lập tài khoản bị khóa theo username; chưa đủ điều kiện tự động hóa chỉ bằng API public.");
-
-        Them(ds, "AUTH-CHANGE-INFO-06", "Auth", "Avatar không hợp lệ do dung lượng quá lớn",
-            "Case thuộc upload/client validation.",
-            _ => Req(HttpMethod.Post, "/auth/change_info_after_signup", Obj()),
-            SaiGiaTri,
-            lyDoBoQua: "Endpoint chỉ nhận URL avatar, không nhận file; case dung lượng ảnh cần kiểm ở upload/client.");
     }
 
     private static void ThemDangXuat(List<KichBanApi> ds)

@@ -8,9 +8,9 @@
                  Chỉ chạy trên môi trường demo / dev.
                  KHÔNG chạy trên production còn dữ liệu thật.
 
-                 Sau khi chạy file này, chạy tiếp các file dữ liệu tĩnh:
-                   1. InsertTaiKhoanSeed.sql
-                   2. InsertProvinceWardSeed.sql
+                 File này tự tạo schema và tài khoản seed mặc định.
+                 Dữ liệu Provinces_seed/Wards_seed được đồng bộ từ API khi
+                 bấm "Kiểm tra seed" trong phần mềm.
 
                  Phần mềm không tự tạo database/schema. Nếu dùng server SQL
                  có sẵn của công ty, hãy chạy các script này trên server đó
@@ -640,7 +640,7 @@ BEGIN
             mat_khau_hien_tai = @matKhau,
             uuid = @uuid,
             trang_thai = N'san_sang',
-            ghi_chu = N'Insert từ HactechTest/Database/InsertTaiKhoanSeed.sql',
+            ghi_chu = N'Insert từ HactechTest/Database/CreateDatabase.sql',
             cap_nhat_luc = SYSDATETIME()
         WHERE sdt = @sdt;
     END
@@ -650,7 +650,7 @@ BEGIN
             (sdt, mat_khau_hien_tai, uuid, trang_thai, ghi_chu)
         VALUES
             (@sdt, @matKhau, @uuid, N'san_sang',
-             N'Insert từ HactechTest/Database/InsertTaiKhoanSeed.sql');
+             N'Insert từ HactechTest/Database/CreateDatabase.sql');
     END
 
     SET @i += 1;

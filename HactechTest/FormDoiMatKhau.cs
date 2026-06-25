@@ -1,3 +1,4 @@
+using HactechTest.Models.Auth;
 using HactechTest.Services.Auth;
 
 namespace HactechTest

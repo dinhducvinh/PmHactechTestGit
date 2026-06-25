@@ -16,9 +16,19 @@ public static class YeuCauDuLieuSeed
     public const int SoSellerSanPhamMucTieu = 20;
     public const int SoSanPhamToiThieuMoiSeller = 3;
     public const int SoSanPhamToiThieu = SoSellerSanPhamMucTieu * SoSanPhamToiThieuMoiSeller;
-    public const int SoGioHangMucTieu = 3;
-    public const int SoDonHangMucTieu = 4;
-    public const int SoDonHangCoTheSuaMucTieu = 3;
+    public const int SoGioHangMucTieu = 10;
+    public const int SoDonHangMoiTrangThaiMucTieu = 5;
+    public const int SoDonHangMucTieu = SoDonHangMoiTrangThaiMucTieu * 6;
+    public const int SoDonHangCoTheSuaMucTieu = SoDonHangMoiTrangThaiMucTieu * 2;
+    public static readonly string[] TrangThaiDonHangMucTieu =
+    [
+        "pending",
+        "confirmed",
+        "shipping",
+        "delivered",
+        "cancelled",
+        "refunded"
+    ];
     public const int SoLikeSanPhamMucTieu = 5;
     public const int SoTinNhanMucTieu = 5;
     public const int SoThongBaoMucTieu = 2;

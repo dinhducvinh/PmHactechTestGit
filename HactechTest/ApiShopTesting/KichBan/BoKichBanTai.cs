@@ -9,7 +9,7 @@ public static partial class BoKichBanApi
 {
     // Số lượng tài khoản sẽ được dùng để test tải (100 tài khoản khác nhau để mô phỏng 100 người dùng thật)
     private const int SoTaiKhoanKiemThuTai = 100;
-    
+
     // Số lượng luồng (thread) chạy song song cùng 1 lúc (bắn 100 request đồng thời)
     private const int SoLuongChaySongSong = 100;
 
@@ -61,10 +61,10 @@ public static partial class BoKichBanApi
             {
                 // Bước chuẩn bị: Lấy ra 100 tài khoản đã đăng ký từ cơ sở dữ liệu
                 var taiKhoan = LayDanhSachTaiKhoanDaDangKyBatBuoc(ctx, SoTaiKhoanKiemThuTai, $"Cần {SoTaiKhoanKiemThuTai} tài khoản seed đã đăng ký để chạy test tải. Hãy bấm Kiểm tra seed để chuẩn bị đủ dữ liệu mới.");
-                
+
                 // Bước chuẩn bị: Lấy Token tự động cho 100 tài khoản này (giống như việc đăng nhập ngầm)
                 var tokenTheoTaiKhoan = await LayTokenChoDanhSachTaiKhoanAsync(ctx, taiKhoan, ct);
-                
+
                 return await ChayTaiAsync(
                     ctx,
                     "LOAD-AUTH-ME-100-01",
@@ -97,7 +97,7 @@ public static partial class BoKichBanApi
             {
                 var taiKhoan = LayDanhSachTaiKhoanDaDangKyBatBuoc(ctx, SoTaiKhoanKiemThuTai, $"Cần {SoTaiKhoanKiemThuTai} tài khoản seed đã đăng ký để chạy test tải. Hãy bấm Kiểm tra seed để chuẩn bị đủ dữ liệu mới.");
                 var tokenTheoTaiKhoan = await LayTokenChoDanhSachTaiKhoanAsync(ctx, taiKhoan, ct);
-                
+
                 return await ChayTaiAsync(
                     ctx,
                     "LOAD-USER-INFO-100-01",
@@ -154,13 +154,13 @@ public static partial class BoKichBanApi
     {
         // 1. Lấy danh sách 100 tài khoản nếu chưa được truyền vào
         var taiKhoan = danhSachTaiKhoan ?? LayDanhSachTaiKhoanDaDangKyBatBuoc(ctx, SoTaiKhoanKiemThuTai, $"Cần {SoTaiKhoanKiemThuTai} tài khoản seed đã đăng ký để chạy test tải. Hãy bấm Kiểm tra seed để chuẩn bị đủ dữ liệu mới.");
-        
+
         // 2. Bắt đầu bấm giờ tổng
         var dongHoTong = Stopwatch.StartNew();
-        
+
         // 3. Gửi đồng loạt 100 request song song và đợi tất cả hoàn thành
         var ketQua = await GuiSongSongAsync(ctx, taiKhoan, SoLuongChaySongSong, taoYeuCau, cancellationToken);
-        
+
         // 4. Dừng bấm giờ tổng
         dongHoTong.Stop();
 
@@ -171,11 +171,11 @@ public static partial class BoKichBanApi
         var tiLeLoi = tong == 0 ? 100 : loi * 100d / tong;             // Tính % lỗi
         var tbMs = tong == 0 ? 0 : ketQua.Average(x => x.ThoiGian.TotalMilliseconds); // Tính thời gian phản hồi trung bình
         var p95Ms = TinhP95Ms(ketQua);                                 // Tính mốc thời gian P95
-        
+
         // 6. Đánh giá xem có vượt qua tiêu chuẩn Pass/Fail theo cấu hình không
         var datNguong = tiLeLoi <= loiToiDaPhanTram && tbMs <= tbToiDaMs && p95Ms <= p95ToiDaMs;
         var tatCaLoiMoiTruong = dat == 0 && ketQua.All(x => x.LoiMoiTruong);
-        
+
         // 7. Tạo chuỗi tóm tắt thông báo để hiển thị ra UI
         var thongDiep = TaoThongDiepTai(ketQua, loiToiDaPhanTram, tbToiDaMs, p95ToiDaMs, dongHoTong.Elapsed);
 
@@ -187,7 +187,7 @@ public static partial class BoKichBanApi
             // Trạng thái chung: Đạt/Thất bại/Lỗi môi trường
             TrangThai = tatCaLoiMoiTruong
                 ? TrangThaiKetQua.LoiMoiTruong
-                : datNguong ? TrangThaiKetQua.Dat : TrangThaiKetQua.ThatBai, 
+                : datNguong ? TrangThaiKetQua.Dat : TrangThaiKetQua.ThatBai,
             ThongDiep = thongDiep,
             MaMongDoi = $"100 request, code 1000, lỗi <= {loiToiDaPhanTram:0.##}%, TB <= {tbToiDaMs} ms, P95 <= {p95ToiDaMs} ms",
             MaThucTe = $"Đạt {dat}/{tong}; lỗi {tiLeLoi:0.##}%; TB {tbMs:0} ms; P95 {p95Ms:0} ms",
@@ -242,10 +242,10 @@ public static partial class BoKichBanApi
             // Cấu trúc nội dung request sẽ gửi
             var yeuCau = await taoYeuCau(taiKhoan, index);
             cancellationToken.ThrowIfCancellationRequested();
-            
+
             // Tiến hành gọi API tới Server
             var response = await ctx.Api.GuiAsync(yeuCau, cancellationToken);
-            
+
             dongHo.Stop(); // Đã nhận được response => Dừng bấm giờ ngay
 
             // Kiểm tra xem server có trả về mã mong đợi (ví dụ: code=1000) không
@@ -253,7 +253,7 @@ public static partial class BoKichBanApi
             var loi = datMa
                 ? null
                 : $"tk_id_server {taiKhoan.TaiKhoanIdServer}: mã thực tế {response.MaSoSanh}, HTTP {(int)response.HttpStatusCode}, message {response.Message ?? "(không có)"}";
-            
+
             // Trả về kết quả đo lường của request này
             return new KetQuaLanTai(datMa, response.MaSoSanh, dongHo.Elapsed, loi, LoiMoiTruong: false);
         }
@@ -297,9 +297,9 @@ public static partial class BoKichBanApi
         // Lấy danh sách thời gian và sắp xếp tăng dần
         var thoiGian = ketQua
             .Select(x => x.ThoiGian.TotalMilliseconds)
-            .OrderBy(x => x) 
+            .OrderBy(x => x)
             .ToList();
-            
+
         // Tìm index của phần tử ở mức 95%
         var viTri = Math.Clamp((int)Math.Ceiling(thoiGian.Count * 0.95) - 1, 0, thoiGian.Count - 1);
         return thoiGian[viTri];
@@ -319,7 +319,7 @@ public static partial class BoKichBanApi
         var tiLeLoi = tong == 0 ? 100 : loi * 100d / tong;
         var tbMs = tong == 0 ? 0 : ketQua.Average(x => x.ThoiGian.TotalMilliseconds);
         var p95Ms = TinhP95Ms(ketQua);
-        
+
         // Nhóm và thống kê xem có bao nhiêu request trả về mã code nào (vd: 1000: 95, 1004: 5, timeout: 2)
         var maThucTe = string.Join(", ", ketQua
             .GroupBy(x => x.MaThucTe)
@@ -327,7 +327,7 @@ public static partial class BoKichBanApi
             .ThenBy(x => x.Key)
             .Take(5)
             .Select(x => $"{x.Key}: {x.Count()}"));
-            
+
         // Trích xuất 3 thông báo lỗi đại diện đầu tiên để người dùng dễ nhìn thấy tại sao lỗi
         var mauLoi = string.Join(" | ", ketQua
             .Where(x => !x.DatMa && !string.IsNullOrWhiteSpace(x.Loi))

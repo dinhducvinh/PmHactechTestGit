@@ -1,9 +1,9 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
-using System.Data;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using HactechTest.Services.App;
+using HactechTest.Models.Dashboard;
+using HactechTest.Services.Dashboard;
 
 namespace HactechTest.Control
 {
@@ -14,6 +14,7 @@ namespace HactechTest.Control
         private int _tongKhongDat;
         private int _tyLeDat;
         private bool _daKhoiTaoNguoiChay;
+        private readonly TongQuanService _tongQuanService = new();
 
         public TongQuan()
         {
@@ -31,49 +32,13 @@ namespace HactechTest.Control
         {
             await NapNguoiChayAsync();
 
-            if (!AppHost.IsInitialized || !AppHost.Instance.DatabaseSanSang)
-            {
-                GanSoLieu(0, 0, 0);
-                return;
-            }
-
             try
             {
-                await using var conn = await AppHost.Instance.OpenConnectionAsync();
-                await using var cmd = conn.CreateCommand();
-                cmd.CommandText = """
-                    SELECT
-                        ISNULL(SUM(tong_so_test), 0),
-                        ISNULL(SUM(so_dat), 0),
-                        ISNULL(SUM(so_khong_dat), 0)
-                    FROM dbo.phien_chay
-                    WHERE thoi_diem_chay >= @tu_ngay
-                      AND thoi_diem_chay < @den_ngay
-                      AND (@nguoi_chay IS NULL OR nguoi_chay = @nguoi_chay);
-                    """;
-
-                var ngayLoc = dtpNgayLoc.Value.Date;
-                var nguoiChay = cboNguoiChay.SelectedItem?.ToString();
-                var locNguoiChay = !string.IsNullOrWhiteSpace(nguoiChay) &&
-                    !string.Equals(nguoiChay, "(tat ca)", StringComparison.OrdinalIgnoreCase);
-
-                cmd.Parameters.Add("@tu_ngay", SqlDbType.DateTime2).Value = ngayLoc;
-                cmd.Parameters.Add("@den_ngay", SqlDbType.DateTime2).Value = ngayLoc.AddDays(1);
-                cmd.Parameters.Add("@nguoi_chay", SqlDbType.NVarChar, 200).Value =
-                    locNguoiChay ? nguoiChay! : DBNull.Value;
-
-                await using var reader = await cmd.ExecuteReaderAsync();
-                if (await reader.ReadAsync())
-                {
-                    GanSoLieu(
-                        Convert.ToInt32(reader.GetValue(0)),
-                        Convert.ToInt32(reader.GetValue(1)),
-                        Convert.ToInt32(reader.GetValue(2)));
-                }
-                else
-                {
-                    GanSoLieu(0, 0, 0);
-                }
+                var boLoc = new BoLocTongQuan(
+                    dtpNgayLoc.Value.Date,
+                    TongQuanService.ChuanHoaNguoiChay(cboNguoiChay.SelectedItem?.ToString()));
+                var thongKe = await _tongQuanService.LayThongKeAsync(boLoc);
+                GanSoLieu(thongKe.TongTest, thongKe.TongDat, thongKe.TongKhongDat);
             }
             catch
             {
@@ -106,30 +71,16 @@ namespace HactechTest.Control
             }
 
             cboNguoiChay.Items.Clear();
-            cboNguoiChay.Items.Add("(tat ca)");
-
-            if (AppHost.IsInitialized && AppHost.Instance.DatabaseSanSang)
+            try
             {
-                try
+                foreach (var nguoiChay in await _tongQuanService.LayNguoiChayAsync())
                 {
-                    await using var conn = await AppHost.Instance.OpenConnectionAsync();
-                    await using var cmd = conn.CreateCommand();
-                    cmd.CommandText = """
-                        SELECT DISTINCT nguoi_chay
-                        FROM dbo.phien_chay
-                        WHERE nguoi_chay IS NOT NULL AND LTRIM(RTRIM(nguoi_chay)) <> N''
-                        ORDER BY nguoi_chay;
-                        """;
-                    await using var reader = await cmd.ExecuteReaderAsync();
-                    while (await reader.ReadAsync())
-                    {
-                        cboNguoiChay.Items.Add(reader.GetString(0));
-                    }
+                    cboNguoiChay.Items.Add(nguoiChay);
                 }
-                catch
-                {
-                    // Giữ bộ lọc mặc định nếu chưa có bảng lịch sử hoặc chưa kết nối được DB.
-                }
+            }
+            catch
+            {
+                cboNguoiChay.Items.Add(TongQuanService.TatCaNguoiChay);
             }
 
             cboNguoiChay.SelectedIndex = 0;

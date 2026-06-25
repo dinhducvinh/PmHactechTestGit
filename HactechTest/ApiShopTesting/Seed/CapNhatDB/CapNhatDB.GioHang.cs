@@ -20,6 +20,10 @@ public sealed partial class CapNhatDB
         var gioHangHienCo = request.Tam.TryGetValue("gioHang", out var gioHangTam)
             ? gioHangTam as GioHangSeed
             : null;
+        var soLuongTruoc = request.Tam.TryGetValue("soLuongTruoc", out var soLuongTruocTam) &&
+                           soLuongTruocTam is int soLuongTruocTamInt
+            ? Math.Max(soLuongTruocTamInt, 0)
+            : gioHangHienCo?.SoLuong ?? 0;
 
         var cartItemIdServer =
             DocIdSau(response.Data, "cart_item_id") ??
@@ -43,7 +47,7 @@ public sealed partial class CapNhatDB
 
         var soLuongMoi =
             DocIntTuNode(response.Data?["quantity"]) ??
-            (gioHangHienCo is null ? soLuongThem : gioHangHienCo.SoLuong + soLuongThem);
+            soLuongTruoc + soLuongThem;
         var lucCapNhat = DateTimeOffset.Now;
 
         var gioHang = DuLieu.GioHangSeed.FirstOrDefault(x => x.CartItemIdServer == cartItemIdServer) ??
